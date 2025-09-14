@@ -7,7 +7,7 @@ import { generateSchedule } from "../utils/simulatedAnnealingScheduler";
 import type { Schedule, Category } from "../utils/simulatedAnnealingScheduler";
 import { ScheduleGrid } from "./ScheduleGrid";
 import "../css/Modal.css";
-import "../css/Scheduler.css";
+import "../css/scheduler.css";
 
 const CATEGORIES: Category[] = [
     {
