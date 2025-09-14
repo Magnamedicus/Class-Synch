@@ -9,8 +9,9 @@ pages:
   script:
     - npm ci
     - npm run build
-    - mkdir public
-    - cp -r dist/* public/
+    # instead of mkdir, just clean & copy
+    - rm -rf public
+    - mv dist public
   artifacts:
     paths:
       - public
