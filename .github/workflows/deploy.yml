@@ -27,7 +27,7 @@ jobs:
       - name: Upload production-ready build files
         uses: actions/upload-artifact@v4
         with:
-          name: production-files
+          name: github-pages   # 👈 fix is here
           path: ./dist
 
   deploy:
@@ -45,7 +45,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: production-files
+          name: github-pages   # 👈 and here
           path: ./dist
 
       - name: Deploy to GitHub Pages
