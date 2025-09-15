@@ -366,8 +366,8 @@ export default function ProfilePage() {
         <div className="profile-page">
             <Navbar />
             <div className="profile-container">
-                <h1>Welcome, {profile.username}</h1>
-                <p>Set up your buckets and obligations for schedule generation.</p>
+                <h1>Welcome, {profile.username}!</h1>
+                <p>Tell us about your weekly obligations 🗓️</p>
 
                 {/* ========== Buckets ========== */}
                 <section>
@@ -524,7 +524,7 @@ export default function ProfilePage() {
                         </div>
 
                         <div>
-                            <label>Max Stretch (hours)</label>
+                            <label>How long can I do this? (hours)</label>
                             <input
                                 type="number"
                                 step="0.5"
