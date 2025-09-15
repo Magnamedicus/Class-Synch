@@ -1,0 +1,95 @@
+
+
+.profile-page {
+    min-height: 100vh;
+    background: url("../assets/profile_bg.png") no-repeat center center fixed;
+    background-size: 90%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #fff;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    padding-top: 80px;
+}
+
+.profile-container {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 16px;
+    padding: 2rem 3rem;
+    max-width: 800px;
+    width: 90%;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
+}
+
+.profile-page h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    text-align: center;
+    color: #f0f8ff;
+    letter-spacing: 1px;
+}
+
+.profile-page p {
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #e0e0e0;
+}
+
+
+.profile-page h2 {
+    font-size: 1.4rem;
+    margin: 1.5rem 0 0.5rem;
+    border-bottom: 2px solid #66b2ff;
+    display: inline-block;
+    color: #66b2ff;
+}
+
+
+.profile-page input,
+.profile-page select,
+.profile-page button {
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    border: none;
+    font-size: 1rem;
+}
+
+.profile-page input,
+.profile-page select {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.profile-page input[type="range"] {
+    width: 100%;
+}
+
+.profile-page button {
+    background: #66b2ff;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.profile-page button:hover {
+    background: #5599e6;
+}
+
+
+.profile-page ul {
+    list-style: none;
+    padding: 0;
+}
+
+.profile-page li {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.6rem 1rem;
+    margin: 0.4rem 0;
+    border-radius: 6px;
+    color: #f8f8f8;
+}
+
+

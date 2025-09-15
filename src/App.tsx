@@ -1,20 +1,17 @@
-import { Routes, Route } from "react-router-dom";
-import Home from "./pages/home";
-import "./App.css";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import ProfilePage from "./pages/Profile";
 
-function App() {
+const App: React.FC = () => {
     return (
-        <div className="app-container">
-
+        <Router>
             <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/schedule" element={<div>Schedule Page</div>} />
-                <Route path="/profile" element={<div>Profile Page</div>} />
-                <Route path="/about" element={<div>About Page</div>} />
+                <Route path="/profile" element={<ProfilePage />} />
             </Routes>
-        </div>
+        </Router>
     );
-}
+};
 
 export default App;
-

@@ -283,4 +283,23 @@
 }
 
 
+.profile-page {
+    background: url("../assets/profile_bg.png") no-repeat center center fixed;
+    background-size: 90% auto; /* zoomed out to show more */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-container {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+    border-radius: 12px;
+}
+
+
+
 
