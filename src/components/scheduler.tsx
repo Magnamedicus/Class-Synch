@@ -1,4 +1,4 @@
-import React, {
+import {
     useState,
     forwardRef,
     useImperativeHandle,
@@ -13,16 +13,16 @@ import { ScheduleGrid } from "./ScheduleGrid";
 import "../css/Modal.css";
 import "../css/scheduler.css";
 
-/** ===========================
- * Public ref handle (exported)
- * =========================== */
-export interface SchedulerHandle {
-    generate: () => Schedule; // returns the generated schedule
-}
+/* =========================
+   Types & handle exported
+========================= */
+export type SchedulerHandle = {
+    generate: () => Promise<Schedule | void>;
+};
 
-/** ===========================
- * Fallback demo categories
- * =========================== */
+/* =========================
+   Fallback demo categories
+========================= */
 const FALLBACK_CATEGORIES: Category[] = [
     {
         id: "school",
@@ -75,7 +75,7 @@ const FALLBACK_CATEGORIES: Category[] = [
         children: [
             {
                 id: "night-sleep",
-                name: "NightSleep",
+                name: "Night Sleep",
                 relativePriority: 1.0,
                 maxStretch: 8.0,
                 preferredTimeBlocks: ["night"],
@@ -90,7 +90,7 @@ const FALLBACK_CATEGORIES: Category[] = [
         children: [
             {
                 id: "friends",
-                name: "FriendHang",
+                name: "Friend Hangout",
                 relativePriority: 0.7,
                 maxStretch: 3.0,
                 preferredTimeBlocks: ["evening"],
@@ -98,7 +98,7 @@ const FALLBACK_CATEGORIES: Category[] = [
             },
             {
                 id: "family",
-                name: "FamilyTime",
+                name: "Family Time",
                 relativePriority: 0.3,
                 maxStretch: 2.5,
                 preferredTimeBlocks: ["evening"],
@@ -108,41 +108,38 @@ const FALLBACK_CATEGORIES: Category[] = [
     },
 ];
 
-/** ===========================
- * Time parsing helpers
- * Accept "09:00", "930", "12:30 PM", or numbers like 1330
- * =========================== */
+/* =========================
+   Utilities to adapt profile
+========================= */
+
+// robust time parsing: "09:00", "9:30", "930", "12:30 PM", etc.
 function parseTimeToHHMM(input: unknown): number | undefined {
     if (typeof input === "number" && Number.isFinite(input)) return input;
     if (typeof input !== "string") return undefined;
 
     const s = input.trim();
-
     const ampm = s.match(/^(\d{1,2})(?::?(\d{2}))?\s*(AM|PM)$/i);
     if (ampm) {
         let h = parseInt(ampm[1], 10);
         const m = parseInt(ampm[2] || "0", 10);
-        const suffix = ampm[3].toUpperCase();
-        if (h === 12) h = 0;       // 12 AM -> 0
-        if (suffix === "PM") h += 12;
+        const p = ampm[3].toUpperCase();
+        if (h === 12) h = 0;
+        if (p === "PM") h += 12;
         return h * 100 + m;
     }
-
     const colon = s.match(/^(\d{1,2}):(\d{2})$/);
     if (colon) {
         const h = parseInt(colon[1], 10);
         const m = parseInt(colon[2], 10);
         if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return h * 100 + m;
     }
-
     const compact = s.match(/^(\d{3,4})$/);
     if (compact) {
-        const val = parseInt(compact[1], 10);
-        const h = Math.floor(val / 100);
-        const m = val % 100;
+        const v = parseInt(compact[1], 10);
+        const h = Math.floor(v / 100);
+        const m = v % 100;
         if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return h * 100 + m;
     }
-
     return undefined;
 }
 
@@ -150,8 +147,7 @@ function coerceMeetingTimes(raw: any): MeetingTime[] {
     if (!Array.isArray(raw)) return [];
     return raw
         .map((mt) => {
-            const day =
-                typeof mt?.day === "string" ? mt.day.toLowerCase() : undefined;
+            const day = typeof mt?.day === "string" ? mt.day.toLowerCase() : undefined;
             const start = parseTimeToHHMM(mt?.start);
             const end = parseTimeToHHMM(mt?.end);
             if (!day || start == null || end == null) return null;
@@ -160,16 +156,11 @@ function coerceMeetingTimes(raw: any): MeetingTime[] {
         .filter(Boolean) as MeetingTime[];
 }
 
-/** ===========================
- * Adapt activeProfile → Category[]
- * =========================== */
 function profileToCategories(profile: any): Category[] {
     const buckets = Array.isArray(profile?.buckets) ? profile.buckets : [];
 
     return buckets.map((bucket: any, i: number) => {
-        const obligations = Array.isArray(bucket?.obligations)
-            ? bucket.obligations
-            : [];
+        const obligations = Array.isArray(bucket?.obligations) ? bucket.obligations : [];
 
         const children = obligations.map((ob: any, j: number) => ({
             id: ob?.id ?? `ob-${i}-${j}`,
@@ -182,14 +173,13 @@ function profileToCategories(profile: any): Category[] {
             preferredTimeBlocks: Array.isArray(ob?.preferredTimeBlocks)
                 ? ob.preferredTimeBlocks
                 : undefined,
-            dependencyIds: Array.isArray(ob?.dependencyIds)
-                ? ob.dependencyIds
-                : [],
+            dependencyIds: Array.isArray(ob?.dependencyIds) ? ob.dependencyIds : [],
             meetingTimes: coerceMeetingTimes(ob?.meetingTimes),
         }));
 
+        // normalize child weights to sum 1
         const sum = children.reduce((s, c) => s + (c.relativePriority ?? 0), 0);
-        const normalizedChildren =
+        const normChildren =
             sum > 0.0001
                 ? children.map((c) => ({
                     ...c,
@@ -207,7 +197,7 @@ function profileToCategories(profile: any): Category[] {
                 typeof bucket?.priority === "number"
                     ? bucket.priority / 100
                     : 1 / Math.max(buckets.length, 1),
-            children: normalizedChildren,
+            children: normChildren,
         } as Category;
     });
 }
@@ -225,15 +215,22 @@ function getActiveCategories(): Category[] {
     }
 }
 
-/** ===========================
- * Component
- * =========================== */
-const Scheduler = forwardRef<SchedulerHandle, Record<string, never>>((_, ref) => {
+/* Yield to the browser so the overlay can paint */
+const nextPaint = () =>
+    new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    );
+
+/* =========================
+   Component
+========================= */
+
+const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
     const [schedule, setSchedule] = useState<Schedule | null>(null);
     const [ms, setMs] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
 
-    // Modal state
+    // modal state
     const [modalOpen, setModalOpen] = useState(false);
     const [selected, setSelected] = useState<{
         day: string;
@@ -253,32 +250,31 @@ const Scheduler = forwardRef<SchedulerHandle, Record<string, never>>((_, ref) =>
         }
     };
 
-    /** Main generate entrypoint (exposed via ref) */
-    const handleGenerateSchedule = (): Schedule => {
-        setLoading(true);
-        setModalOpen(false);
+    const handleGenerateSchedule = async (): Promise<Schedule | void> => {
+        try {
+            setLoading(true);
+            await nextPaint(); // ensure overlay is visible
 
-        const categories = getActiveCategories();
+            const categories = getActiveCategories();
+            const t0 = performance.now();
+            const result = generateSchedule(categories);
+            const t1 = performance.now();
 
-        const t0 = performance.now();
-        const result = generateSchedule(categories);
-        const t1 = performance.now();
-
-        setSchedule(result);
-        setMs(t1 - t0);
-        persist(result);
-
-        setTimeout(() => setLoading(false), 0);
-
-        console.log(`Generated Weekly Schedule in ${Math.round(t1 - t0)} ms`, result);
-        return result;
+            setSchedule(result);
+            setMs(t1 - t0);
+            persist(result);
+            return result;
+        } catch (err) {
+            console.error("❌ Error generating schedule:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useImperativeHandle(ref, () => ({
         generate: handleGenerateSchedule,
     }));
 
-    // Block click -> open modal
     const handleBlockClick = (
         day: string,
         block: { startIdx: number; length: number; label: string },
@@ -290,7 +286,6 @@ const Scheduler = forwardRef<SchedulerHandle, Record<string, never>>((_, ref) =>
         setModalOpen(true);
     };
 
-    // Modal actions
     const clearBlock = () => {
         if (!schedule || !selected) return;
         const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
@@ -320,39 +315,34 @@ const Scheduler = forwardRef<SchedulerHandle, Record<string, never>>((_, ref) =>
         setModalOpen(false);
     };
 
-    // for modal dropdown options
     const currentCategories = getActiveCategories();
     const allObligations = currentCategories.flatMap((cat) =>
         cat.children.map((child) => child.name)
     );
-
     const blockEnd = selected ? selected.startIdx + newLength : null;
 
     return (
         <div style={{ padding: 16 }}>
-            {/* Loading overlay */}
+            {/* Loading Overlay */}
             {loading && (
                 <div className="loading-overlay">
-                    <div className="loading-message">
-                        <div className="spinner"></div>
-                        Making Your Schedule...
+                    <div className="loading-card">
+                        <div className="loading-title pulse">Making Your Schedule</div>
+                        <div className="loading-spinner" aria-label="loading" />
                     </div>
                 </div>
             )}
 
-            {/* Perf info */}
             {ms !== null && (
                 <div style={{ marginBottom: 8 }}>
                     Generated in {Math.round(ms)} ms
                 </div>
             )}
 
-            {/* Grid */}
             {schedule && (
                 <ScheduleGrid schedule={schedule} onBlockClick={handleBlockClick} />
             )}
 
-            {/* Edit modal */}
             {modalOpen && selected && (
                 <div className="modal-overlay" onClick={() => setModalOpen(false)}>
                     <div className="modal-card" onClick={(e) => e.stopPropagation()}>
