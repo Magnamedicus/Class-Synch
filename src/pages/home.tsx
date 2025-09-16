@@ -17,7 +17,7 @@ export default function Home() {
     const navigate = useNavigate();
 
     const toggleForm = () => {
-        setShowLogin(!showLogin);
+        setShowLogin((v) => !v);
     };
 
     const handleAuth = (e: React.FormEvent) => {
@@ -90,7 +90,8 @@ export default function Home() {
 
     return (
         <div className="home">
-            <Navbar />
+            {/* Hide 'Generate Schedule' in the Home dropdown only */}
+            <Navbar showGenerate={false} />
 
             <div className="dropdown">
                 <div
@@ -98,11 +99,20 @@ export default function Home() {
                     onClick={toggleForm}
                     role="button"
                     tabIndex={0}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") toggleForm();
+                    }}
+                    aria-expanded={showLogin}
+                    aria-controls="home-dropdown-content"
                 >
                     ≡ Menu
                 </div>
-                <div className={`dropdown__content ${showLogin ? "open" : ""}`}>
-                    <button>Generate Schedule</button>
+
+                <div
+                    id="home-dropdown-content"
+                    className={`dropdown__content ${showLogin ? "open" : ""}`}
+                >
+                    {/* ⬇️ Removed the 'Generate Schedule' button from Home dropdown */}
 
                     <div className="auth-form">
                         <h3>{isSignup ? "Create Profile" : "Login"}</h3>
@@ -135,9 +145,11 @@ export default function Home() {
                                 {isSignup ? "Sign Up" : "Log In"}
                             </button>
                         </form>
+
                         {errorMessage && <p className="error">{errorMessage}</p>}
+
                         <p
-                            onClick={() => setIsSignup(!isSignup)}
+                            onClick={() => setIsSignup((v) => !v)}
                             className="toggle-form"
                         >
                             {isSignup
@@ -175,3 +187,4 @@ export default function Home() {
         </div>
     );
 }
+
