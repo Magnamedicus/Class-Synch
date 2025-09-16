@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import "../css/Profile.css";
 
-
 interface MeetingTime {
     day: string;
     start: string;
@@ -17,6 +16,7 @@ interface Obligation {
     meetingTimes: MeetingTime[];
     priority: number;
     maxStretch: number;
+    preferredTimeBlocks?: string[]; // NEW
 }
 
 interface Bucket {
@@ -31,7 +31,6 @@ interface Profile {
     password: string;
     buckets: Bucket[];
 }
-
 
 function normalizeProfile(raw: any): Profile {
     const username = raw?.username ?? "";
@@ -63,6 +62,9 @@ function normalizeProfile(raw: any): Profile {
                         : [],
                     priority: Number.isFinite(o?.priority) ? o.priority : 0,
                     maxStretch: Number.isFinite(o?.maxStretch) ? o.maxStretch : 2,
+                    preferredTimeBlocks: Array.isArray(o?.preferredTimeBlocks)
+                        ? o.preferredTimeBlocks
+                        : [], // ensure defined
                 }))
                 : [],
         }));
@@ -70,7 +72,6 @@ function normalizeProfile(raw: any): Profile {
 
     return { username, email, password, buckets };
 }
-
 
 function rebalance<T extends { priority: number }>(
     items: T[],
@@ -80,14 +81,11 @@ function rebalance<T extends { priority: number }>(
     const len = items.length;
     if (len === 0) return items;
 
-
     if (len === 1) {
         return [{ ...items[0], priority: 100 }];
     }
 
-
     const target = Math.max(0, Math.min(100, Math.round(newValue)));
-
 
     const othersTotalBefore = items.reduce((s, it, idx) => {
         return idx === changedIndex ? s : s + it.priority;
@@ -95,37 +93,34 @@ function rebalance<T extends { priority: number }>(
 
     const remaining = Math.max(0, 100 - target);
 
-
     const anyOthers = othersTotalBefore > 0;
 
     let result = items.map((it, idx) => {
         if (idx === changedIndex) return { ...it, priority: target };
         if (!anyOthers) {
-            // Even distribution among others
             const per = Math.floor(remaining / (len - 1));
             return { ...it, priority: per };
         } else {
-            // Scale proportionally
             const scaled = Math.round((it.priority / othersTotalBefore) * remaining);
             return { ...it, priority: scaled };
         }
     });
 
-    // Fix rounding error so sum = 100 exactly
     const sum = result.reduce((s, it) => s + it.priority, 0);
     const diff = 100 - sum;
     if (diff !== 0) {
-        // Nudge the last item that isn't the changed one (or fallback to changed)
         let idxToFix = result.findIndex((_, idx) => idx !== changedIndex);
         if (idxToFix === -1) idxToFix = changedIndex;
-        const fixed = Math.max(0, Math.min(100, result[idxToFix].priority + diff));
+        const fixed = Math.max(
+            0,
+            Math.min(100, result[idxToFix].priority + diff)
+        );
         result[idxToFix] = { ...result[idxToFix], priority: fixed };
     }
 
     return result;
 }
 
-// Rebalance the obligations of a bucket
 function rebalanceBucketObligations(
     bucket: Bucket,
     changedIndex: number,
@@ -136,20 +131,14 @@ function rebalanceBucketObligations(
     return { ...bucket, obligations: reb };
 }
 
-/* =======================
-   Component
-======================= */
-
 export default function ProfilePage() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [buckets, setBuckets] = useState<Bucket[]>([
         { name: "School Work", priority: 100, obligations: [] },
     ]);
 
-    // Add-bucket UI
     const [newBucketName, setNewBucketName] = useState("");
 
-    // Add-obligation UI
     const [newObligation, setNewObligation] = useState<Obligation>({
         name: "",
         bucketName: "School Work",
@@ -158,32 +147,31 @@ export default function ProfilePage() {
         meetingTimes: [],
         priority: 0,
         maxStretch: 2,
+        preferredTimeBlocks: [], // default
     });
 
-    // Add-meeting UI snippet
     const [newMeeting, setNewMeeting] = useState<MeetingTime>({
         day: "Monday",
         start: "09:00",
         end: "10:00",
     });
 
-    // Load and normalize profile from localStorage once
     useEffect(() => {
         const stored = localStorage.getItem("activeProfile");
         if (stored) {
             const parsed = normalizeProfile(JSON.parse(stored));
-            // Also normalize top-level buckets' total; ensure we have something valid
             const hasAny = parsed.buckets.length > 0;
             const normalized =
                 hasAny && parsed.buckets.reduce((s, b) => s + b.priority, 0) > 0
                     ? parsed
                     : {
                         ...parsed,
-                        buckets: [{ name: "School Work", priority: 100, obligations: [] }],
+                        buckets: [
+                            { name: "School Work", priority: 100, obligations: [] },
+                        ],
                     };
             setProfile(normalized);
             setBuckets(normalized.buckets);
-            // Initialize default bucket name for new obligations if available
             if (normalized.buckets[0]) {
                 setNewObligation((prev) => ({
                     ...prev,
@@ -193,11 +181,6 @@ export default function ProfilePage() {
         }
     }, []);
 
-    /* =======================
-       Buckets
-    ======================= */
-
-    // Auto-balancing bucket priority slider
     const handleBucketPriorityChange = (bucketIndex: number, value: number) => {
         setBuckets((prev) => rebalance(prev, bucketIndex, value));
     };
@@ -214,7 +197,6 @@ export default function ProfilePage() {
             alert("A bucket with that name already exists.");
             return;
         }
-        // Add with a default 10% and auto-balance
         const next = [...buckets, { name, priority: 10, obligations: [] }];
         const newIndex = next.length - 1;
         const rebalanced = rebalance(next, newIndex, 10);
@@ -222,12 +204,7 @@ export default function ProfilePage() {
         setNewBucketName("");
     };
 
-    /* =======================
-       Obligations
-    ======================= */
-
     const addMeetingTime = () => {
-        // Quick guard if start >= end (string compare is fine for HH:mm)
         if (newMeeting.start >= newMeeting.end) {
             alert("End time must be after start time.");
             return;
@@ -250,7 +227,6 @@ export default function ProfilePage() {
             return;
         }
 
-        // If it's a class, ensure hasMeetings and at least one meeting time
         if (newObligation.isClass) {
             if (newObligation.meetingTimes.length === 0) {
                 alert("Classes must include at least one meeting time.");
@@ -269,7 +245,6 @@ export default function ProfilePage() {
 
             const targetBucket = prev[idx];
 
-            // Insert with a small default, then auto-balance
             const inserted = [...targetBucket.obligations, newObligation];
             const newObIndex = inserted.length - 1;
             const rebalancedObligs = rebalance(inserted, newObIndex, 10);
@@ -283,7 +258,6 @@ export default function ProfilePage() {
             return next;
         });
 
-        // Reset new obligation form (keep bucket for convenience)
         setNewObligation((prev) => ({
             name: "",
             bucketName: prev.bucketName,
@@ -292,6 +266,7 @@ export default function ProfilePage() {
             meetingTimes: [],
             priority: 0,
             maxStretch: 2,
+            preferredTimeBlocks: [],
         }));
     };
 
@@ -303,22 +278,22 @@ export default function ProfilePage() {
         setBuckets((prev) => {
             const copy = [...prev];
             const bucket = copy[bucketIndex];
-            const rebalanced = rebalanceBucketObligations(bucket, obligationIndex, value);
+            const rebalanced = rebalanceBucketObligations(
+                bucket,
+                obligationIndex,
+                value
+            );
             copy[bucketIndex] = rebalanced;
             return copy;
         });
     };
 
-    /* =======================
-       Save
-    ======================= */
-
     const saveProfile = () => {
         if (!profile) return;
 
-        // Ensure each bucket has obligations that total 100 (if any exist)
         const bad = buckets.find(
-            (b) => b.obligations.length > 0 &&
+            (b) =>
+                b.obligations.length > 0 &&
                 b.obligations.reduce((s, o) => s + o.priority, 0) !== 100
         );
         if (bad) {
@@ -336,7 +311,6 @@ export default function ProfilePage() {
         const updated: Profile = { ...profile, buckets };
         localStorage.setItem("activeProfile", JSON.stringify(updated));
 
-        // (Optional) keep "user" in sync so new logins carry your data forward
         const userRaw = localStorage.getItem("user");
         if (userRaw) {
             const user = JSON.parse(userRaw);
@@ -392,7 +366,13 @@ export default function ProfilePage() {
                         Total: <strong>{totalBuckets}%</strong> (must equal 100)
                     </p>
 
-                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: "0.5rem",
+                            marginTop: "0.5rem",
+                        }}
+                    >
                         <input
                             type="text"
                             placeholder="New bucket name"
@@ -429,7 +409,13 @@ export default function ProfilePage() {
                         ))}
                     </select>
 
-                    <div style={{ display: "flex", gap: "1rem", margin: "0.5rem 0" }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: "1rem",
+                            margin: "0.5rem 0",
+                        }}
+                    >
                         <label>
                             <input
                                 type="checkbox"
@@ -438,7 +424,9 @@ export default function ProfilePage() {
                                     setNewObligation({
                                         ...newObligation,
                                         isClass: e.target.checked,
-                                        hasMeetings: e.target.checked ? true : newObligation.hasMeetings,
+                                        hasMeetings: e.target.checked
+                                            ? true
+                                            : newObligation.hasMeetings,
                                     })
                                 }
                             />
@@ -471,14 +459,28 @@ export default function ProfilePage() {
                                 </p>
                             ))}
 
-                            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    gap: "0.5rem",
+                                    alignItems: "center",
+                                }}
+                            >
                                 <select
                                     value={newMeeting.day}
                                     onChange={(e) =>
                                         setNewMeeting({ ...newMeeting, day: e.target.value })
                                     }
                                 >
-                                    {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map((d) => (
+                                    {[
+                                        "Monday",
+                                        "Tuesday",
+                                        "Wednesday",
+                                        "Thursday",
+                                        "Friday",
+                                        "Saturday",
+                                        "Sunday",
+                                    ].map((d) => (
                                         <option key={d} value={d}>
                                             {d}
                                         </option>
@@ -506,7 +508,14 @@ export default function ProfilePage() {
                         </div>
                     )}
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginTop: "0.75rem" }}>
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "0.75rem",
+                            marginTop: "0.75rem",
+                        }}
+                    >
                         <div>
                             <label>Priority (% within bucket)</label>
                             <input
@@ -562,20 +571,39 @@ export default function ProfilePage() {
                                 ) : (
                                     <ul>
                                         {bkt.obligations.map((o, oIdx) => (
-                                            <li key={o.name + oIdx}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                                            <li key={o.name + oIdx} className="obligation-card">
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        justifyContent: "space-between",
+                                                        alignItems: "center",
+                                                        gap: "0.75rem",
+                                                        flexWrap: "wrap",
+                                                    }}
+                                                >
                                                     <div>
                                                         <strong>{o.name}</strong>{" "}
                                                         <span style={{ opacity: 0.85 }}>
-                              ({o.isClass ? "Class" : o.hasMeetings ? "Has meetings" : "Flexible"})
+                              ({o.isClass
+                                                            ? "Class"
+                                                            : o.hasMeetings
+                                                                ? "Has meetings"
+                                                                : "Flexible"})
                             </span>
-                                                        <div style={{ fontSize: "0.9rem", opacity: 0.8 }}>
+                                                        <div
+                                                            style={{ fontSize: "0.9rem", opacity: 0.8 }}
+                                                        >
                                                             Max stretch: {o.maxStretch}h
                                                         </div>
                                                     </div>
 
                                                     <div style={{ minWidth: 220 }}>
-                                                        <div style={{ fontSize: "0.85rem", marginBottom: 4 }}>
+                                                        <div
+                                                            style={{
+                                                                fontSize: "0.85rem",
+                                                                marginBottom: 4,
+                                                            }}
+                                                        >
                                                             {o.priority}% in {bkt.name}
                                                         </div>
                                                         <input
@@ -591,11 +619,72 @@ export default function ProfilePage() {
                                                                 )
                                                             }
                                                         />
+
+                                                        {/* Preferred Time Slots row */}
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                gap: "12px",
+                                                                marginTop: "6px",
+                                                                fontSize: "0.85rem",
+                                                            }}
+                                                        >
+                                                            {["morning", "afternoon", "evening", "night"].map(
+                                                                (slot) => (
+                                                                    <label
+                                                                        key={slot}
+                                                                        style={{
+                                                                            display: "flex",
+                                                                            alignItems: "center",
+                                                                            gap: "4px",
+                                                                        }}
+                                                                    >
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={(o.preferredTimeBlocks || []).includes(
+                                                                                slot
+                                                                            )}
+                                                                            onChange={(e) => {
+                                                                                const updated = e.target.checked
+                                                                                    ? [...(o.preferredTimeBlocks || []), slot]
+                                                                                    : (o.preferredTimeBlocks || []).filter(
+                                                                                        (s) => s !== slot
+                                                                                    );
+
+                                                                                setBuckets((prev) => {
+                                                                                    const copy = [...prev];
+                                                                                    copy[bIdx] = {
+                                                                                        ...copy[bIdx],
+                                                                                        obligations: copy[bIdx].obligations.map(
+                                                                                            (ob, idx) =>
+                                                                                                idx === oIdx
+                                                                                                    ? {
+                                                                                                        ...ob,
+                                                                                                        preferredTimeBlocks: updated,
+                                                                                                    }
+                                                                                                    : ob
+                                                                                        ),
+                                                                                    };
+                                                                                    return copy;
+                                                                                });
+                                                                            }}
+                                                                        />
+                                                                        {slot}
+                                                                    </label>
+                                                                )
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
 
                                                 {o.meetingTimes.length > 0 && (
-                                                    <div style={{ marginTop: 4, fontSize: "0.9rem", opacity: 0.9 }}>
+                                                    <div
+                                                        style={{
+                                                            marginTop: 4,
+                                                            fontSize: "0.9rem",
+                                                            opacity: 0.9,
+                                                        }}
+                                                    >
                                                         {o.meetingTimes.map((m, i) => (
                                                             <div key={i}>
                                                                 {m.day}: {m.start}–{m.end}

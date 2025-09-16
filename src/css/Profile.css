@@ -92,4 +92,13 @@
     color: #f8f8f8;
 }
 
+nav {
+    border-radius: 62px;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 14px 30px;
+    width: 40%;
+    margin: 0 auto;
+}
+
+
 

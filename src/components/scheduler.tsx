@@ -1,15 +1,29 @@
-import {
+import React, {
     useState,
     forwardRef,
     useImperativeHandle,
 } from "react";
 import { generateSchedule } from "../utils/simulatedAnnealingScheduler";
-import type { Schedule, Category } from "../utils/simulatedAnnealingScheduler";
+import type {
+    Schedule,
+    Category,
+    MeetingTime,
+} from "../utils/simulatedAnnealingScheduler";
 import { ScheduleGrid } from "./ScheduleGrid";
 import "../css/Modal.css";
 import "../css/scheduler.css";
 
-const CATEGORIES: Category[] = [
+/** ===========================
+ * Public ref handle (exported)
+ * =========================== */
+export interface SchedulerHandle {
+    generate: () => Schedule; // returns the generated schedule
+}
+
+/** ===========================
+ * Fallback demo categories
+ * =========================== */
+const FALLBACK_CATEGORIES: Category[] = [
     {
         id: "school",
         name: "school-work",
@@ -94,12 +108,132 @@ const CATEGORIES: Category[] = [
     },
 ];
 
-const Scheduler = forwardRef((props, ref) => {
+/** ===========================
+ * Time parsing helpers
+ * Accept "09:00", "930", "12:30 PM", or numbers like 1330
+ * =========================== */
+function parseTimeToHHMM(input: unknown): number | undefined {
+    if (typeof input === "number" && Number.isFinite(input)) return input;
+    if (typeof input !== "string") return undefined;
+
+    const s = input.trim();
+
+    const ampm = s.match(/^(\d{1,2})(?::?(\d{2}))?\s*(AM|PM)$/i);
+    if (ampm) {
+        let h = parseInt(ampm[1], 10);
+        const m = parseInt(ampm[2] || "0", 10);
+        const suffix = ampm[3].toUpperCase();
+        if (h === 12) h = 0;       // 12 AM -> 0
+        if (suffix === "PM") h += 12;
+        return h * 100 + m;
+    }
+
+    const colon = s.match(/^(\d{1,2}):(\d{2})$/);
+    if (colon) {
+        const h = parseInt(colon[1], 10);
+        const m = parseInt(colon[2], 10);
+        if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return h * 100 + m;
+    }
+
+    const compact = s.match(/^(\d{3,4})$/);
+    if (compact) {
+        const val = parseInt(compact[1], 10);
+        const h = Math.floor(val / 100);
+        const m = val % 100;
+        if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return h * 100 + m;
+    }
+
+    return undefined;
+}
+
+function coerceMeetingTimes(raw: any): MeetingTime[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((mt) => {
+            const day =
+                typeof mt?.day === "string" ? mt.day.toLowerCase() : undefined;
+            const start = parseTimeToHHMM(mt?.start);
+            const end = parseTimeToHHMM(mt?.end);
+            if (!day || start == null || end == null) return null;
+            return { day, start, end } as MeetingTime;
+        })
+        .filter(Boolean) as MeetingTime[];
+}
+
+/** ===========================
+ * Adapt activeProfile → Category[]
+ * =========================== */
+function profileToCategories(profile: any): Category[] {
+    const buckets = Array.isArray(profile?.buckets) ? profile.buckets : [];
+
+    return buckets.map((bucket: any, i: number) => {
+        const obligations = Array.isArray(bucket?.obligations)
+            ? bucket.obligations
+            : [];
+
+        const children = obligations.map((ob: any, j: number) => ({
+            id: ob?.id ?? `ob-${i}-${j}`,
+            name: ob?.name ?? `Obligation ${j + 1}`,
+            relativePriority:
+                typeof ob?.priority === "number"
+                    ? ob.priority / 100
+                    : 1 / Math.max(obligations.length, 1),
+            maxStretch: typeof ob?.maxStretch === "number" ? ob.maxStretch : 1.0,
+            preferredTimeBlocks: Array.isArray(ob?.preferredTimeBlocks)
+                ? ob.preferredTimeBlocks
+                : undefined,
+            dependencyIds: Array.isArray(ob?.dependencyIds)
+                ? ob.dependencyIds
+                : [],
+            meetingTimes: coerceMeetingTimes(ob?.meetingTimes),
+        }));
+
+        const sum = children.reduce((s, c) => s + (c.relativePriority ?? 0), 0);
+        const normalizedChildren =
+            sum > 0.0001
+                ? children.map((c) => ({
+                    ...c,
+                    relativePriority: (c.relativePriority ?? 0) / sum,
+                }))
+                : children.map((c) => ({
+                    ...c,
+                    relativePriority: 1 / Math.max(children.length, 1),
+                }));
+
+        return {
+            id: bucket?.id ?? `cat-${i}`,
+            name: bucket?.name ?? `Category ${i + 1}`,
+            priority:
+                typeof bucket?.priority === "number"
+                    ? bucket.priority / 100
+                    : 1 / Math.max(buckets.length, 1),
+            children: normalizedChildren,
+        } as Category;
+    });
+}
+
+function getActiveCategories(): Category[] {
+    try {
+        const raw = localStorage.getItem("activeProfile");
+        if (!raw) return FALLBACK_CATEGORIES;
+        const parsed = JSON.parse(raw);
+        const mapped = profileToCategories(parsed);
+        return mapped.length ? mapped : FALLBACK_CATEGORIES;
+    } catch (e) {
+        console.warn("Failed to read activeProfile; using fallback categories.", e);
+        return FALLBACK_CATEGORIES;
+    }
+}
+
+/** ===========================
+ * Component
+ * =========================== */
+const Scheduler = forwardRef<SchedulerHandle, Record<string, never>>((_, ref) => {
     const [schedule, setSchedule] = useState<Schedule | null>(null);
     const [ms, setMs] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
 
-    // modal state
+    // Modal state
     const [modalOpen, setModalOpen] = useState(false);
     const [selected, setSelected] = useState<{
         day: string;
@@ -111,39 +245,44 @@ const Scheduler = forwardRef((props, ref) => {
     const [newLabel, setNewLabel] = useState<string>("");
     const [newLength, setNewLength] = useState<number>(1);
 
-
-    const handleGenerateSchedule = () => {
-        setLoading(true);
-
-        setTimeout(() => {
-            try {
-                const t0 = performance.now();
-                const result = generateSchedule(CATEGORIES);
-                const t1 = performance.now();
-                setSchedule(result);
-                setMs(t1 - t0);
-                console.log(
-                    `Generated Weekly Schedule in ${Math.round(t1 - t0)} ms`,
-                    result
-                );
-            } catch (err) {
-                console.error("❌ Error generating schedule:", err);
-            } finally {
-                setLoading(false);
-            }
-        }, 50);
+    const persist = (s: Schedule) => {
+        try {
+            localStorage.setItem("lastSchedule", JSON.stringify(s));
+        } catch (e) {
+            console.warn("Unable to persist schedule to localStorage:", e);
+        }
     };
 
+    /** Main generate entrypoint (exposed via ref) */
+    const handleGenerateSchedule = (): Schedule => {
+        setLoading(true);
+        setModalOpen(false);
+
+        const categories = getActiveCategories();
+
+        const t0 = performance.now();
+        const result = generateSchedule(categories);
+        const t1 = performance.now();
+
+        setSchedule(result);
+        setMs(t1 - t0);
+        persist(result);
+
+        setTimeout(() => setLoading(false), 0);
+
+        console.log(`Generated Weekly Schedule in ${Math.round(t1 - t0)} ms`, result);
+        return result;
+    };
 
     useImperativeHandle(ref, () => ({
         generate: handleGenerateSchedule,
     }));
 
-
+    // Block click -> open modal
     const handleBlockClick = (
         day: string,
         block: { startIdx: number; length: number; label: string },
-        blockType: string
+        _blockType: string
     ) => {
         setSelected(block ? { ...block, day } : null);
         setNewLabel(block.label);
@@ -151,61 +290,47 @@ const Scheduler = forwardRef((props, ref) => {
         setModalOpen(true);
     };
 
-    // Clear entire contiguous block
+    // Modal actions
     const clearBlock = () => {
         if (!schedule || !selected) return;
         const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
-        for (
-            let i = selected.startIdx;
-            i < selected.startIdx + selected.length;
-            i++
-        ) {
+        for (let i = selected.startIdx; i < selected.startIdx + selected.length; i++) {
             updated[selected.day][i] = null;
         }
         setSchedule(updated);
+        persist(updated);
         setModalOpen(false);
     };
 
-    // Replace block with another obligation, adjusting length
     const updateBlock = () => {
         if (!schedule || !selected) return;
         const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
 
-        // clear old block
-        for (
-            let i = selected.startIdx;
-            i < selected.startIdx + selected.length;
-            i++
-        ) {
+        for (let i = selected.startIdx; i < selected.startIdx + selected.length; i++) {
             updated[selected.day][i] = null;
         }
-
-        // apply new block
-        for (
-            let i = selected.startIdx;
-            i < selected.startIdx + newLength;
-            i++
-        ) {
+        for (let i = selected.startIdx; i < selected.startIdx + newLength; i++) {
             if (i < updated[selected.day].length) {
                 updated[selected.day][i] = newLabel;
             }
         }
 
         setSchedule(updated);
+        persist(updated);
         setModalOpen(false);
     };
 
-    // obligations list for dropdown
-    const allObligations = CATEGORIES.flatMap((cat) =>
+    // for modal dropdown options
+    const currentCategories = getActiveCategories();
+    const allObligations = currentCategories.flatMap((cat) =>
         cat.children.map((child) => child.name)
     );
 
-    // compute end time preview for slider
     const blockEnd = selected ? selected.startIdx + newLength : null;
 
     return (
         <div style={{ padding: 16 }}>
-            {/* 🔹 Loading Overlay */}
+            {/* Loading overlay */}
             {loading && (
                 <div className="loading-overlay">
                     <div className="loading-message">
@@ -215,35 +340,27 @@ const Scheduler = forwardRef((props, ref) => {
                 </div>
             )}
 
+            {/* Perf info */}
             {ms !== null && (
                 <div style={{ marginBottom: 8 }}>
                     Generated in {Math.round(ms)} ms
                 </div>
             )}
 
+            {/* Grid */}
             {schedule && (
-                <ScheduleGrid
-                    schedule={schedule}
-                    onBlockClick={handleBlockClick}
-                />
+                <ScheduleGrid schedule={schedule} onBlockClick={handleBlockClick} />
             )}
 
-
+            {/* Edit modal */}
             {modalOpen && selected && (
-                <div
-                    className="modal-overlay"
-                    onClick={() => setModalOpen(false)}
-                >
-                    <div
-                        className="modal-card"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+                    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
                         <h3>Modify Block</h3>
                         <p>
                             {selected.label} • {selected.length * 15} minutes
                         </p>
 
-                        {/* Form panel */}
                         <div className="modal-form">
                             <label>
                                 Change to:
@@ -267,16 +384,13 @@ const Scheduler = forwardRef((props, ref) => {
                                     max={selected.length * 2}
                                     step={1}
                                     value={newLength}
-                                    onChange={(e) =>
-                                        setNewLength(Number(e.target.value))
-                                    }
+                                    onChange={(e) => setNewLength(Number(e.target.value))}
                                 />
                             </label>
 
                             {blockEnd && (
                                 <p style={{ fontSize: "0.9rem", color: "#9ca3af" }}>
-                                    Adjusted block runs from index {selected.startIdx} to{" "}
-                                    {blockEnd}
+                                    Adjusted block runs from index {selected.startIdx} to {blockEnd}
                                 </p>
                             )}
                         </div>
