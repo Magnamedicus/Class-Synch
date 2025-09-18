@@ -1,0 +1,81 @@
+.questionnaire-layout {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    padding: 40px;
+    box-sizing: border-box;
+}
+
+.card-side {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.form-side {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px;
+}
+
+.form-side label {
+    font-size: 20px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.form-side input {
+    padding: 12px;
+    font-size: 18px;
+    border-radius: 8px;
+    border: 2px solid #ccc;
+    background: #fff;      /* ✅ white background */
+    color: #222;           /* ✅ dark text */
+    outline: none;
+    margin-bottom: 20px;
+}
+
+.form-side input:focus {
+    border-color: #0703f7; /* match card accent */
+    box-shadow: 0 0 6px rgba(7, 3, 247, 0.4);
+}
+
+.continue-btn-wrapper {
+    position: fixed;
+    bottom: 30px;
+    right: 40px;
+}
+
+.questionnaire-layout {
+    background: linear-gradient(135deg, #000 0%, #111 100%);
+}
+
+/* Wraps entire page */
+.questionnaire-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;  /* centers the title horizontally */
+    justify-content: flex-start;
+}
+
+/* Title at top */
+.title-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center; /* ✅ center horizontally */
+    margin: 20px 0;          /* spacing above/below */
+}
+
+.questionnaire-page {
+    position: relative;
+    background: #000;
+    color: #fff;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+}
+

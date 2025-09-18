@@ -1,0 +1,70 @@
+.custom-number-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;   /* ✅ keep it aligned left */
+    gap: 6px;                      /* space between - / input / + */
+    margin-left: 5px;             /* ✅ move input closer to card */
+}
+
+.custom-number-input {
+    width: 25px !important;          /* ✅ force fixed width */
+    min-width: 100px !important;
+    max-width: 80px !important;
+
+    height: 70px !important;         /* ✅ taller */
+    font-size: 90px !important;      /* ✅ larger number */
+    font-weight: bold !important;
+
+    text-align: center;
+    line-height: 70px;               /* vertically centers text */
+
+    border-radius: 12px;
+    border: 3px solid #0aa4f8;
+    background: #111;
+    color: #222 !important;
+
+    -webkit-appearance: none;        /* ✅ reset native styles */
+    -moz-appearance: textfield;
+    appearance: none;
+
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.custom-number-input:focus {
+    border-color: #00ffcc;
+    box-shadow: 0 0 12px rgba(0, 255, 204, 0.6);
+    outline: none;
+}
+
+.custom-number-input::-webkit-outer-spin-button,
+.custom-number-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.custom-number-input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Increment/Decrement buttons */
+.num-btn {
+    background: #0aa4f8;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 28px;          /* ✅ larger symbols */
+    font-weight: bold;
+    width: 50px;              /* ✅ taller & more balanced */
+    height: 70px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.num-btn:hover {
+    background: #00ffcc;
+}
+
+.num-btn:active {
+    transform: scale(0.9);
+}

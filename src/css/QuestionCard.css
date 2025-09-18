@@ -1,0 +1,53 @@
+/* Base container */
+.container {
+    width: 320px;              /* bigger */
+    height: 380px;             /* bigger */
+    perspective: 1000px;
+    margin-top: -40px;         /* lift card slightly higher */
+}
+
+/* The flipping body */
+.cardbody {
+    height: 100%;
+    width: 100%;
+    position: relative;
+    transition: transform 1200ms;
+    transform-style: preserve-3d;
+    border-radius: 2rem;
+}
+
+/* Flip on hover */
+.container:hover > .cardbody {
+    cursor: pointer;
+    transform: rotateY(180deg) rotateZ(180deg);
+}
+
+/* Faces */
+.front, .back {
+    height: 100%;
+    width: 100%;
+    border-radius: 2rem;
+    position: absolute;
+    box-shadow: 0 0 20px 3px rgba(0, 0, 0, 0.3);
+    backface-visibility: hidden;
+    background: linear-gradient(-135deg, #0703f7, #bcff04);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    text-align: center;
+}
+
+.back {
+    transform: rotateY(180deg) rotateZ(180deg);
+}
+
+/* Text styles */
+.front-heading, .back-heading {
+    font-size: 26px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}

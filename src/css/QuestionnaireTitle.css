@@ -1,0 +1,71 @@
+/* src/css/QuestionnaireTitle.css */
+
+.qt-title {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    z-index: 1000;
+
+    /* font basics */
+    font-family: 'Orbitron', 'Poppins', 'Segoe UI', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+
+    /* gradient text */
+    background: linear-gradient(90deg, #00ffe0, #f6f4f6, #00ffe0);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+    /* glowing neon shadows */
+    text-shadow:
+            0 0 5px rgba(0, 255, 204, 0.8),
+            0 0 10px rgba(248, 241, 248, 0.9),
+            0 0 20px rgba(0, 255, 204, 0.6),
+            0 0 40px rgba(237, 235, 237, 0.96);
+
+    /* fancy animation */
+    animation:
+            glowPulse 3s infinite alternate ease-in-out,
+            gradientShift 8s linear infinite,
+            floaty 6s ease-in-out infinite;
+}
+
+/* glowing intensity animation */
+@keyframes glowPulse {
+    0% {
+        text-shadow:
+                0 0 5px rgba(0, 255, 204, 0.7),
+                0 0 10px rgba(248, 246, 248, 0.91),
+                0 0 20px rgba(0, 255, 204, 0.4),
+                0 0 40px rgba(251, 247, 251, 0.97);
+        transform: skewX(0deg);
+    }
+    100% {
+        text-shadow:
+                0 0 15px rgba(0, 255, 204, 1),
+                0 0 30px rgba(248, 246, 248, 0.8),
+                0 0 60px rgba(0, 255, 204, 0.6),
+                0 0 80px rgba(248, 247, 248, 0.95);
+        transform: skewX(3deg);
+    }
+}
+
+/* gradient shifting animation */
+@keyframes gradientShift {
+    to {
+        background-position: 200% center;
+    }
+}
+
+/* subtle floating motion */
+@keyframes floaty {
+    0%, 100% {
+        transform: translateY(0) rotate(-1deg);
+    }
+    50% {
+        transform: translateY(-6px) rotate(1deg);
+    }
+}
