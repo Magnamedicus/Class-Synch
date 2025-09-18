@@ -4,6 +4,7 @@ import Home from "./pages/home";
 import Profile from "./pages/Profile";
 import Scheduler from "./components/scheduler"; // if this is a page
 import About from "./pages/about";
+import QuestionnairePage from "./pages/QuestionnairePage.tsx";
 
 // Define routes
 const router = createBrowserRouter([
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
         path: "/about",
         element: <About />,
     },
+    {
+        path: "/questionnaire",
+        element: <QuestionnairePage />,
+    }
 ]);
 
 export default router;
