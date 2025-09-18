@@ -9,6 +9,7 @@ export default function Navbar() {
             <div className="navbar__logo">CLASS SYNCH</div>
             <ul className="navbar__links">
                 <li><Link to="/">Home</Link></li>
+                <li><Link to="/questionnaire">Questionnaire</Link></li>
                 <li><Link to="/schedule">My Schedule</Link></li>
                 <li><Link to="/profile">Profile</Link></li>
                 <li><Link to="/about">About</Link></li>
