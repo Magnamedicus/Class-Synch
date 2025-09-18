@@ -1,4 +1,3 @@
-// src/components/QuestionnaireTitle.tsx
 import React from 'react';
 import '../css/QuestionnaireTitle.css';
 

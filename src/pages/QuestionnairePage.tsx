@@ -5,6 +5,8 @@ import BackButton from '../components/BackButton';
 import NumberInput from '../components/inputs/NumberInput'; // ✅ custom input
 import '../css/QuestionnairePage.css';
 import QuestionnaireTitle from '../components/QuestionnaireTitle';
+import logo from '../assets/logo.png';
+
 
 
 const questionnaire = [
@@ -110,9 +112,8 @@ const QuestionnairePage: React.FC = () => {
     return (
         <div className="questionnaire-page">
             {/* ✅ Title goes at the very top */}
-            <div className="title-wrapper">
-                <QuestionnaireTitle />
-            </div>
+            <img src={logo} alt="App Logo" className="page-logo" />
+
 
             {/* Existing layout */}
             <div className="questionnaire-layout">
