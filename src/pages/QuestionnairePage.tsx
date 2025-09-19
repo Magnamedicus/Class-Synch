@@ -2,20 +2,19 @@ import React, { useState } from 'react';
 import QuestionCard from '../components/QuestionCard';
 import ContinueButton from '../components/ContinueButton';
 import BackButton from '../components/BackButton';
-import NumberInput from '../components/inputs/NumberInput'; // ✅ custom input
+import NumberInput from '../components/inputs/NumberInput';
 import TextInput from '../components/inputs/TextInput';
+import EnterClasses from "../components/inputs/EnterClasses";
 import '../css/QuestionnairePage.css';
 
 import logo from '../assets/logo.png';
-
-
 
 const questionnaire = [
     {
         bucket: 'School Work',
         questions: [
             { id: 'q1', text: 'How many classes are you taking?', inputType: 'number', hint: 'Enter a number' },
-            { id: 'q2', text: 'Name your classes (comma separated)', inputType: 'text', hint: 'Type class names' }
+            { id: 'q2', text: 'Name your classes (or upload schedule)', inputType: 'enter-classes', hint: 'Type class names' }
         ]
     },
     {
@@ -32,11 +31,11 @@ const QuestionnairePage: React.FC = () => {
     const [questionIndex, setQuestionIndex] = useState(0);
     const [inputValue, setInputValue] = useState('');
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
+    const [classes, setClasses] = useState<string[]>([]); // ✅ track classes here
 
     const currentBucket = questionnaire[bucketIndex];
     const currentQuestion = currentBucket?.questions[questionIndex];
 
-    // ✅ Renderer function for inputs
     const renderInput = () => {
         if (!currentQuestion) return null;
 
@@ -46,16 +45,22 @@ const QuestionnairePage: React.FC = () => {
                     <NumberInput
                         value={inputValue}
                         onChange={setInputValue}
-                        placeholder={0}
+                        placeholder="0"
                     />
                 );
             case 'text':
                 return (
                     <TextInput
-
                         value={inputValue}
                         onChange={setInputValue}
                         placeholder={currentQuestion.hint}
+                    />
+                );
+            case 'enter-classes':
+                return (
+                    <EnterClasses
+                        value={classes}
+                        onChange={setClasses}
                     />
                 );
             case 'time':
@@ -81,14 +86,20 @@ const QuestionnairePage: React.FC = () => {
     const handleContinue = () => {
         if (!currentQuestion) return;
 
-        setAnswers(prev => ({
-            ...prev,
-            [currentQuestion.id]: inputValue
-        }));
+        if (currentQuestion.inputType === 'enter-classes') {
+            setAnswers(prev => ({
+                ...prev,
+                [currentQuestion.id]: classes.join(',')
+            }));
+        } else {
+            setAnswers(prev => ({
+                ...prev,
+                [currentQuestion.id]: inputValue
+            }));
+            setInputValue('');
+        }
 
-        setInputValue('');
-
-        // Next question or bucket
+        // ✅ Progress to next question
         if (questionIndex < currentBucket.questions.length - 1) {
             setQuestionIndex(prev => prev + 1);
         } else if (bucketIndex < questionnaire.length - 1) {
@@ -110,13 +121,15 @@ const QuestionnairePage: React.FC = () => {
         }
     };
 
+    const isClassesQuestion = currentQuestion?.inputType === 'enter-classes';
+    const disableContinue = isClassesQuestion
+        ? classes.length === 0
+        : !inputValue.trim();
+
     return (
         <div className="questionnaire-page">
-            {/* ✅ Title goes at the very top */}
             <img src={logo} alt="App Logo" className="page-logo" />
 
-
-            {/* Existing layout */}
             <div className="questionnaire-layout">
                 <div className="card-side">
                     {currentQuestion && (
@@ -145,14 +158,13 @@ const QuestionnairePage: React.FC = () => {
                     {currentQuestion && (
                         <ContinueButton
                             onClick={handleContinue}
-                            disabled={!inputValue.trim()}
+                            disabled={disableContinue}
                         />
                     )}
                 </div>
             </div>
         </div>
     );
-
 };
 
 export default QuestionnairePage;

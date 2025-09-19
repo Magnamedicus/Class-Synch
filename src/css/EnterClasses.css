@@ -1,0 +1,170 @@
+.enter-classes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    color: #fff;
+}
+
+.option-header {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(90deg, #ff8a00, #e52e71);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.input-row {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.class-input {
+    flex: 1;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    border: 2px solid #6a5acd;
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.class-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.add-btn {
+    background: linear-gradient(135deg, #00ffcc, #0066ff);
+    border: none;
+    padding: 0.7rem 1.4rem;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #111;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 0 12px rgba(0, 255, 204, 0.6);
+}
+
+.add-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 20px rgba(0, 255, 204, 0.9);
+}
+
+/* Dropdown */
+.dropdown-wrapper {
+    position: relative;
+}
+
+.dropdown-toggle {
+    padding: 0.7rem 1.2rem;
+    border-radius: 10px;
+    border: 2px solid #ff8a00;
+    background: rgba(20, 20, 30, 0.9);
+    color: #ff8a00;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.dropdown-toggle:hover {
+    background: #ff8a00;
+    color: #fff;
+}
+
+.dropdown-list {
+    position: absolute;
+    top: 110%;
+    left: 0;
+    min-width: 240px;
+    background: #1a1a2e;
+    border-radius: 12px;
+    border: 2px solid #ff8a00;
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    padding: 0.4rem 0;
+    animation: dropdownFade 0.3s ease;
+}
+
+@keyframes dropdownFade {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    color: #fff;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 138, 0, 0.5);
+}
+
+.remove-btn-small {
+    background: crimson;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.remove-btn-small:hover {
+    background: #ff4d6d;
+}
+
+/* Upload */
+.file-upload-form {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.file-upload-label {
+    cursor: pointer;
+    background: rgba(40, 40, 60, 0.95);
+    padding: 2rem 3rem;
+    border-radius: 20px;
+    border: 3px dashed #6a5acd;
+    box-shadow: 0 0 25px rgba(106, 90, 205, 0.5);
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.file-upload-label:hover {
+    background: rgba(70, 50, 130, 1);
+    box-shadow: 0 0 35px rgba(106, 90, 205, 0.8);
+}
+
+.file-upload-label svg {
+    fill: #6a5acd;
+    margin-bottom: 0.5rem;
+}
+
+.file-upload-design p {
+    margin: 0.3rem 0;
+}
+
+.browse-button {
+    background: #6a5acd;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+.browse-button:hover {
+    background: #00ffcc;
+    color: #111;
+}
+
+.file-upload-label input {
+    display: none; /* Hide the default ugly file input */
+}
