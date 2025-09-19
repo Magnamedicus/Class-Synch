@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from "react-router-dom";
 import QuestionCard from '../components/QuestionCard';
 import ContinueButton from '../components/ContinueButton';
 import BackButton from '../components/BackButton';
@@ -130,6 +131,10 @@ const QuestionnairePage: React.FC = () => {
     return (
         <div className="questionnaire-page">
             <img src={logo} alt="App Logo" className="page-logo" />
+
+            <Link to="/">
+                <img src={logo} alt="App Logo" className="page-logo" />
+            </Link>
 
             <div className="questionnaire-layout">
                 <div className="card-side">

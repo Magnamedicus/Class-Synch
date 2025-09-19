@@ -1,3 +1,5 @@
+/* src/css/EnterClasses.css */
+
 .enter-classes-container {
     display: flex;
     flex-direction: column;
@@ -22,8 +24,8 @@
 .class-input {
     flex: 1;
     padding: 0.7rem 1rem;
-    border-radius: 10px;
-    border: 2px solid #6a5acd;
+    border-radius: 0.625rem; /* 10px */
+    border: 0.125rem solid #6a5acd; /* 2px */
     font-size: 1rem;
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
@@ -40,15 +42,15 @@
     font-size: 1rem;
     font-weight: bold;
     color: #111;
-    border-radius: 12px;
+    border-radius: 0.75rem; /* 12px */
     cursor: pointer;
     transition: all 0.3s;
-    box-shadow: 0 0 12px rgba(0, 255, 204, 0.6);
+    box-shadow: 0 0 0.75rem rgba(0, 255, 204, 0.6); /* 12px */
 }
 
 .add-btn:hover {
     transform: scale(1.08);
-    box-shadow: 0 0 20px rgba(0, 255, 204, 0.9);
+    box-shadow: 0 0 1.25rem rgba(0, 255, 204, 0.9); /* 20px */
 }
 
 /* Dropdown */
@@ -58,13 +60,14 @@
 
 .dropdown-toggle {
     padding: 0.7rem 1.2rem;
-    border-radius: 10px;
-    border: 2px solid #ff8a00;
+    border-radius: 0.625rem; /* 10px */
+    border: 0.125rem solid #ff8a00; /* 2px */
     background: rgba(20, 20, 30, 0.9);
     color: #ff8a00;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
+    font-size: 1rem;
 }
 
 .dropdown-toggle:hover {
@@ -76,18 +79,18 @@
     position: absolute;
     top: 110%;
     left: 0;
-    min-width: 240px;
+    min-width: 15rem; /* 240px */
     background: #1a1a2e;
-    border-radius: 12px;
-    border: 2px solid #ff8a00;
-    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
+    border-radius: 0.75rem; /* 12px */
+    border: 0.125rem solid #ff8a00; /* 2px */
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.5); /* 12px, 25px */
     z-index: 2000;
     padding: 0.4rem 0;
     animation: dropdownFade 0.3s ease;
 }
 
 @keyframes dropdownFade {
-    from { opacity: 0; transform: translateY(-8px); }
+    from { opacity: 0; transform: translateY(-0.5rem); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -108,7 +111,7 @@
 .remove-btn-small {
     background: crimson;
     border: none;
-    border-radius: 6px;
+    border-radius: 0.375rem; /* 6px */
     color: #fff;
     font-size: 0.85rem;
     padding: 0.3rem 0.6rem;
@@ -130,21 +133,23 @@
     cursor: pointer;
     background: rgba(40, 40, 60, 0.95);
     padding: 2rem 3rem;
-    border-radius: 20px;
-    border: 3px dashed #6a5acd;
-    box-shadow: 0 0 25px rgba(106, 90, 205, 0.5);
+    border-radius: 1.25rem; /* 20px */
+    border: 0.1875rem dashed #6a5acd; /* 3px */
+    box-shadow: 0 0 1.5rem rgba(106, 90, 205, 0.5); /* 25px */
     text-align: center;
     transition: all 0.3s;
 }
 
 .file-upload-label:hover {
     background: rgba(70, 50, 130, 1);
-    box-shadow: 0 0 35px rgba(106, 90, 205, 0.8);
+    box-shadow: 0 0 2rem rgba(106, 90, 205, 0.8); /* 35px */
 }
 
 .file-upload-label svg {
     fill: #6a5acd;
     margin-bottom: 0.5rem;
+    width: 2.5rem;
+    height: auto;
 }
 
 .file-upload-design p {
@@ -154,10 +159,11 @@
 .browse-button {
     background: #6a5acd;
     padding: 0.5rem 1rem;
-    border-radius: 10px;
+    border-radius: 0.625rem; /* 10px */
     color: #fff;
     font-weight: bold;
     transition: background 0.3s;
+    display: inline-block;
 }
 
 .browse-button:hover {
@@ -167,4 +173,68 @@
 
 .file-upload-label input {
     display: none; /* Hide the default ugly file input */
+}
+
+/* -------------------- */
+/* Responsive Breakpoints */
+/* -------------------- */
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .enter-classes-container {
+        gap: 1rem;
+    }
+
+    .class-input {
+        font-size: 0.95rem;
+    }
+
+    .add-btn {
+        font-size: 0.9rem;
+        padding: 0.6rem 1.2rem;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .input-row {
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    .add-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .dropdown-toggle {
+        width: 100%;
+        font-size: 0.9rem;
+    }
+
+    .file-upload-label {
+        width: 100%;
+        padding: 1.5rem;
+    }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+    .option-header {
+        font-size: 1.1rem;
+    }
+
+    .class-input {
+        font-size: 0.85rem;
+        padding: 0.6rem;
+    }
+
+    .dropdown-list {
+        min-width: 12rem; /* smaller dropdown */
+    }
+
+    .browse-button {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
 }

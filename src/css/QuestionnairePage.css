@@ -11,7 +11,7 @@
     background-size: cover;
     background-position: center 20%; /* pushes image down a little */
 
-    color: #fff; /* keep text readable if needed */
+    color: #fff;
 }
 
 /* Layout for card + form */
@@ -19,7 +19,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5rem; /* 80px */
+    gap: 5rem; /* 5 × root font size */
     height: 100%;
     width: 100%;
 }
@@ -31,6 +31,7 @@
 .form-side {
     flex: 1;
     max-width: 37.5rem; /* 600px */
+    width: 100%;
 }
 
 /* Button wrappers */
@@ -55,13 +56,83 @@
     z-index: 2000;
     cursor: pointer;
 
-    opacity: 0.6; /* ✅ slightly transparent */
+    opacity: 0.6;
     transition: transform 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
 }
 
 /* On hover, logo brightens + glows */
 .page-logo:hover {
     transform: scale(1.1);
-    filter: drop-shadow(0 0 0.5rem rgba(255, 255, 255, 0.7)); /* 8px */
-    opacity: 1; /* ✅ full visibility on hover */
+    filter: drop-shadow(0 0 0.5rem rgba(255, 255, 255, 0.7));
+    opacity: 1;
+}
+
+/* ========================= */
+/* ✅ Responsive Adjustments */
+/* ========================= */
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .questionnaire-layout {
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 2rem 1rem;
+        gap: 2rem;
+    }
+
+    .form-side {
+        max-width: 90%;
+        width: 100%;
+    }
+
+    .card-side {
+        width: 100%;
+        max-width: 30rem;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .questionnaire-layout {
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .form-side {
+        width: 100%;
+        max-width: 22rem;
+    }
+
+    .card-side {
+        max-width: 22rem;
+    }
+
+    .continue-btn-wrapper,
+    .back-btn-wrapper {
+        bottom: 1.5rem;
+    }
+
+    .page-logo {
+        height: 8rem;
+    }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+    .form-side, .card-side {
+        max-width: 18rem;
+    }
+
+    .continue-btn-wrapper,
+    .back-btn-wrapper {
+        bottom: 1rem;
+    }
+
+    .page-logo {
+        height: 6rem;
+        top: 1rem;
+        right: 1rem;
+    }
 }

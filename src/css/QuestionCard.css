@@ -1,9 +1,9 @@
 /* Base container */
 .container {
-    width: 320px;              /* bigger */
-    height: 380px;             /* bigger */
-    perspective: 1000px;
-    margin-top: -40px;         /* lift card slightly higher */
+    width: 20rem;               /* ~320px */
+    height: 23.75rem;           /* ~380px */
+    perspective: 62.5rem;       /* ~1000px */
+    margin-top: -2.5rem;        /* ~-40px */
 }
 
 /* The flipping body */
@@ -11,7 +11,7 @@
     height: 100%;
     width: 100%;
     position: relative;
-    transition: transform 1200ms;
+    transition: transform 1.2s;
     transform-style: preserve-3d;
     border-radius: 2rem;
 }
@@ -28,7 +28,7 @@
     width: 100%;
     border-radius: 2rem;
     position: absolute;
-    box-shadow: 0 0 20px 3px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 1.25rem 0.2rem rgba(0, 0, 0, 0.3);
     backface-visibility: hidden;
     background: linear-gradient(-135deg, #0703f7, #bcff04);
     color: #fff;
@@ -36,8 +36,8 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 20px;
-    padding: 20px;
+    gap: 1.25rem;   /* ~20px */
+    padding: 1.25rem; /* ~20px */
     text-align: center;
 }
 
@@ -47,7 +47,55 @@
 
 /* Text styles */
 .front-heading, .back-heading {
-    font-size: 26px;
+    font-size: 1.6rem;  /* ~26px */
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 0.6rem; /* ~10px */
+}
+
+/* ========================= */
+/* ✅ Responsive Adjustments */
+/* ========================= */
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .container {
+        width: 18rem;
+        height: 21rem;
+        margin-top: -2rem;
+    }
+
+    .front-heading, .back-heading {
+        font-size: 1.4rem;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .container {
+        width: 16rem;
+        height: 19rem;
+        margin-top: -1.5rem;
+    }
+
+    .front, .back {
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .front-heading, .back-heading {
+        font-size: 1.2rem;
+    }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+    .container {
+        width: 14rem;
+        height: 17rem;
+        margin-top: -1rem;
+    }
+
+    .front-heading, .back-heading {
+        font-size: 1rem;
+    }
 }

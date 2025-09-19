@@ -11,6 +11,7 @@
     box-shadow: 0 0 1rem rgba(0, 255, 204, 0.6);
     font-family: 'Orbitron', monospace;
     color: #00ffcc;
+    flex-wrap: wrap; /* ✅ prevents overflow on small devices */
 }
 
 .time-unit {
@@ -24,10 +25,11 @@
     font-size: 2.5rem;
     font-weight: bold;
     text-shadow: 0 0 0.5rem #00ffcc, 0 0 1rem #00ffcc;
-    padding: 0.2rem 0.5rem;
+    padding: 0.2rem 0.6rem;
     border-radius: 0.5rem;
     background: rgba(255, 255, 255, 0.05);
     min-width: 3ch;
+    max-width: 5ch;
     text-align: center;
     border: none;
     outline: none;
@@ -78,4 +80,55 @@
 .ampm-toggle:hover {
     transform: scale(1.1);
     box-shadow: 0 0 1.5rem rgba(0, 255, 204, 0.8);
+}
+
+/* 🔹 Media Queries for responsiveness */
+@media (max-width: 768px) {
+    .time-input-container {
+        gap: 0.6rem;
+        padding: 0.8rem 1rem;
+    }
+
+    .time-display-input {
+        font-size: 2rem;
+        padding: 0.2rem 0.5rem;
+    }
+
+    .time-colon {
+        font-size: 2rem;
+    }
+
+    .ampm-toggle {
+        font-size: 1rem;
+        padding: 0.4rem 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .time-input-container {
+        flex-direction: column; /* ✅ stack vertically on small phones */
+        align-items: stretch;
+        gap: 0.8rem;
+        padding: 0.6rem;
+    }
+
+    .time-unit {
+        flex-direction: row; /* ✅ hours/minutes toggle side by side */
+        gap: 0.5rem;
+    }
+
+    .time-display-input {
+        font-size: 1.6rem;
+        max-width: 4ch;
+    }
+
+    .time-colon {
+        font-size: 1.6rem;
+    }
+
+    .ampm-toggle {
+        font-size: 0.9rem;
+        padding: 0.3rem 0.6rem;
+        align-self: center;
+    }
 }
