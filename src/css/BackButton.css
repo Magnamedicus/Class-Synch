@@ -2,8 +2,8 @@
 .button {
     display: block;
     position: relative;
-    width: 56px;
-    height: 56px;
+    width: 3.5rem;   /* 56px */
+    height: 3.5rem;  /* 56px */
     margin: 0;
     overflow: hidden;
     outline: none;
@@ -17,17 +17,17 @@
     content: "";
     position: absolute;
     border-radius: 50%;
-    inset: 7px;
+    inset: 0.4375rem; /* 7px */
 }
 
 .button:before {
-    border: 4px solid #f0eeef;
+    border: 0.25rem solid #f0eeef; /* 4px */
     transition: opacity 0.4s cubic-bezier(0.77, 0, 0.175, 1) 80ms,
     transform 0.5s cubic-bezier(0.455, 0.03, 0.515, 0.955) 80ms;
 }
 
 .button:after {
-    border: 4px solid #96daf0;
+    border: 0.25rem solid #96daf0; /* 4px */
     transform: scale(1.3);
     transition: opacity 0.4s cubic-bezier(0.165, 0.84, 0.44, 1),
     transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -59,9 +59,9 @@
 
 .button-elem {
     display: block;
-    width: 20px;
-    height: 20px;
-    margin: 17px 18px 0 18px;
+    width: 1.25rem;   /* 20px */
+    height: 1.25rem;  /* 20px */
+    margin: 1.0625rem 1.125rem 0 1.125rem; /* 17px 18px 0 18px */
     transform: rotate(180deg);
     fill: #f0eeef;
 }
@@ -69,13 +69,13 @@
 .button:hover .button-box,
 .button:focus .button-box {
     transition: 0.4s;
-    transform: translateX(-56px);
+    transform: translateX(-3.5rem); /* -56px */
 }
 
 /* Position the back button bottom-left */
 .button {
     position: fixed;
-    bottom: 30px;
-    left: 30px;
+    bottom: 1.875rem; /* 30px */
+    left: 1.875rem;   /* 30px */
     z-index: 1000;
 }

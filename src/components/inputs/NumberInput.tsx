@@ -4,7 +4,7 @@ import '../../css/NumberInput.css';
 interface NumberInputProps {
     value: string;
     onChange: (value: string) => void;
-    placeholder?: string;
+    placeholder?: string | number; // ✅ allow numbers too
 }
 
 const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, placeholder }) => {
@@ -32,16 +32,28 @@ const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, placeholder 
 
     return (
         <div className="custom-number-wrapper">
-            <button type="button" className="num-btn" onClick={handleDecrement}>−</button>
+            <button
+                type="button"
+                className="num-btn"
+                onClick={handleDecrement}
+            >
+                −
+            </button>
             <input
                 type="number"
                 className="custom-number-input"
                 value={value}
                 onChange={handleChange}
-                placeholder={placeholder || "Enter a number"}
-                min="0" // ✅ also adds native browser enforcement
+                placeholder={placeholder !== undefined ? String(placeholder) : 'Enter a number'} // ✅ always stringify
+                min="0" // ✅ browser enforcement
             />
-            <button type="button" className="num-btn" onClick={handleIncrement}>+</button>
+            <button
+                type="button"
+                className="num-btn"
+                onClick={handleIncrement}
+            >
+                +
+            </button>
         </div>
     );
 };

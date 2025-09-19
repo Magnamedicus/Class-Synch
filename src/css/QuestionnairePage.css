@@ -19,7 +19,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 80px;
+    gap: 5rem; /* 80px */
     height: 100%;
     width: 100%;
 }
@@ -30,36 +30,38 @@
 
 .form-side {
     flex: 1;
-    max-width: 600px;
+    max-width: 37.5rem; /* 600px */
 }
 
 /* Button wrappers */
 .continue-btn-wrapper {
     position: absolute;
-    bottom: 40px;
-    right: 40px;
+    bottom: 2.5rem; /* 40px */
+    right: 2.5rem;  /* 40px */
 }
 
 .back-btn-wrapper {
     position: absolute;
-    bottom: 40px;
-    left: 40px;
+    bottom: 2.5rem; /* 40px */
+    left: 2.5rem;   /* 40px */
 }
 
 .page-logo {
     position: absolute;
-    top: 10px;
-    right: 30px;
-    height: 140px;        /* adjust size */
-    width: auto;         /* keep aspect ratio */
-    z-index: 2000;       /* stays above everything */
-    cursor: pointer;     /* optional: looks clickable */
-    transition: transform 0.3s ease, filter 0.3s ease;
+    top: 1.25rem;   /* 20px */
+    right: 1.875rem; /* 30px */
+    height: 10rem;   /* 160px */
+    width: auto;
+    z-index: 2000;
+    cursor: pointer;
+
+    opacity: 0.6; /* ✅ slightly transparent */
+    transition: transform 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
 }
 
-/* Add some hover flair */
+/* On hover, logo brightens + glows */
 .page-logo:hover {
     transform: scale(1.1) rotate(2deg);
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.7));
+    filter: drop-shadow(0 0 0.5rem rgba(255, 255, 255, 0.7)); /* 8px */
+    opacity: 1; /* ✅ full visibility on hover */
 }
-

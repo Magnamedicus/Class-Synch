@@ -3,8 +3,9 @@ import QuestionCard from '../components/QuestionCard';
 import ContinueButton from '../components/ContinueButton';
 import BackButton from '../components/BackButton';
 import NumberInput from '../components/inputs/NumberInput'; // ✅ custom input
+import TextInput from '../components/inputs/TextInput';
 import '../css/QuestionnairePage.css';
-import QuestionnaireTitle from '../components/QuestionnaireTitle';
+
 import logo from '../assets/logo.png';
 
 
@@ -45,13 +46,13 @@ const QuestionnairePage: React.FC = () => {
                     <NumberInput
                         value={inputValue}
                         onChange={setInputValue}
-                        placeholder={currentQuestion.hint}
+                        placeholder={0}
                     />
                 );
             case 'text':
                 return (
-                    <input
-                        type="text"
+                    <TextInput
+
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         placeholder={currentQuestion.hint}

@@ -1,0 +1,32 @@
+.text-input-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.custom-text-input {
+    width: 25rem;         /* 400px */
+    height: 4.375rem;     /* 70px */
+    font-size: 1.8rem;
+    text-align: center;
+    border: 0.125rem solid #6a5acd;  /* 2px */
+    border-radius: 0.75rem;          /* 12px */
+    outline: none;
+    background: rgba(255, 255, 255, 0.9);
+    color: #222;
+    transition: all 0.3s ease;
+    box-shadow: 0 0.25rem 0.625rem rgba(106, 90, 205, 0.3); /* 0px 4px 10px */
+}
+
+.custom-text-input::placeholder {
+    color: rgba(100, 100, 100, 0.6);
+    font-style: italic;
+}
+
+.custom-text-input:focus {
+    border-color: #00ffcc;
+    box-shadow:
+            0 0 0.9375rem #00ffcc,               /* 15px */
+            0 0 1.5625rem rgba(0, 255, 204, 0.6); /* 25px */
+    background: rgba(255, 255, 255, 1);
+}

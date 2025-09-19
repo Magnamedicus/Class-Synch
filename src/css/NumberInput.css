@@ -2,28 +2,28 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;   /* ✅ keep it aligned left */
-    gap: 6px;                      /* space between - / input / + */
-    margin-left: 5px;             /* ✅ move input closer to card */
+    gap: 0.375rem;                 /* 6px space between - / input / + */
+    margin-left: 0.3125rem;        /* 5px move input closer to card */
 }
 
 .custom-number-input {
-    width: 25px !important;          /* ✅ force fixed width */
-    min-width: 100px !important;
-    max-width: 80px !important;
+    width: 1.5625rem !important;   /* 25px force fixed width */
+    min-width: 6.25rem !important; /* 100px */
+    max-width: 5rem !important;    /* 80px */
 
-    height: 70px !important;         /* ✅ taller */
-    font-size: 90px !important;      /* ✅ larger number */
+    height: 4.375rem !important;   /* 70px taller */
+    font-size: 5.625rem !important;/* 90px larger number */
     font-weight: bold !important;
 
     text-align: center;
-    line-height: 70px;               /* vertically centers text */
+    line-height: 4.375rem;         /* 70px vertically centers text */
 
-    border-radius: 12px;
-    border: 3px solid #0aa4f8;
+    border-radius: 0.75rem;        /* 12px */
+    border: 0.1875rem solid #0aa4f8; /* 3px */
     background: #111;
     color: #222 !important;
 
-    -webkit-appearance: none;        /* ✅ reset native styles */
+    -webkit-appearance: none;      /* ✅ reset native styles */
     -moz-appearance: textfield;
     appearance: none;
 
@@ -32,7 +32,7 @@
 
 .custom-number-input:focus {
     border-color: #00ffcc;
-    box-shadow: 0 0 12px rgba(0, 255, 204, 0.6);
+    box-shadow: 0 0 0.75rem rgba(0, 255, 204, 0.6); /* 12px */
     outline: none;
 }
 
@@ -51,12 +51,12 @@
 .num-btn {
     background: #0aa4f8;
     border: none;
-    border-radius: 8px;
+    border-radius: 0.5rem;          /* 8px */
     color: #fff;
-    font-size: 28px;          /* ✅ larger symbols */
+    font-size: 1.75rem;             /* 28px larger symbols */
     font-weight: bold;
-    width: 50px;              /* ✅ taller & more balanced */
-    height: 70px;
+    width: 3.125rem;                /* 50px */
+    height: 4.375rem;               /* 70px */
     cursor: pointer;
     transition: background 0.3s, transform 0.2s;
 }
