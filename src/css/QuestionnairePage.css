@@ -61,7 +61,7 @@
 
 /* On hover, logo brightens + glows */
 .page-logo:hover {
-    transform: scale(1.1) rotate(2deg);
+    transform: scale(1.1);
     filter: drop-shadow(0 0 0.5rem rgba(255, 255, 255, 0.7)); /* 8px */
     opacity: 1; /* ✅ full visibility on hover */
 }

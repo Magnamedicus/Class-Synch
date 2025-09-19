@@ -54,7 +54,7 @@ const QuestionnairePage: React.FC = () => {
                     <TextInput
 
                         value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
+                        onChange={setInputValue}
                         placeholder={currentQuestion.hint}
                     />
                 );

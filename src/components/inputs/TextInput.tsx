@@ -9,15 +9,11 @@ interface TextInputProps {
 
 const TextInput: React.FC<TextInputProps> = ({ value, onChange, placeholder }) => {
     return (
-        <div className="text-input-container">
-            <input
-                type="text"
-                className="custom-text-input"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder={placeholder || "Type your answer..."}
-            />
+
+        <div className="input-container">
+            <input placeholder = {placeholder} type="text" />
         </div>
+
     );
 };
 
