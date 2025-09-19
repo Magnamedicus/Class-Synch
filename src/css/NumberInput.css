@@ -1,39 +1,30 @@
 .custom-number-wrapper {
     display: flex;
     align-items: center;
-    justify-content: flex-start;   /* ✅ keep it aligned left */
-    gap: 0.375rem;                 /* 6px space between - / input / + */
-    margin-left: 0.3125rem;        /* 5px move input closer to card */
+    justify-content: flex-start;
+    gap: 0.5rem;
+    margin-left: 0.3rem;
 }
 
 .custom-number-input {
-    width: 1.5625rem !important;   /* 25px force fixed width */
-    min-width: 6.25rem !important; /* 100px */
-    max-width: 5rem !important;    /* 80px */
+    width: 4rem;              /* relative width */
+    min-width: 3rem;
+    max-width: 6rem;
 
-    height: 4.375rem !important;   /* 70px taller */
-    font-size: 5.625rem !important;/* 90px larger number */
-    font-weight: bold !important;
+    height: 3.5rem;
+    font-size: 2rem;          /* ✅ default size */
+    font-weight: bold;
 
     text-align: center;
-    line-height: 4.375rem;         /* 70px vertically centers text */
 
-    border-radius: 0.75rem;        /* 12px */
-    border: 0.1875rem solid #0aa4f8; /* 3px */
+    border-radius: 0.5rem;
+    border: 0.15rem solid #0aa4f8;
     background: #111;
-    color: #222 !important;
+    color: #eee;
 
-    -webkit-appearance: none;      /* ✅ reset native styles */
+    /* ✅ completely remove browser’s native spinners */
     -moz-appearance: textfield;
-    appearance: none;
-
-    transition: border-color 0.3s, box-shadow 0.3s;
-}
-
-.custom-number-input:focus {
-    border-color: #00ffcc;
-    box-shadow: 0 0 0.75rem rgba(0, 255, 204, 0.6); /* 12px */
-    outline: none;
+    appearance: textfield;
 }
 
 .custom-number-input::-webkit-outer-spin-button,
@@ -42,21 +33,21 @@
     margin: 0;
 }
 
-.custom-number-input[type=number] {
-    -moz-appearance: textfield;
-    appearance: textfield;
+.custom-number-input:focus {
+    border-color: #00ffcc;
+    box-shadow: 0 0 0.75rem rgba(0, 255, 204, 0.6);
+    outline: none;
 }
 
-/* Increment/Decrement buttons */
 .num-btn {
     background: #0aa4f8;
     border: none;
-    border-radius: 0.5rem;          /* 8px */
+    border-radius: 0.4rem;
     color: #fff;
-    font-size: 1.75rem;             /* 28px larger symbols */
+    font-size: 1.5rem;
     font-weight: bold;
-    width: 3.125rem;                /* 50px */
-    height: 4.375rem;               /* 70px */
+    width: 2rem;
+    height: 3.5rem;
     cursor: pointer;
     transition: background 0.3s, transform 0.2s;
 }
@@ -67,4 +58,33 @@
 
 .num-btn:active {
     transform: scale(0.9);
+}
+
+/* ✅ Responsive fixes */
+@media (max-width: 600px) {
+    .custom-number-input {
+        width: 3rem;
+        height: 3rem;
+        font-size: 1.5rem;   /* slightly smaller font */
+    }
+
+    .num-btn {
+        width: 1.8rem;
+        height: 3rem;
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .custom-number-input {
+        width: 2.5rem;
+        height: 2.5rem;
+        font-size: 1.2rem;   /* ✅ shrink further */
+    }
+
+    .num-btn {
+        width: 1.5rem;
+        height: 2.5rem;
+        font-size: 1rem;
+    }
 }

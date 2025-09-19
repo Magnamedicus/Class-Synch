@@ -5,6 +5,7 @@ import BackButton from '../components/BackButton';
 import NumberInput from '../components/inputs/NumberInput';
 import TextInput from '../components/inputs/TextInput';
 import EnterClasses from "../components/inputs/EnterClasses";
+import TimeInput from '../components/inputs/TimeInput';
 import '../css/QuestionnairePage.css';
 
 import logo from '../assets/logo.png';
@@ -65,10 +66,10 @@ const QuestionnairePage: React.FC = () => {
                 );
             case 'time':
                 return (
-                    <input
+                    <TimeInput
                         type="time"
                         value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
+                        onChange={setInputValue}
                     />
                 );
             default:

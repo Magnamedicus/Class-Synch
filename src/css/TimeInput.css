@@ -1,0 +1,81 @@
+.time-input-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+
+    background: rgba(0, 0, 0, 0.6);
+    padding: 1rem 1.5rem;
+    border-radius: 1rem;
+    border: 0.2rem solid #00ffcc;
+    box-shadow: 0 0 1rem rgba(0, 255, 204, 0.6);
+    font-family: 'Orbitron', monospace;
+    color: #00ffcc;
+}
+
+.time-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.time-display-input {
+    font-size: 2.5rem;
+    font-weight: bold;
+    text-shadow: 0 0 0.5rem #00ffcc, 0 0 1rem #00ffcc;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    min-width: 3ch;
+    text-align: center;
+    border: none;
+    outline: none;
+    color: #00ffcc;
+}
+
+.time-display-input::-webkit-outer-spin-button,
+.time-display-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.time-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #00ffcc;
+    text-shadow: 0 0 0.3rem #00ffcc;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.time-btn:hover {
+    transform: scale(1.2);
+    color: #fff;
+}
+
+.time-colon {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #00ffcc;
+    text-shadow: 0 0 0.5rem #00ffcc, 0 0 1rem #00ffcc;
+}
+
+.ampm-toggle {
+    margin-left: 1rem;
+    padding: 0.5rem 1rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 0.5rem;
+    background: linear-gradient(135deg, #6a5acd, #00ffcc);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 0 1rem rgba(106, 90, 205, 0.6);
+    transition: all 0.3s ease;
+}
+
+.ampm-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 1.5rem rgba(0, 255, 204, 0.8);
+}
