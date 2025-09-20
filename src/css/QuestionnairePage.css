@@ -2,65 +2,68 @@
 
 .questionnaire-page {
     position: relative;
-    height: 100vh;
+    min-height: 100vh;
     width: 100%;
     overflow: hidden;
 
     /* ✅ background image */
-    background: url('../assets/q_bg.png') no-repeat center center fixed;
+    background: url("../assets/q_bg.png") no-repeat center center fixed;
     background-size: cover;
-    background-position: center 20%; /* pushes image down a little */
-
+    background-position: center 20%;
     color: #fff;
 }
 
 /* Layout for card + form */
+/* Layout for card + form */
 .questionnaire-layout {
     display: flex;
-    align-items: center;
     justify-content: center;
-    gap: 5rem; /* 5 × root font size */
-    height: 100%;
+    gap: clamp(2rem, 5vw, 5rem);
     width: 100%;
+    box-sizing: border-box;
+
+    /* ✅ Instead of flex-start, center vertically but control position with padding */
+    align-items: flex-start;
+    padding-top: 28vh; /* pushes BOTH card and form down together */
 }
 
 .card-side {
     flex: 0 0 auto;
+    max-width: clamp(16rem, 40vw, 28rem);
 }
 
 .form-side {
     flex: 1;
-    max-width: 37.5rem; /* 600px */
+    max-width: clamp(18rem, 50vw, 37.5rem);
     width: 100%;
 }
 
 /* Button wrappers */
 .continue-btn-wrapper {
     position: absolute;
-    bottom: 2.5rem; /* 40px */
-    right: 2.5rem;  /* 40px */
+    bottom: 5vh;
+    right: 5vw;
 }
 
 .back-btn-wrapper {
     position: absolute;
-    bottom: 2.5rem; /* 40px */
-    left: 2.5rem;   /* 40px */
+    bottom: 5vh;
+    left: 5vw;
 }
 
+/* Logo */
 .page-logo {
     position: absolute;
-    top: 1.25rem;   /* 20px */
-    right: 1.875rem; /* 30px */
-    height: 10rem;   /* 160px */
+    top: 2vh;
+    right: 3vw;
+    height: clamp(4rem, 10vw, 10rem);
     width: auto;
     z-index: 2000;
     cursor: pointer;
-
     opacity: 0.6;
     transition: transform 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
 }
 
-/* On hover, logo brightens + glows */
 .page-logo:hover {
     transform: scale(1.1);
     filter: drop-shadow(0 0 0.5rem rgba(255, 255, 255, 0.7));
@@ -76,19 +79,16 @@
     .questionnaire-layout {
         flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
-        padding: 2rem 1rem;
+        padding: 6vh 2vw;
         gap: 2rem;
+    }
+
+    .card-side {
+        max-width: 26rem;
     }
 
     .form-side {
         max-width: 90%;
-        width: 100%;
-    }
-
-    .card-side {
-        width: 100%;
-        max-width: 30rem;
     }
 }
 
@@ -97,41 +97,42 @@
     .questionnaire-layout {
         flex-direction: column;
         align-items: center;
+        padding: 6vh 1rem;
         gap: 1.5rem;
-    }
-
-    .form-side {
-        width: 100%;
-        max-width: 22rem;
     }
 
     .card-side {
         max-width: 22rem;
     }
 
+    .form-side {
+        max-width: 22rem;
+    }
+
     .continue-btn-wrapper,
     .back-btn-wrapper {
-        bottom: 1.5rem;
+        bottom: 2vh;
     }
 
     .page-logo {
-        height: 8rem;
+        height: clamp(4rem, 12vw, 8rem);
     }
 }
 
 /* Small phones */
 @media (max-width: 480px) {
-    .form-side, .card-side {
+    .card-side,
+    .form-side {
         max-width: 18rem;
     }
 
     .continue-btn-wrapper,
     .back-btn-wrapper {
-        bottom: 1rem;
+        bottom: 1.5vh;
     }
 
     .page-logo {
-        height: 6rem;
+        height: clamp(3rem, 14vw, 6rem);
         top: 1rem;
         right: 1rem;
     }

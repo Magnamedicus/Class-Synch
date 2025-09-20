@@ -1,12 +1,11 @@
 
 
 .logo {
-  height: 12vw;                  /* responsive scaling */
-  max-height: 6rem;              /* cap for large screens */
-  min-height: 3rem;              /* cap for small screens */
-  padding: 1rem;                 /* relative padding */
+  height: 6rem; /* relative instead of 6em */
+  padding: 1.5rem;
   will-change: filter;
   transition: filter 300ms ease;
+  max-width: 100%;
 }
 
 .logo:hover {
@@ -33,44 +32,42 @@
 }
 
 .card {
-  padding: 2rem;                 /* relative padding */
-  border-radius: 0.75rem;        /* smoother scaling */
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 0 1rem rgba(0, 0, 0, 0.2);
+  padding: 2rem;
+  border-radius: 0.75rem;
+  max-width: 90%;
+  margin: 0 auto;
 }
 
 .read-the-docs {
   color: #888;
-  font-size: 0.9rem;             /* scales better */
-  line-height: 1.5;
+  font-size: 0.9rem;
+  text-align: center;
+  line-height: 1.4;
 }
 
-/* ✅ Responsive adjustments */
+/* =====================
+   📱 Responsive Queries
+   ===================== */
 @media (max-width: 768px) {
   .logo {
-    height: 20vw;                /* smaller devices: logo scales by viewport */
-    padding: 0.8rem;
+    height: 4rem;
+    padding: 1rem;
   }
 
   .card {
-    padding: 1.5rem;
-    margin: 0 1rem;              /* spacing from edges */
-  }
-
-  .read-the-docs {
-    font-size: 0.85rem;
+    padding: 1.2rem;
   }
 }
 
 @media (max-width: 480px) {
   .logo {
-    height: 25vw;
-    padding: 0.6rem;
+    height: 3rem;
+    padding: 0.8rem;
   }
 
   .card {
     padding: 1rem;
-    margin: 0 0.5rem;
+    font-size: 0.9rem;
   }
 
   .read-the-docs {
