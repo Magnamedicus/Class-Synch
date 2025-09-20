@@ -1,64 +1,53 @@
 /* src/css/QuestionnairePage.css */
 
 .questionnaire-page {
-    position: relative;
-    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh; /* ✅ use dynamic viewport height (fixes iOS Safari) */
     width: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
 
-    /* ✅ background image */
     background: url("../assets/q_bg.png") no-repeat center center fixed;
     background-size: cover;
     background-position: center 20%;
     color: #fff;
 }
 
-/* Layout for card + form */
-/* Layout for card + form */
 .questionnaire-layout {
+    flex: 1; /* ✅ fills all remaining space */
     display: flex;
+    align-items: center;
     justify-content: center;
-    gap: clamp(2rem, 5vw, 5rem);
-    width: 100%;
+    gap: 5rem;
+    padding: 2rem;
     box-sizing: border-box;
-
-    /* ✅ Instead of flex-start, center vertically but control position with padding */
-    align-items: flex-start;
-    padding-top: 28vh; /* pushes BOTH card and form down together */
 }
 
 .card-side {
     flex: 0 0 auto;
-    max-width: clamp(16rem, 40vw, 28rem);
 }
 
 .form-side {
     flex: 1;
-    max-width: clamp(18rem, 50vw, 37.5rem);
+    max-width: 37.5rem;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
-/* Button wrappers */
-.continue-btn-wrapper {
-    position: absolute;
-    bottom: 5vh;
-    right: 5vw;
-}
-
+/* Buttons */
+.continue-btn-wrapper,
 .back-btn-wrapper {
-    position: absolute;
-    bottom: 5vh;
-    left: 5vw;
+    margin-top: 2rem;
 }
 
 /* Logo */
 .page-logo {
     position: absolute;
-    top: 2vh;
-    right: 3vw;
-    height: clamp(4rem, 10vw, 10rem);
-    width: auto;
-    z-index: 2000;
+    top: 1rem;
+    right: 1rem;
+    height: clamp(5rem, 10vw, 8rem);
     cursor: pointer;
     opacity: 0.6;
     transition: transform 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
@@ -70,21 +59,12 @@
     opacity: 1;
 }
 
-/* ========================= */
-/* ✅ Responsive Adjustments */
-/* ========================= */
-
-/* Tablet */
+/* Responsive */
 @media (max-width: 1024px) {
     .questionnaire-layout {
         flex-direction: column;
-        align-items: center;
-        padding: 6vh 2vw;
+        justify-content: center; /* ✅ ensures vertical centering */
         gap: 2rem;
-    }
-
-    .card-side {
-        max-width: 26rem;
     }
 
     .form-side {
@@ -92,48 +72,41 @@
     }
 }
 
-/* Mobile */
 @media (max-width: 768px) {
     .questionnaire-layout {
-        flex-direction: column;
-        align-items: center;
-        padding: 6vh 1rem;
         gap: 1.5rem;
+        padding: 1.5rem;
     }
 
+    .form-side,
     .card-side {
-        max-width: 22rem;
-    }
-
-    .form-side {
-        max-width: 22rem;
-    }
-
-    .continue-btn-wrapper,
-    .back-btn-wrapper {
-        bottom: 2vh;
+        max-width: 90%;
     }
 
     .page-logo {
-        height: clamp(4rem, 12vw, 8rem);
+        height: 6rem;
     }
 }
 
-/* Small phones */
 @media (max-width: 480px) {
-    .card-side,
-    .form-side {
-        max-width: 18rem;
+    .questionnaire-layout {
+        gap: 1rem;
+        padding: 1rem;
     }
 
-    .continue-btn-wrapper,
-    .back-btn-wrapper {
-        bottom: 1.5vh;
+    .form-side,
+    .card-side {
+        max-width: 95%;
     }
 
     .page-logo {
-        height: clamp(3rem, 14vw, 6rem);
-        top: 1rem;
-        right: 1rem;
+        height: 4rem;
     }
 }
+
+html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden; /* ✅ prevents horizontal scrolling */
+}
+
