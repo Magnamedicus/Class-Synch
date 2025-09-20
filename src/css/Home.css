@@ -12,16 +12,11 @@
     margin: 0;
     padding: 0;
 
-
-    background:
-            linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
-            url("../assets/class_synch_bg.png") center/cover no-repeat fixed;
+    background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+    url("../assets/class_synch_bg.png") center/cover no-repeat fixed;
 }
 
-
-
-
-
+/* ===== Hero Section ===== */
 .hero {
     text-align: center;
     padding: 6rem 2rem 3rem;
@@ -29,43 +24,17 @@
 }
 
 .hero h1 {
-    font-size: 3rem;
+    font-size: clamp(2rem, 5vw, 3rem);
     font-weight: 800;
     margin-bottom: 0.75rem;
 }
 
 .hero p {
-    font-size: 1.25rem;
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
     color: #ddd;
 }
 
-
-
-
-
-@media (max-width: 768px) {
-    .navbar {
-        flex-direction: column;
-        gap: 1rem;
-        padding: 1rem;
-    }
-
-    .hero h1 {
-        font-size: 2.2rem;
-    }
-
-    .hero p {
-        font-size: 1rem;
-    }
-
-    .main-content {
-        margin: 1rem;
-        padding: 1rem;
-    }
-}
-
-
-
+/* ===== Schedule Button ===== */
 .schedule-button {
     position: absolute;
     top: 7rem;
@@ -73,20 +42,18 @@
     background: rgba(0, 0, 0, 0.65);
     border-radius: 0.75rem;
     padding: 1rem 1.5rem;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0.4rem 1.25rem rgba(0, 0, 0, 0.4);
 
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-10%);
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
-
 
 .schedule-button:hover,
 .home:hover .schedule-button {
     opacity: 1;
     transform: translateY(0);
 }
-
 
 .schedule-button button {
     background: #3b82f6;
@@ -107,8 +74,7 @@
     transform: scale(0.97);
 }
 
-
-
+/* ===== Dropdown ===== */
 .dropdown {
     position: absolute;
     top: 6rem;
@@ -138,14 +104,15 @@
     background: rgba(15, 23, 32, 0.95);
     border-radius: 0.75rem;
     padding: 0.75rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.4);
     animation: dropdownSlide 0.4s ease forwards;
+    gap: 1rem;
 }
 
-.dropdown:hover .dropdown__content {
+.dropdown:hover .dropdown__content,
+.dropdown__content.open {
     display: flex;
 }
-
 
 .dropdown__content button {
     background: #3b82f6;
@@ -166,11 +133,11 @@
     transform: scale(0.97);
 }
 
-/* Animation */
+/* Dropdown Animation */
 @keyframes dropdownSlide {
     from {
         opacity: 0;
-        transform: translateY(-15px) scale(0.95);
+        transform: translateY(-15%) scale(0.95);
     }
     to {
         opacity: 1;
@@ -178,39 +145,7 @@
     }
 }
 
-
-
-.dropdown__content {
-    display: none;
-    flex-direction: column;
-    background: rgba(15, 23, 42, 0.9);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-top: 0.5rem;
-    animation: slideDown 0.3s ease-out forwards;
-    gap: 1rem;
-}
-
-.dropdown__content.open {
-    display: flex;
-}
-
-.dropdown__content button {
-    background: #3b82f6;
-    color: #fff;
-    font-weight: 600;
-    border: none;
-    border-radius: 0.375rem;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: background 0.2s ease-in-out;
-}
-
-.dropdown__content button:hover {
-    background: #2563eb;
-}
-
-
+/* ===== Auth Form ===== */
 .auth-form {
     display: flex;
     flex-direction: column;
@@ -241,7 +176,7 @@
 }
 
 .auth-form input:focus {
-    outline: 2px solid #3b82f6;
+    outline: 0.125rem solid #3b82f6;
 }
 
 .auth-form button {
@@ -270,19 +205,7 @@
     text-decoration: underline;
 }
 
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10%);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-
+/* ===== Profile Page ===== */
 .profile-page {
     background: url("../assets/profile_bg.png") no-repeat center center fixed;
     background-size: 90% auto; /* zoomed out to show more */
@@ -294,12 +217,72 @@
 .profile-container {
     background-color: rgba(0, 0, 0, 0.6);
     color: white;
-    max-width: 900px;
+    max-width: 56.25rem; /* 900px */
     margin: 2rem auto;
     padding: 2rem;
-    border-radius: 12px;
+    border-radius: 0.75rem;
 }
 
+/* ===== Responsive Breakpoints ===== */
+@media (max-width: 768px) {
+    .hero {
+        padding: 4rem 1.5rem 2rem;
+    }
 
+    .hero h1 {
+        font-size: clamp(1.8rem, 6vw, 2.2rem);
+    }
 
+    .hero p {
+        font-size: clamp(0.95rem, 3.5vw, 1.1rem);
+    }
 
+    .schedule-button {
+        top: 5rem;
+        left: 1rem;
+        padding: 0.8rem 1.2rem;
+    }
+
+    .profile-container {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero {
+        padding: 3rem 1rem 1.5rem;
+    }
+
+    .hero h1 {
+        font-size: clamp(1.5rem, 7vw, 1.8rem);
+    }
+
+    .hero p {
+        font-size: clamp(0.85rem, 4vw, 1rem);
+    }
+
+    .schedule-button {
+        top: 4rem;
+        left: 0.8rem;
+        padding: 0.6rem 1rem;
+    }
+
+    .dropdown__trigger {
+        font-size: 1rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    .auth-form {
+        padding: 0.8rem;
+    }
+
+    .auth-form h3 {
+        font-size: 1rem;
+    }
+
+    .profile-container {
+        margin: 0.8rem;
+        padding: 1rem;
+    }
+}
