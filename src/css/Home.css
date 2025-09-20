@@ -1,19 +1,21 @@
 
 .home {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    font-family: "Inter", sans-serif;
+    /* was: min-height: 100vh; */
+    min-height: 100svh;
     color: #fff;
-    position: relative;
-    overflow-x: hidden;
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    padding: 0;
+    @supports (height: 100dvh) { min-height: 100dvh; }
 
-    background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
-    url("../assets/class_synch_bg.png") center/cover no-repeat fixed;
+    /* …keep your other rules… */
+
+    /* was: … no-repeat fixed;  */
+    background: linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)),
+    url("../assets/class_synch_bg.png") center / cover no-repeat;
+    /* explicitly make it scroll */
+    background-attachment: scroll;
+
+    /* avoid vertical clipping */
+    overflow-x: hidden; /* remove any overflow: hidden; */
+    /* no overflow-y hidden here */
 }
 
 /* Hero section */

@@ -34,7 +34,7 @@
             radial-gradient(900px 500px at 0% 20%, rgba(16,185,129,.16), rgba(16,185,129,0) 50%),
             linear-gradient(180deg, #0b1220 0%, var(--bg-deep) 100%);
     color: var(--text);
-    overflow-x: hidden;
+
 }
 
 /* Empty state */
@@ -102,7 +102,7 @@
     padding: var(--space-6) var(--space-5);   /* was smaller */
     margin: var(--space-5) 0;                 /* extra margin between cards */
     box-shadow: 0 14px 34px rgba(2,8,23,.38);
-    overflow: hidden;
+
 }
 .card-header { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
 .card-header h3 { margin: 0; font-weight: 800; letter-spacing: .2px; }

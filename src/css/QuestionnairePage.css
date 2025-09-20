@@ -1,53 +1,67 @@
 /* src/css/QuestionnairePage.css */
 
 .questionnaire-page {
-    display: flex;
-    flex-direction: column;
-    min-height: 100dvh; /* ✅ use dynamic viewport height (fixes iOS Safari) */
-    width: 100%;
-    overflow-x: hidden;
+    position: relative;
+    /* was: min-height: 100vh; */
+    min-height: 100svh;
+    @supports (height: 100dvh) { min-height: 100dvh; }
 
-    background: url("../assets/q_bg.png") no-repeat center center fixed;
-    background-size: cover;
-    background-position: center 20%;
-    color: #fff;
+    width: 100%;
+    /* was: overflow: hidden; */
+    overflow-x: hidden; /* allow natural vertical scroll */
+
+    /* was: url(... ) no-repeat center center fixed; */
+    background: url("../assets/q_bg.png") no-repeat center 20% / cover;
+    background-attachment: scroll;
 }
 
+
+/* Layout for card + form */
+/* Layout for card + form */
 .questionnaire-layout {
-    flex: 1; /* ✅ fills all remaining space */
     display: flex;
-    align-items: center;
     justify-content: center;
-    gap: 5rem;
-    padding: 2rem;
+    gap: clamp(2rem, 5vw, 5rem);
+    width: 100%;
     box-sizing: border-box;
+
+    /* ✅ Instead of flex-start, center vertically but control position with padding */
+    align-items: flex-start;
+    padding-top: 28vh; /* pushes BOTH card and form down together */
 }
 
 .card-side {
     flex: 0 0 auto;
+    max-width: clamp(16rem, 40vw, 28rem);
 }
 
 .form-side {
     flex: 1;
-    max-width: 37.5rem;
+    max-width: clamp(18rem, 50vw, 37.5rem);
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
 }
 
-/* Buttons */
-.continue-btn-wrapper,
+/* Button wrappers */
+.continue-btn-wrapper {
+    position: absolute;
+    bottom: 5vh;
+    right: 5vw;
+}
+
 .back-btn-wrapper {
-    margin-top: 2rem;
+    position: absolute;
+    bottom: 5vh;
+    left: 5vw;
 }
 
 /* Logo */
 .page-logo {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
-    height: clamp(5rem, 10vw, 8rem);
+    top: 2vh;
+    right: 3vw;
+    height: clamp(4rem, 10vw, 10rem);
+    width: auto;
+    z-index: 2000;
     cursor: pointer;
     opacity: 0.6;
     transition: transform 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
@@ -59,12 +73,21 @@
     opacity: 1;
 }
 
-/* Responsive */
+/* ========================= */
+/* ✅ Responsive Adjustments */
+/* ========================= */
+
+/* Tablet */
 @media (max-width: 1024px) {
     .questionnaire-layout {
         flex-direction: column;
-        justify-content: center; /* ✅ ensures vertical centering */
+        align-items: center;
+        padding: 6vh 2vw;
         gap: 2rem;
+    }
+
+    .card-side {
+        max-width: 26rem;
     }
 
     .form-side {
@@ -72,41 +95,52 @@
     }
 }
 
+/* Mobile */
 @media (max-width: 768px) {
     .questionnaire-layout {
+        flex-direction: column;
+        align-items: center;
+        padding: 6vh 1rem;
         gap: 1.5rem;
-        padding: 1.5rem;
     }
 
-    .form-side,
     .card-side {
-        max-width: 90%;
+        max-width: 22rem;
+    }
+
+    .form-side {
+        max-width: 22rem;
+    }
+
+    .continue-btn-wrapper,
+    .back-btn-wrapper {
+        bottom: 2vh;
     }
 
     .page-logo {
-        height: 6rem;
+        height: clamp(4rem, 12vw, 8rem);
     }
 }
 
+/* Small phones */
 @media (max-width: 480px) {
-    .questionnaire-layout {
-        gap: 1rem;
-        padding: 1rem;
+    .card-side,
+    .form-side {
+        max-width: 18rem;
     }
 
-    .form-side,
-    .card-side {
-        max-width: 95%;
+    .continue-btn-wrapper,
+    .back-btn-wrapper {
+        bottom: 1.5vh;
     }
 
     .page-logo {
-        height: 4rem;
+        height: clamp(3rem, 14vw, 6rem);
+        top: 1rem;
+        right: 1rem;
     }
 }
 
-html, body {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden; /* ✅ prevents horizontal scrolling */
-}
+.questionnaire-page { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.page-logo { top: calc(env(safe-area-inset-top, 0px) + 1rem); right: calc(env(safe-area-inset-right, 0px) + 1rem); }
 
