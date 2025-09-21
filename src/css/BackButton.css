@@ -74,8 +74,6 @@
 
 /* Position the back button bottom-left */
 .button {
-    position: fixed;
-    bottom: 1.875rem; /* 30px */
-    left: 1.875rem;   /* 30px */
-    z-index: 1000;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    left: calc(env(safe-area-inset-left, 0px) + 1rem);
 }

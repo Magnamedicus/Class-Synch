@@ -2,14 +2,14 @@
 .home {
     /* was: min-height: 100vh; */
     min-height: 100svh;
-    color: #fff;
     @supports (height: 100dvh) { min-height: 100dvh; }
+    color: #fff;
 
     /* …keep your other rules… */
 
     /* was: … no-repeat fixed;  */
     background: linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)),
-    url("../assets/class_synch_bg.png") center / cover no-repeat;
+    url("../assets/class_synch_bg.png")  no-repeat center center / cover;
     /* explicitly make it scroll */
     background-attachment: scroll;
 
@@ -209,7 +209,8 @@
 
 /* Profile page */
 .profile-page {
-    background: url("../assets/profile_bg.png") no-repeat center center fixed;
+    background: url("../assets/profile_bg.png") no-repeat center center / cover;
+    background-attachment: scroll;
     background-size: 90% auto;
     min-height: 100vh;
     display: flex;
