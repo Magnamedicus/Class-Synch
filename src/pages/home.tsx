@@ -169,7 +169,7 @@ export default function Home() {
                 <Scheduler />
 
                 {/* Development-only reset button */}
-                <button
+                <button className = "reset"
                     onClick={handleReset}
                     style={{
                         marginTop: "2rem",
