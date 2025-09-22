@@ -253,7 +253,7 @@
 
     .schedule-button,
     .dropdown {
-        top: 12vh;
+        top: 14vh;
         left: 5%;
         transform: scale(0.9);
         background: rgba(0, 0, 0, 0.55); /* lighter for mobile */
@@ -288,7 +288,8 @@
 
     .schedule-button,
     .dropdown {
-        left: 50%;
+        top: 16vh;
+        left: 10%;
         transform: translateX(-50%) scale(0.85);
         background: rgba(0, 0, 0, 0.45); /* even lighter on phones */
     }
