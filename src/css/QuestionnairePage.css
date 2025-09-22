@@ -133,8 +133,13 @@
         gap: 1.75rem;
     }
 
+
+
     .questionnaire-page {
         background-position: center top;
+        background: url("../assets/q_bg.png") no-repeat center 20% / cover;
+        background-attachment: scroll;
+        background-size: cover;
     }
 
     .card-side,
