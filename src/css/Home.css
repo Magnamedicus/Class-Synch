@@ -1,21 +1,15 @@
 
 .home {
-    /* was: min-height: 100vh; */
     min-height: 100svh;
     @supports (height: 100dvh) { min-height: 100dvh; }
     color: #fff;
 
-    /* …keep your other rules… */
+    background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+    url("../assets/class_synch_bg.png") no-repeat center center / cover;
+    background-attachment: scroll; /* ✅ works on iOS Safari */
 
-    /* was: … no-repeat fixed;  */
-    background: linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)),
-    url("../assets/class_synch_bg.png")  no-repeat center center / cover;
-    /* explicitly make it scroll */
-    background-attachment: scroll;
-
-    /* avoid vertical clipping */
-    overflow-x: hidden; /* remove any overflow: hidden; */
-    /* no overflow-y hidden here */
+    overflow-x: hidden;
+    width: 100%;
 }
 
 /* Hero section */
@@ -238,11 +232,12 @@
         font-size: clamp(0.9rem, 3.5vw, 1rem);
     }
 
+    /* ✅ keep dropdown/schedule aligned on tablets */
     .schedule-button,
     .dropdown {
         top: 12vh;
-        left: 5%;
-        transform: scale(0.9);
+        left: 50%;
+        transform: translateX(-50%) scale(0.9);
     }
 
     .auth-form {
@@ -261,8 +256,11 @@
         font-size: clamp(0.8rem, 4vw, 0.95rem);
     }
 
+    /* ✅ center and shrink on very small screens */
     .schedule-button,
     .dropdown {
+        top: auto;
+        bottom: 2rem;
         left: 50%;
         transform: translateX(-50%) scale(0.85);
     }
