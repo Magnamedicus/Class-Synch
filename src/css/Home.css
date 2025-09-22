@@ -1,18 +1,27 @@
 
+/* =============================== */
+/* Home Page Styles (Responsive)   */
+/* =============================== */
+
 .home {
-    min-height: 100svh;
-    @supports (height: 100dvh) { min-height: 100dvh; }
+    min-height: 100svh; /* safer on mobile browsers */
+    @supports (height: 100dvh) {
+        min-height: 100dvh;
+    }
     color: #fff;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
 
     background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
     url("../assets/class_synch_bg.png") no-repeat center center / cover;
-    background-attachment: scroll; /* ✅ works on iOS Safari */
+    background-attachment: scroll;
 
     overflow-x: hidden;
-    width: 100%;
 }
 
-/* Hero section */
+/* ================= Hero Section ================= */
 .hero {
     text-align: center;
     padding: 8vh 5vw 5vh;
@@ -30,7 +39,7 @@
     color: #ddd;
 }
 
-/* Schedule Button */
+/* ================= Schedule Button ================= */
 .schedule-button {
     position: absolute;
     top: 10vh;
@@ -70,7 +79,7 @@
     transform: scale(0.97);
 }
 
-/* Dropdown */
+/* ================= Dropdown ================= */
 .dropdown {
     position: absolute;
     top: 9vh;
@@ -141,7 +150,7 @@
     }
 }
 
-/* Auth Form */
+/* ================= Auth Form ================= */
 .auth-form {
     display: flex;
     flex-direction: column;
@@ -201,7 +210,7 @@
     text-decoration: underline;
 }
 
-/* Profile page */
+/* ================= Profile Page ================= */
 .profile-page {
     background: url("../assets/profile_bg.png") no-repeat center center / cover;
     background-attachment: scroll;
@@ -220,24 +229,34 @@
     border-radius: 0.75rem;
 }
 
-/* 📱 Media Queries */
+/* ================= Responsive ================= */
+
+/* Tablet */
 @media (max-width: 768px) {
+    .home {
+        background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
+        url("../assets/class_synch_bg.png") no-repeat center center / cover;
+    }
+
     .hero {
         padding: 6vh 2rem 3vh;
     }
+
     .hero h1 {
         font-size: clamp(1.8rem, 6vw, 2.2rem);
     }
+
     .hero p {
         font-size: clamp(0.9rem, 3.5vw, 1rem);
+        color: #f0f0f0;
     }
 
-    /* ✅ keep dropdown/schedule aligned on tablets */
     .schedule-button,
     .dropdown {
         top: 12vh;
-        left: 50%;
-        transform: translateX(-50%) scale(0.9);
+        left: 5%;
+        transform: scale(0.9);
+        background: rgba(0, 0, 0, 0.55); /* lighter for mobile */
     }
 
     .auth-form {
@@ -245,24 +264,33 @@
     }
 }
 
+/* Mobile */
 @media (max-width: 480px) {
+    .home {
+        background: linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.25)),
+        url("../assets/class_synch_bg.png") no-repeat center center / cover;
+    }
+
     .hero {
         padding: 5vh 1rem 2vh;
     }
+
     .hero h1 {
         font-size: clamp(1.5rem, 7vw, 1.8rem);
-    }
-    .hero p {
-        font-size: clamp(0.8rem, 4vw, 0.95rem);
+        text-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.6);
     }
 
-    /* ✅ center and shrink on very small screens */
+    .hero p {
+        font-size: clamp(0.8rem, 4vw, 0.95rem);
+        color: #fafafa;
+        text-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.6);
+    }
+
     .schedule-button,
     .dropdown {
-        top: auto;
-        bottom: 2rem;
         left: 50%;
         transform: translateX(-50%) scale(0.85);
+        background: rgba(0, 0, 0, 0.45); /* even lighter on phones */
     }
 
     .auth-form {
