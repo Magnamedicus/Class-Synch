@@ -1,3 +1,10 @@
+/* src/css/NumberInput.css */
+
+
+
+
+
+
 .custom-number-wrapper {
     display: flex;
     align-items: center;
@@ -7,30 +14,22 @@
 }
 
 .custom-number-input {
-    width: 4rem;              /* relative width */
-    min-width: 3rem;
-    max-width: 6rem;
-
-    height: 3.5rem;
-    font-size: 2rem;          /* ✅ default size */
+    width: clamp(3rem, 8vw, 5rem); ;
+    height: clamp(3rem, 8vh, 4.5rem);
+    font-size: clamp(1.5rem, 5vw, 3rem);
     font-weight: bold;
 
     text-align: center;
-
-    border-radius: 0.5rem;
-    border: 0.15rem solid #0aa4f8;
+    border-radius: 0.75rem;
+    border: 0.2rem solid #0aa4f8;
     background: #111;
-    color: #eee;
+    color: #fff;
 
-    /* ✅ completely remove browser’s native spinners */
+    -webkit-appearance: none;
     -moz-appearance: textfield;
     appearance: textfield;
-}
 
-.custom-number-input::-webkit-outer-spin-button,
-.custom-number-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .custom-number-input:focus {
@@ -39,15 +38,22 @@
     outline: none;
 }
 
+.custom-number-input::-webkit-outer-spin-button,
+.custom-number-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Increment/Decrement buttons */
 .num-btn {
     background: #0aa4f8;
     border: none;
-    border-radius: 0.4rem;
+    border-radius: 0.5rem;
     color: #fff;
-    font-size: 1.5rem;
+    font-size: clamp(1rem, 3vw, 1.5rem);
     font-weight: bold;
-    width: 2rem;
-    height: 3.5rem;
+    width: clamp(2rem, 10vw, 3rem);
+    height: clamp(2.5rem, 7vh, 4rem);
     cursor: pointer;
     transition: background 0.3s, transform 0.2s;
 }
@@ -60,31 +66,5 @@
     transform: scale(0.9);
 }
 
-/* ✅ Responsive fixes */
-@media (max-width: 600px) {
-    .custom-number-input {
-        width: 3rem;
-        height: 3rem;
-        font-size: 1.5rem;   /* slightly smaller font */
-    }
 
-    .num-btn {
-        width: 1.8rem;
-        height: 3rem;
-        font-size: 1.2rem;
-    }
-}
 
-@media (max-width: 400px) {
-    .custom-number-input {
-        width: 2.5rem;
-        height: 2.5rem;
-        font-size: 1.2rem;   /* ✅ shrink further */
-    }
-
-    .num-btn {
-        width: 1.5rem;
-        height: 2.5rem;
-        font-size: 1rem;
-    }
-}
