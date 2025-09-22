@@ -102,19 +102,55 @@
     }
 }
 
-/* Small phones */
-@media (max-width: 480px) {
+/* Mobile */
+@media (max-width: 768px) {
+    .questionnaire-layout {
+        flex-direction: column;      /* ✅ stack vertically */
+        align-items: center;         /* ✅ center both card + form */
+        justify-content: flex-start;
+        padding: 12vh 1rem 4vh;      /* ✅ push down, avoid top overlap */
+        gap: 2rem;                   /* ✅ space between card and input */
+    }
+
     .card-side {
-        max-width: 90%;
+        max-width: 90%;              /* ✅ prevent full bleed */
+        width: 100%;
+        flex: none;                  /* ✅ stop flex growing */
     }
 
     .form-side {
-        max-width: 90%;
+        max-width: 90%;              /* ✅ match card */
+        width: 100%;
+        flex: none;
+        display: flex;
+        justify-content: center;     /* ✅ center input group */
+    }
+
+    .continue-btn-wrapper,
+    .back-btn-wrapper {
+        bottom: 2vh;
+    }
+
+    .page-logo {
+        height: clamp(4rem, 12vw, 8rem);
+        top: 1rem;
+        right: 1rem;
+    }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+    .questionnaire-layout {
+        padding: 10vh 1rem 3vh;
+        gap: 1.5rem;
+    }
+
+    .card-side,
+    .form-side {
+        max-width: 95%;              /* ✅ even tighter on tiny screens */
     }
 
     .page-logo {
         height: clamp(3rem, 14vw, 6rem);
-        top: 1rem;
-        right: 1rem;
     }
 }
