@@ -88,7 +88,8 @@
     }
 
     .questionnaire-page {
-        background-position: center top; /* ✅ shift focal point */
+        background: url("../assets/q_bg_mobile.png") no-repeat center center;
+        background-size: cover;  /* fills screen, but this version is pre-scaled for mobile */
     }
 
     .card-side, .form-side {
@@ -122,8 +123,8 @@
     }
 
     .questionnaire-page {
-        background-position: center top; /* ✅ don’t redeclare whole bg */
-        background-size: contain;
+        background: url("../assets/q_bg_mobile.png") no-repeat center center;
+        background-size: cover;  /* fills screen, but this version is pre-scaled for mobile */
     }
 
     .card-side,
