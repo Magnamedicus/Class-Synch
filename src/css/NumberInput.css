@@ -1,70 +1,56 @@
-/* src/css/NumberInput.css */
-
-
-
-
-
+/* ========= Number Input (responsive bounds & sizing) ========= */
 
 .custom-number-wrapper {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: 0.5rem;
-    margin-left: 0.3rem;
+    justify-content: center;
+    gap: .6rem;
+    width: 100%;
+    max-width: clamp(14rem, 48vw, 28rem);   /* ✅ hard ceiling so it never looks huge */
+    margin: 0 auto;
 }
 
 .custom-number-input {
-    width: clamp(3rem, 8vw, 5rem); ;
-    height: clamp(3rem, 8vh, 4.5rem);
-    font-size: clamp(1.5rem, 5vw, 3rem);
-    font-weight: bold;
-
+    /* width is the piece that was “going rogue” */
+    width: clamp(8rem, 36vw, 18rem);
+    height: clamp(2.4rem, 7.8vw, 3.6rem);
+    font-size: clamp(1.1rem, 4.5vw, 2rem);
+    font-weight: 700;
     text-align: center;
-    border-radius: 0.75rem;
-    border: 0.2rem solid #0aa4f8;
-    background: #111;
-    color: #fff;
+    line-height: 1;                         /* avoid vertical drift */
+    border-radius: .75rem;
+    border: .15rem solid #0aa4f8;
+    background: rgba(17,17,17,.9);
+    color: #eaeaea;
 
     -webkit-appearance: none;
     -moz-appearance: textfield;
-    appearance: textfield;
+    appearance: none;
 
-    transition: border-color 0.3s, box-shadow 0.3s;
+    transition: border-color .3s, box-shadow .3s;
 }
-
 .custom-number-input:focus {
     border-color: #00ffcc;
-    box-shadow: 0 0 0.75rem rgba(0, 255, 204, 0.6);
+    box-shadow: 0 0 .75rem rgba(0,255,204,.6);
     outline: none;
 }
-
 .custom-number-input::-webkit-outer-spin-button,
 .custom-number-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
 
-/* Increment/Decrement buttons */
 .num-btn {
     background: #0aa4f8;
     border: none;
-    border-radius: 0.5rem;
+    border-radius: .6rem;
     color: #fff;
-    font-size: clamp(1rem, 3vw, 1.5rem);
-    font-weight: bold;
-    width: clamp(2rem, 10vw, 3rem);
-    height: clamp(2.5rem, 7vh, 4rem);
+    font-size: clamp(1rem, 3.5vw, 1.4rem);
+    font-weight: 800;
+    width: clamp(2.25rem, 8vw, 3rem);
+    height: clamp(2.25rem, 8vw, 3rem);
     cursor: pointer;
-    transition: background 0.3s, transform 0.2s;
+    transition: background .3s, transform .2s;
 }
-
-.num-btn:hover {
-    background: #00ffcc;
-}
-
-.num-btn:active {
-    transform: scale(0.9);
-}
-
-
-
+.num-btn:hover { background: #00ffcc; }
+.num-btn:active { transform: scale(.94); }

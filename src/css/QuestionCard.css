@@ -1,12 +1,15 @@
-/* src/css/QuestionCard.css */
+/* ========= Question Card (prevents mobile collapse) ========= */
 
+/* Card wrapper – keep a stable aspect ratio so it NEVER turns into a thin bar */
 .container {
-    width: clamp(16rem, 40vw, 20rem);
-    height: clamp(20rem, 50vh, 24rem);
+    /* desktop-ish size with responsive scaling */
+    width: clamp(18rem, 28vw + 10rem, 26rem);
+    aspect-ratio: 4 / 5;                /* ✅ fixes the height issue */
     perspective: 1000px;
-    margin: 0 auto; /* ✅ remove old margin-top hacks */
+    margin-top: -1rem;                  /* matches your original “slightly higher” feel */
 }
 
+/* The flipping body */
 .cardbody {
     height: 100%;
     width: 100%;
@@ -16,20 +19,19 @@
     border-radius: 2rem;
 }
 
-/* Flip on hover */
+/* Flip on hover (desktop) */
 .container:hover > .cardbody {
     cursor: pointer;
     transform: rotateY(180deg) rotateZ(180deg);
 }
 
 /* Faces */
-.front,
-.back {
-    height: 100%;
-    width: 100%;
+.front, .back {
+    height: 80%;
+    width: 80%;
     border-radius: 2rem;
     position: absolute;
-    box-shadow: 0 0 1.25rem 0.2rem rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 1.25rem .2rem rgba(0,0,0,.3);
     backface-visibility: hidden;
     background: linear-gradient(-135deg, #0703f7, #bcff04);
     color: #fff;
@@ -37,27 +39,22 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 1rem;
+    gap: 1.25rem;
     padding: 1.25rem;
     text-align: center;
 }
+.back { transform: rotateY(180deg) rotateZ(180deg); }
 
-.back {
-    transform: rotateY(180deg) rotateZ(180deg);
+/* Text */
+.front-heading, .back-heading {
+    font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+    font-weight: 700;
+    margin-bottom: .5rem;
 }
 
-/* Text styles */
-.front-heading,
-.back-heading {
-    font-size: clamp(1.2rem, 2vw, 1.6rem);
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-}
-
-/* 📱 Responsive Tweaks */
+/* ====== Mobile tightening ====== */
 @media (max-width: 768px) {
     .container {
-        width: 80%;
-        height: auto;
+        width: min(88vw, 20rem);          /* don’t let the card go full-bleed */
     }
 }
