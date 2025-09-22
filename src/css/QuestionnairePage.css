@@ -26,7 +26,7 @@
     width: 100%;
     box-sizing: border-box;
     padding: 5vh 5vw; /* baseline padding for desktop */
-    padding-top: 28vh;
+    padding-top: 27vh;
 }
 
 .card-side {
@@ -77,72 +77,44 @@
 /* ========================= */
 
 /* Tablet */
+/* Desktop stays the same */
+
+/* Tablet and below */
 @media (max-width: 1024px) {
     .questionnaire-layout {
         flex-direction: column;
-        justify-content: flex-start;
         align-items: center;
+        justify-content: flex-start;
+        padding: 10vh 5vw 5vh;
         gap: 2rem;
-        padding: 8vh 2rem 4vh;
     }
 
     .card-side {
         max-width: 26rem;
+        width: 100%;
     }
 
     .form-side {
-        max-width: 90%;
-    }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-    .questionnaire-layout {
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
-        gap: 1.5rem;
-        padding: 10vh 1rem 4vh;
-    }
-
-    .card-side {
-        max-width: 20rem;
-    }
-
-    .form-side {
-        max-width: 22rem;
-    }
-
-    .continue-btn-wrapper,
-    .back-btn-wrapper {
-        bottom: 2vh;
-    }
-
-    .page-logo {
-        height: clamp(4rem, 12vw, 8rem);
+        max-width: 22rem;   /* ✅ lock input width */
+        width: 100%;
+        display: flex;
+        justify-content: center; /* ✅ center input */
     }
 }
 
 /* Small phones */
 @media (max-width: 480px) {
-    .questionnaire-layout {
-        padding: 12vh 1rem 3vh;
-        gap: 1rem;
+    .card-side {
+        max-width: 90%;
     }
 
-    .card-side,
     .form-side {
-        max-width: 18rem;
-    }
-
-    .continue-btn-wrapper,
-    .back-btn-wrapper {
-        bottom: 1.5vh;
+        max-width: 90%;
     }
 
     .page-logo {
         height: clamp(3rem, 14vw, 6rem);
-        top: calc(env(safe-area-inset-top, 0px) + 1rem);
-        right: calc(env(safe-area-inset-right, 0px) + 1rem);
+        top: 1rem;
+        right: 1rem;
     }
 }
