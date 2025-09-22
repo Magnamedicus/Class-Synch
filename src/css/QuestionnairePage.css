@@ -123,6 +123,7 @@
 
     .questionnaire-page {
         background-position: center top; /* ✅ don’t redeclare whole bg */
+        background-size: contain;
     }
 
     .card-side,
