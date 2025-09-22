@@ -90,6 +90,7 @@
     .questionnaire-page {
         background: url("../assets/q_bg_mobile.png") no-repeat center center;
         background-size: cover;  /* fills screen, but this version is pre-scaled for mobile */
+        background-position: center 20%; /* desktop focal point */
     }
 
     .card-side, .form-side {
@@ -100,7 +101,10 @@
 
     .form-side {
         display: flex;
-        justify-content: center;
+        max-width: 80%;
+        padding-right: 8vw;
+
+        justify-content: right;
     }
 
     .continue-btn-wrapper,
