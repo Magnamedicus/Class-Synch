@@ -2,17 +2,17 @@
 
 .questionnaire-page {
     position: relative;
-    /* was: min-height: 100vh */
     min-height: 100svh;
     @supports (height: 100dvh) { min-height: 100dvh; }
-
     width: 100%;
-    overflow-x: hidden;               /* allow natural vertical scroll */
+    overflow-x: hidden;
 
-    /* Keep your illustration, but avoid iOS "fixed" issues */
-    background: url("../assets/q_bg.png") no-repeat center 26% / cover;
+    background: url("../assets/q_bg.png") no-repeat center 20% / cover;
     background-attachment: scroll;
+    background-size: cover; /* ✅ ensure scaling */
 }
+
+
 
 /* ====== Layout ====== */
 .questionnaire-layout {
@@ -94,6 +94,12 @@
         gap: 2rem;
     }
 
+    .questionnaire-page {
+        background-position: center top;
+    }
+
+
+
     .card-side {
         width: 100%;
         max-width: 90%;
@@ -121,10 +127,14 @@
 }
 
 /* ====== Small phones ====== */
-@media (max-width: 480px) {
+@media (max-width: 500px) {
     .questionnaire-layout {
         padding: 15vh 1rem 5vh;          /* a bit more breathing room on tiny screens */
         gap: 1.75rem;
+    }
+
+    .questionnaire-page {
+        background-position: center top;
     }
 
     .card-side,
