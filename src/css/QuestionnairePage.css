@@ -88,9 +88,13 @@
     }
 
     .questionnaire-page {
-        background: url("../assets/q_bg_mobile.png") no-repeat center center;
-        background-size: cover;  /* fills screen, but this version is pre-scaled for mobile */
-        background-position: center 20%; /* desktop focal point */
+        background-image: url("../assets/q_bg_mobile.png");
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+        background-attachment: scroll;
+
+
     }
 
     .card-side, .form-side {
@@ -127,8 +131,12 @@
     }
 
     .questionnaire-page {
-        background: url("../assets/q_bg_mobile.png") no-repeat center center;
-        background-size: cover;  /* fills screen, but this version is pre-scaled for mobile */
+        background-image: url("../assets/q_bg_mobile.png");
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+        background-attachment: scroll;
+
     }
 
     .card-side,
