@@ -58,3 +58,15 @@
         width: min(88vw, 20rem);          /* don’t let the card go full-bleed */
     }
 }
+
+@media (max-width: 500px) {
+    .container {
+        width: min(44vw, 10rem);          /* don’t let the card go full-bleed */
+    }
+
+    .front, .back {
+        height: 20%;
+        width: 20%;
+
+
+}
