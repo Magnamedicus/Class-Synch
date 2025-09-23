@@ -112,7 +112,7 @@
         width: 100%;
         padding: 0 1rem 6vh;
         box-sizing: border-box;
-        padding-top: 23vh;              /* was 22vh; too much push-down */
+        padding-top: 17vh;              /* was 22vh; too much push-down */
     }
 
     /* Card centered */
