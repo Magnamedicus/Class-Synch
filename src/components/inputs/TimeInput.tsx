@@ -2,119 +2,105 @@ import React, { useState, useEffect } from "react";
 import "../../css/TimeInput.css";
 
 interface TimeInputProps {
-    value: string; // format: "HH:MM AM/PM"
+    /** format: "HH:MM AM/PM" (12-hour) */
+    value: string;
     onChange: (newTime: string) => void;
 }
 
+const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max);
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 const TimeInput: React.FC<TimeInputProps> = ({ value, onChange }) => {
-    const [hours, setHours] = useState(12);
-    const [minutes, setMinutes] = useState(0);
+    const [hours, setHours] = useState<number>(12);        // 1..12
+    const [minutes, setMinutes] = useState<number>(0);     // 0..59
     const [ampm, setAmpm] = useState<"AM" | "PM">("AM");
 
-    // Parse incoming value
+    // Sync from prop
     useEffect(() => {
-        if (value) {
-            const match = value.match(/(\d{1,2}):(\d{2})\s?(AM|PM)/i);
-            if (match) {
-                setHours(parseInt(match[1], 10));
-                setMinutes(parseInt(match[2], 10));
-                setAmpm(match[3].toUpperCase() as "AM" | "PM");
-            }
+        if (!value) return;
+        const m = value.match(/^\s*(\d{1,2}):(\d{2})\s*(AM|PM)\s*$/i);
+        if (m) {
+            const h = clamp(parseInt(m[1], 10), 1, 12);
+            const min = clamp(parseInt(m[2], 10), 0, 59);
+            const ap = m[3].toUpperCase() as "AM" | "PM";
+            setHours(h);
+            setMinutes(min);
+            setAmpm(ap);
         }
     }, [value]);
 
-    const updateTime = (h: number, m: number, ap: "AM" | "PM") => {
-        const formatted = `${String(h).padStart(2, "0")}:${String(m).padStart(
-            2,
-            "0"
-        )} ${ap}`;
-        onChange(formatted);
+    const emit = (h: number, m: number, ap: "AM" | "PM") => {
+        onChange(`${pad2(h)}:${pad2(m)} ${ap}`);
     };
 
-    const incrementHours = () => {
-        const newHours = hours === 12 ? 1 : hours + 1;
-        setHours(newHours);
-        updateTime(newHours, minutes, ampm);
+    // Hours
+    const incHours = () => { const h = hours === 12 ? 1 : hours + 1; setHours(h); emit(h, minutes, ampm); };
+    const decHours = () => { const h = hours === 1 ? 12 : hours - 1; setHours(h); emit(h, minutes, ampm); };
+    const onHoursChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+        const raw = parseInt(e.target.value.replace(/\D+/g, "") || "1", 10);
+        const h = clamp(raw, 1, 12);
+        setHours(h); emit(h, minutes, ampm);
     };
 
-    const decrementHours = () => {
-        const newHours = hours === 1 ? 12 : hours - 1;
-        setHours(newHours);
-        updateTime(newHours, minutes, ampm);
+    // Minutes (always display with leading zero)
+    const incMinutes = () => { const m = (minutes + 1) % 60; setMinutes(m); emit(hours, m, ampm); };
+    const decMinutes = () => { const m = minutes === 0 ? 59 : minutes - 1; setMinutes(m); emit(hours, m, ampm); };
+    const onMinutesChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+        const digits = e.target.value.replace(/\D+/g, "");       // keep only 0-9
+        const raw = digits === "" ? 0 : parseInt(digits, 10);
+        const m = clamp(raw, 0, 59);
+        setMinutes(m);
+        emit(hours, m, ampm);
     };
 
-    const incrementMinutes = () => {
-        const newMinutes = (minutes + 1) % 60;
-        setMinutes(newMinutes);
-        updateTime(hours, newMinutes, ampm);
-    };
-
-    const decrementMinutes = () => {
-        const newMinutes = minutes === 0 ? 59 : minutes - 1;
-        setMinutes(newMinutes);
-        updateTime(hours, newMinutes, ampm);
-    };
-
-    const handleHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let val = parseInt(e.target.value, 10);
-        if (isNaN(val)) val = 1;
-        if (val < 1) val = 1;
-        if (val > 12) val = 12;
-        setHours(val);
-        updateTime(val, minutes, ampm);
-    };
-
-    const handleMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let val = parseInt(e.target.value, 10);
-        if (isNaN(val)) val = 0;
-        if (val < 0) val = 0;
-        if (val > 59) val = 59;
-        setMinutes(val);
-        updateTime(hours, val, ampm);
-    };
-
+    // AM/PM
     const toggleAmPm = () => {
         const next = ampm === "AM" ? "PM" : "AM";
         setAmpm(next);
-        updateTime(hours, minutes, next);
+        emit(hours, minutes, next);
     };
 
     return (
-        <div className="time-input-container">
+        <div className="time-input" role="group" aria-label="Time input">
             {/* Hours */}
-            <div className="time-unit">
-                <button className="time-btn" onClick={incrementHours}>▲</button>
+            <div className="segment hours">
+                <button type="button" className="inc" aria-label="Increase hours" onClick={incHours}>▲</button>
                 <input
-                    type="number"
-                    min="1"
-                    max="12"
-                    value={hours}
-                    onChange={handleHourChange}
-                    className="time-display-input"
+                    className="value"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={String(hours)}           // no leading zero for 12h look
+                    onChange={onHoursChange}
+                    onFocus={(e) => e.currentTarget.select()}
+                    aria-label="Hours"
                 />
-                <button className="time-btn" onClick={decrementHours}>▼</button>
+                <button type="button" className="dec" aria-label="Decrease hours" onClick={decHours}>▼</button>
             </div>
 
-            <span className="time-colon">:</span>
+            {/* Colon */}
+            <span className="colon" aria-hidden="true">:</span>
 
             {/* Minutes */}
-            <div className="time-unit">
-                <button className="time-btn" onClick={incrementMinutes}>▲</button>
+            <div className="segment minutes">
+                <button type="button" className="inc" aria-label="Increase minutes" onClick={incMinutes}>▲</button>
                 <input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={minutes}
-                    onChange={handleMinuteChange}
-                    className="time-display-input"
+                    className="value"
+                    type="text"                 /* text to allow leading zero */
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={pad2(minutes)}       /* always 00..59 */
+                    onChange={onMinutesChange}
+                    onFocus={(e) => e.currentTarget.select()}
+                    aria-label="Minutes"
                 />
-                <button className="time-btn" onClick={decrementMinutes}>▼</button>
+                <button type="button" className="dec" aria-label="Decrease minutes" onClick={decMinutes}>▼</button>
             </div>
 
             {/* AM/PM */}
-            <div className="ampm-toggle" onClick={toggleAmPm}>
+            <button type="button" className="ampm" onClick={toggleAmPm} aria-label="Toggle AM/PM">
                 {ampm}
-            </div>
+            </button>
         </div>
     );
 };

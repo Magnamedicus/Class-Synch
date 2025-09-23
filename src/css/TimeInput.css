@@ -1,4 +1,9 @@
-.time-input-container {
+/* =========================
+   TimeInput – Neon Clock UI
+   ========================= */
+
+/* --- Container --- */
+.time-input {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -11,17 +16,47 @@
     box-shadow: 0 0 1rem rgba(0, 255, 204, 0.6);
     font-family: 'Orbitron', monospace;
     color: #00ffcc;
-    flex-wrap: wrap; /* ✅ prevents overflow on small devices */
 }
 
-.time-unit {
+/* Back-compat aliases (can remove later) */
+.time-input-container { all: unset; }
+.time-input-container { display: contents; } /* so old wrappers don't interfere */
+
+/* --- Segments (Hours / Minutes) --- */
+.segment {
     display: flex;
-    flex-direction: column;
+    flex-direction: column;        /* ▲ above, ▼ below (digital dial look) */
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.35rem;
 }
 
-.time-display-input {
+/* Back-compat alias */
+.time-unit { all: unset; }
+.time-unit { display: inline-flex; flex-direction: column; align-items: center; gap: 0.35rem; }
+
+/* --- Buttons (▲ / ▼) --- */
+.inc, .dec,
+.time-btn /* alias */ {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #00ffcc;
+    text-shadow: 0 0 0.3rem #00ffcc;
+    transition: transform 0.2s ease, color 0.2s ease;
+    padding: 0.1rem 0.2rem;
+}
+
+.inc:hover, .dec:hover,
+.time-btn:hover {
+    transform: scale(1.2);
+    color: #fff;
+}
+
+/* --- Numeric display (input) --- */
+.value,
+.time-display-input /* alias */ {
     font-size: 2.5rem;
     font-weight: bold;
     text-shadow: 0 0 0.5rem #00ffcc, 0 0 1rem #00ffcc;
@@ -34,38 +69,33 @@
     border: none;
     outline: none;
     color: #00ffcc;
-}
 
+    /* remove native spinners */
+    -moz-appearance: textfield;
+}
+.value::-webkit-outer-spin-button,
+.value::-webkit-inner-spin-button,
 .time-display-input::-webkit-outer-spin-button,
 .time-display-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
 
-.time-btn {
-    background: transparent;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: #00ffcc;
-    text-shadow: 0 0 0.3rem #00ffcc;
-    transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.time-btn:hover {
-    transform: scale(1.2);
-    color: #fff;
-}
-
-.time-colon {
+/* --- Colon --- */
+.colon,
+.time-colon /* alias */ {
     font-size: 2.5rem;
     font-weight: bold;
     color: #00ffcc;
     text-shadow: 0 0 0.5rem #00ffcc, 0 0 1rem #00ffcc;
+    padding: 0 0.2rem;
+    line-height: 1;
 }
 
-.ampm-toggle {
-    margin-left: 1rem;
+/* --- AM/PM pill --- */
+.ampm,
+.ampm-toggle /* alias */ {
+    margin-left: 0.75rem;
     padding: 0.5rem 1rem;
     font-size: 1.2rem;
     font-weight: bold;
@@ -74,61 +104,66 @@
     color: #fff;
     cursor: pointer;
     box-shadow: 0 0 1rem rgba(106, 90, 205, 0.6);
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
+.ampm:hover,
 .ampm-toggle:hover {
-    transform: scale(1.1);
+    transform: scale(1.08);
     box-shadow: 0 0 1.5rem rgba(0, 255, 204, 0.8);
 }
 
-/* 🔹 Media Queries for responsiveness */
+/* =========================
+   Responsiveness
+   ========================= */
+
+/* Tablet & down: slightly smaller */
 @media (max-width: 768px) {
-    .time-input-container {
-        gap: 0.6rem;
-        padding: 0.8rem 1rem;
+    .time-input {
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
     }
-
-    .time-display-input {
-        font-size: 2rem;
-        padding: 0.2rem 0.5rem;
-    }
-
-    .time-colon {
-        font-size: 2rem;
-    }
-
-    .ampm-toggle {
-        font-size: 1rem;
-        padding: 0.4rem 0.8rem;
-    }
+    .value,
+    .time-display-input { font-size: 2rem; padding: 0.15rem 0.5rem; }
+    .colon,
+    .time-colon { font-size: 2rem; }
+    .ampm,
+    .ampm-toggle { font-size: 1rem; padding: 0.4rem 0.8rem; }
 }
 
+/* Phones: keep EVERYTHING on one line (no wrap) and scale */
 @media (max-width: 480px) {
-    .time-input-container {
-        flex-direction: column; /* ✅ stack vertically on small phones */
-        align-items: stretch;
-        gap: 0.8rem;
-        padding: 0.6rem;
+    .time-input {
+        display: grid;                /* prevents wrapping more reliably than flex */
+        grid-auto-flow: column;
+        grid-auto-columns: max-content;
+        align-items: center;
+        justify-content: center;
+        column-gap: 0.5rem;
+        max-width: 92vw;
+        margin: 0 auto;
+        white-space: nowrap;
     }
 
-    .time-unit {
-        flex-direction: row; /* ✅ hours/minutes toggle side by side */
-        gap: 0.5rem;
-    }
+    .segment,
+    .time-unit { gap: 0.25rem; }
 
+    .value,
     .time-display-input {
         font-size: 1.6rem;
         max-width: 4ch;
     }
 
-    .time-colon {
-        font-size: 1.6rem;
-    }
+    .inc, .dec,
+    .time-btn { font-size: 1rem; padding: 0.05rem 0.15rem; }
 
-    .ampm-toggle {
-        font-size: 0.9rem;
-        padding: 0.3rem 0.6rem;
-        align-self: center;
-    }
+    .colon,
+    .time-colon { font-size: 1.6rem; padding: 0 0.1rem; }
+
+    .ampm,
+    .ampm-toggle { font-size: 0.9rem; padding: 0.3rem 0.6rem; margin-left: 0.4rem; }
+}
+
+/* Ultra-narrow (SE/mini): gentle overall shrink */
+@media (max-width: 380px) {
+    .time-input { transform: scale(.92); transform-origin: center top; }
 }

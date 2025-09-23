@@ -176,6 +176,67 @@
         font-size: clamp(0.95rem, 2.8vw, 1.05rem);
     }
 
+    .time-input {
+        display: flex;
+        flex-wrap: nowrap;          /* ✅ never wrap to a new line */
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;                 /* space between blocks */
+        max-width: 92vw;            /* contain on tiny screens */
+        margin: 0 auto;
+    }
+
+    /* Each numeric block (hours & minutes) */
+    .time-input .segment,
+    .time-input .hours,
+    .time-input .minutes {
+        flex: 0 0 auto;             /* don’t shrink to zero and don’t wrap */
+        width: clamp(3rem, 18vw, 3.75rem);   /* ⬅️ narrower on phones */
+        height: clamp(2.25rem, 10vw, 2.75rem);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: .9rem;
+    }
+
+    /* Up/Down arrow buttons inside each segment */
+    .time-input .inc,
+    .time-input .dec {
+        width: clamp(1.6rem, 9vw, 2rem);
+        height: clamp(1.6rem, 9vw, 2rem);
+        flex: 0 0 auto;
+    }
+
+    /* The numeric value text */
+    .time-input .value {
+        font-size: clamp(1rem, 5.2vw, 1.25rem);
+        line-height: 1;
+        min-width: 1.8ch;           /* keeps 0–59 from jittering */
+        text-align: center;
+    }
+
+    /* The colon between HH and MM */
+    .time-input .colon {
+        flex: 0 0 auto;
+        font-size: clamp(1.1rem, 6vw, 1.5rem);
+        line-height: 1;
+        padding: 0 .15rem;
+    }
+
+    /* AM/PM pill */
+    .time-input .ampm {
+        flex: 0 0 auto;
+        margin-left: .35rem;
+        font-size: clamp(.75rem, 3.8vw, .9rem);
+        padding: .25rem .5rem;
+        border-radius: .75rem;
+    }
+
+    /* If your old styles used column layout, force row on mobile */
+    .time-input.row {
+        flex-direction: row !important;
+    }
+
 }
 
 /* Optional micro-tweak: on very narrow phones, show the whole art instead of cropping */
