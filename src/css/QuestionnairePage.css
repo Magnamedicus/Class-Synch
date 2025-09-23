@@ -108,7 +108,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        gap: 1rem;
+        gap: 2.5rem;
         width: 100%;
         padding: 0 1rem 6vh;
         box-sizing: border-box;
@@ -143,9 +143,10 @@
         position: absolute;
         right: calc(env(safe-area-inset-right, 0) + 0.75rem);
         top: calc(env(safe-area-inset-top, 0) + 0.25rem);
-        z-index: 2;
+        z-index: 9999;
         height: 3.25rem;
-        pointer-events: none;
+        pointer-events: auto;
+        touch-action: manipulation;
     }
 
     .continue-btn-wrapper {
