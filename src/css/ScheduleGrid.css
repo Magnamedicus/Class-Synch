@@ -377,6 +377,28 @@
 }
 
 
+/* Compact grid on small screens */
+@media (max-width: 768px) {
+    :root {
+        --time-col-w: 3.75rem;   /* thinner time column */
+        --row-h: 1.05rem;        /* tighter rows */
+    }
+
+    .schedule {
+        overflow-x: auto;        /* let the 7-day table scroll horizontally */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .schedule__day-header {
+        font-size: .8rem;
+    }
+
+    .block__title { font-size: .7rem; }
+    .block__meta  { font-size: .65rem; }
+}
+
+
+
 
 
 

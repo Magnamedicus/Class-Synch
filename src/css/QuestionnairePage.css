@@ -9,8 +9,8 @@
 
     background-image: url("../assets/q_bg.png");
     background-repeat: no-repeat;
-    background-position: center 20%; /* desktop focal point */
-    background-size: cover;          /* ✅ scales properly */
+    background-position: center 20%;
+    background-size: cover;
     background-attachment: scroll;
 }
 
@@ -23,10 +23,8 @@
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-
-    padding-top: 16vh; /* nudges down so title isn’t clipped */
+    padding-top: 16vh;
 }
-
 .card-side { flex: 0 0 auto; }
 .form-side {
     flex: 1;
@@ -67,6 +65,7 @@
 /* ====== Tablet ====== */
 @media (max-width: 1024px) {
     .questionnaire-layout {
+
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
@@ -78,91 +77,97 @@
 }
 
 /* ====== Mobile ====== */
+/* ===== Mobile-only layout for Questionnaire (≤768px) ===== */
 @media (max-width: 768px) {
+
+    /* Headline */
+    .questionnaire-page h1,
+    .questionnaire-page .questionnaire-heading {
+        text-align: center;
+        margin: calc(env(safe-area-inset-top, 0) + 0.75rem) auto 1rem;
+        padding: 0 1rem;
+        line-height: 1.2;
+        max-width: 28ch;
+        /* Optional if the heading is huge on phones: */
+        font-size: clamp(1.25rem, 6vw, 2rem);
+    }
+
+    /* ✅ Put the mobile background on the SAME element, not the child */
+    .questionnaire-page {
+        background-image: url("../assets/q_bg_mobile.png");
+        background-repeat: no-repeat;
+        background-position: top center;
+        background-size: cover;          /* good look on most phones */
+        background-color: #0b1120;       /* fills any letterboxing */
+    }
+
+    /* And make sure the layout itself is transparent (no background) */
     .questionnaire-layout {
+        background: transparent !important;
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        padding: 14vh 1rem 5vh;
-        gap: 2rem;
-    }
-
-    .questionnaire-page {
-        background-image: url("../assets/q_bg_mobile.png");
-        background-repeat: no-repeat;
-        background-position: center center;
-        background-size: cover;
-        background-attachment: scroll;
-
-
-    }
-
-    .card-side, .form-side {
+        gap: 1rem;
         width: 100%;
-        max-width: 90%;
-        flex: none;
+        padding: 0 1rem 6vh;
+        box-sizing: border-box;
+        padding-top: 25vh;              /* was 22vh; too much push-down */
     }
 
-    .form-side {
+    /* Card centered */
+    .questionnaire-page .question-card,
+    .questionnaire-page .card,
+    .questionnaire-page .question {
+        width: min(520px, 92vw);
+        margin: 0 auto;
+        position: static !important;
+    }
+
+    /* Input centered directly below card */
+    .questionnaire-page .question-input,
+    .questionnaire-page .input-group,
+    .questionnaire-page .counter,
+    .questionnaire-page .stepper {
+        width: min(520px, 92vw);
+        margin: 0.5rem auto 0;
         display: flex;
-        max-width: 80%;
-        padding-right: 8vw;
-
-        justify-content: right;
+        justify-content: center;
+        align-items: center;
+        gap: .75rem;
+        position: static !important;
     }
 
+    /* Raise the logo above the words */
+    .page-logo {
+        position: absolute;
+        right: calc(env(safe-area-inset-right, 0) + 0.75rem);
+        top: calc(env(safe-area-inset-top, 0) + 0.25rem);
+        z-index: 2;
+        height: 3.25rem;
+        pointer-events: none;
+    }
+
+    .continue-btn-wrapper {
+        position: absolute; /* stays pinned even if content scrolls */
+        right: 1.25rem;
+        bottom: calc(env(safe-area-inset-bottom, 0) + 2.4rem); /* <-- raise/lower by changing 1.5rem */
+        z-index: 20;
+    }
+
+    /* Match the Back button on the left (optional) */
+    .back-btn-wrapper {
+        position:absolute;
+        left: 1.25rem;
+        bottom: calc(env(safe-area-inset-bottom, 0) + 1.5rem);
+        z-index: 20;
+    }
+}
+
+/* Optional micro-tweak: on very narrow phones, show the whole art instead of cropping */
+@media (max-width: 430px) {
+    .questionnaire-page { background-size: contain; }
     .continue-btn-wrapper,
     .back-btn-wrapper {
-        bottom: 2vh;
+        bottom: calc(env(safe-area-inset-bottom, 0) + 1.9rem);
     }
-
-    .page-logo {
-        height: 8rem;
-        top: 1rem;
-        right: 1rem;
-    }
-}
-
-/* ====== Small phones ====== */
-@media (max-width: 500px) {
-    .questionnaire-layout {
-        padding: 15vh 1rem 5vh;
-        gap: 1.75rem;
-    }
-
-    .questionnaire-page {
-        background-image: url("../assets/q_bg_mobile.png");
-        background-repeat: no-repeat;
-        background-position: center center;
-        background-size: cover;
-        background-attachment: scroll;
-
-    }
-
-    .card-side,
-    .form-side {
-        max-width: 95%;
-    }
-
-    .continue-btn-wrapper,
-    .back-btn-wrapper {
-        bottom: 1.5vh;
-    }
-
-    .page-logo {
-        height: 6rem;
-    }
-}
-
-/* iOS safe areas */
-.questionnaire-page {
-    padding:
-            env(safe-area-inset-top, 0)
-            env(safe-area-inset-right, 0)
-            env(safe-area-inset-bottom, 0)
-            env(safe-area-inset-left, 0);
-}
-.page-logo {
-    top: calc(env(safe-area-inset-top, 0) + 1rem);
-    right: calc(env(safe-area-inset-right, 0) + 1rem);
 }

@@ -75,3 +75,16 @@ code {
     padding: 0.15rem 0.3rem;
   }
 }
+
+
+/* Make sure the app background never shows white gaps on long content */
+html, body, #root {
+  background-color: #0b1120; /* matches your dark aesthetic */
+  min-height: 100%;
+}
+
+/* Smoother text scaling on dense phones */
+@media (max-width: 380px) {
+  :root { font-size: 13.5px; }
+}
+

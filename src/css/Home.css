@@ -304,3 +304,13 @@
         margin: 0 auto;
     }
 }
+
+
+@media (max-width: 420px) {
+    .home {
+        background-size: contain;     /* show all the artwork on smallest phones */
+        background-position: top center;
+        background-color: #0b1120;    /* fill the rest */
+    }
+}
+

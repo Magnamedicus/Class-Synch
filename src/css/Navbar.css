@@ -38,13 +38,21 @@
 
 @media (max-width: 640px) {
     .navbar {
-        padding: .75rem 1rem;
+        width: 100%;
+        padding: .6rem .75rem;
+        overflow: hidden;           /* prevent page-wide horizontal scroll */
     }
+
     .navbar__links {
-        flex-wrap: wrap;
-        gap: .6rem 1rem;
+        display: flex;
+        flex-wrap: wrap;            /* ✅ break to a second line instead of overflowing */
+        gap: .5rem .75rem;
+        max-width: 100%;
     }
+
     .navbar__links a {
-        font-size: .95rem;
+        white-space: nowrap;
+        font-size: .875rem;
+        padding: .35rem .6rem;
     }
 }
