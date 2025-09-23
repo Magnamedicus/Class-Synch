@@ -7,6 +7,7 @@
     aspect-ratio: 4 / 5;                /* ✅ fixes the height issue */
     perspective: 1000px;
     margin-top: -1rem;                  /* matches your original “slightly higher” feel */
+    padding-top: 7vh;
 }
 
 /* The flipping body */
@@ -17,12 +18,15 @@
     transition: transform 1200ms;
     transform-style: preserve-3d;
     border-radius: 2rem;
+
 }
 
 /* Flip on hover (desktop) */
 .container:hover > .cardbody {
     cursor: pointer;
-    transform: rotateY(180deg) rotateZ(180deg);
+
+    transform: rotateY(180deg) rotateZ(180deg) translateY(100px);
+
 }
 
 /* Faces */
@@ -55,7 +59,8 @@
 /* ====== Mobile tightening ====== */
 @media (max-width: 768px) {
     .container {
-        width: min(88vw, 20rem);          /* don’t let the card go full-bleed */
+        width: min(98vw, 30rem);          /* don’t let the card go full-bleed */
+        padding-right: 3vw;
     }
 }
 
@@ -65,8 +70,8 @@
     }
 
     .front, .back {
-        height: 80%;
-        width: 80%;
+        height: 90%;
+        width: 90%;
 
 
     }

@@ -200,20 +200,26 @@
     .input-row {
         flex-direction: column;
         gap: 0.6rem;
+
+    }
+
+    .option-header {
+
+        padding-top: 3vh;
     }
 
     .add-btn {
-        width: 100%;
+        width: 90%;
         text-align: center;
     }
 
     .dropdown-toggle {
-        width: 100%;
+        width: 90%;
         font-size: 0.9rem;
     }
 
     .file-upload-label {
-        width: 100%;
+        width: 90%;
         padding: 1.5rem;
     }
 }

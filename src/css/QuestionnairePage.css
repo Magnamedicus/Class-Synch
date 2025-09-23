@@ -24,6 +24,7 @@
     height: 100%;
     box-sizing: border-box;
     padding-top: 16vh;
+    overflow:hidden;
 }
 .card-side { flex: 0 0 auto; }
 .form-side {
@@ -111,7 +112,7 @@
         width: 100%;
         padding: 0 1rem 6vh;
         box-sizing: border-box;
-        padding-top: 25vh;              /* was 22vh; too much push-down */
+        padding-top: 23vh;              /* was 22vh; too much push-down */
     }
 
     /* Card centered */
@@ -161,6 +162,19 @@
         bottom: calc(env(safe-area-inset-bottom, 0) + 1.5rem);
         z-index: 20;
     }
+
+    /* Make the question card a bit larger on mobile */
+    .questionnaire-page .question-card,
+    .questionnaire-page .card,
+    .questionnaire-page .question {
+        /* widen slightly */
+        width: min(560px, 94vw);     /* was ~520px, 92vw */
+        /* give content more breathing room */
+        padding: clamp(1rem, 3.5vw, 1.5rem);
+        /* scale text a touch */
+        font-size: clamp(0.95rem, 2.8vw, 1.05rem);
+    }
+
 }
 
 /* Optional micro-tweak: on very narrow phones, show the whole art instead of cropping */
