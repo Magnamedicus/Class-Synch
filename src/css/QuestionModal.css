@@ -1,0 +1,74 @@
+:root {
+    --qm-bg: hsl(222 16% 10% / 0.6);
+    --qm-panel: hsl(220 16% 16%);
+    --qm-text: hsl(210 40% 96%);
+    --qm-muted: hsl(215 16% 75%);
+    --qm-primary: hsl(170 80% 45%);
+    --qm-radius: 1rem;
+}
+
+.qm-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--qm-bg);
+    backdrop-filter: blur(0.35rem);
+    display: grid;
+    place-items: center;
+    z-index: 10000;
+    padding: 1.5rem;
+}
+
+.qm-dialog {
+    width: min(44rem, 96vw);
+    max-height: 86vh;
+    overflow: auto;
+    background: var(--qm-panel);
+    color: var(--qm-text);
+    border-radius: var(--qm-radius);
+    box-shadow: 0 0.75rem 3rem rgba(0,0,0,.5);
+    padding: 1.25rem 1.25rem 1rem;
+    outline: none;
+}
+
+.qm-title {
+    margin: 0 0 0.75rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+.qm-body {
+    display: grid;
+    gap: 1rem;
+}
+
+.qm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.qm-btn {
+    appearance: none;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.qm-btn--primary {
+    background: var(--qm-primary);
+    color: white;
+}
+
+.qm-btn--ghost {
+    background: transparent;
+    color: var(--qm-muted);
+    outline: 1px solid hsl(215 16% 35%);
+}
+
+@media (max-width: 30rem) {
+    .qm-dialog { width: 96vw; padding: 1rem; }
+}

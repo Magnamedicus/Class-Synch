@@ -1,0 +1,89 @@
+:root {
+    --qc-radius: 1rem;
+    --qc-edge-w: 10vw;      /* gradient edge width */
+    --qc-edge-w-max: 6.25rem; /* ~100px in rem */
+    --qc-dot: 0.6rem;
+    --qc-dot-active: 0.8rem;
+}
+
+/* Root */
+.qc-root {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    outline: none;
+}
+
+/* Viewport */
+.qc-viewport {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--qc-radius);
+    background: hsl(220 15% 12%);
+}
+
+/* Track (slides container) */
+.qc-track {
+    display: flex;
+    cursor: grab;
+}
+.qc-track:active { cursor: grabbing; }
+
+/* Slide */
+.qc-slide {
+    flex: 0 0 100%;
+    aspect-ratio: 16 / 9;
+    background-size: cover;
+    background-position: center;
+    border-radius: var(--qc-radius);
+}
+
+/* Gradient edges (subtle vignette) */
+.qc-edge {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+.qc-edge--left {
+    left: 0;
+    width: min(var(--qc-edge-w), var(--qc-edge-w-max));
+    background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(0,0,0,0));
+}
+.qc-edge--right {
+    right: 0;
+    width: min(var(--qc-edge-w), var(--qc-edge-w-max));
+    background: linear-gradient(270deg, rgba(0,0,0,0.35), rgba(0,0,0,0));
+}
+
+/* Dots */
+.qc-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+.qc-dot {
+    width: var(--qc-dot);
+    height: var(--qc-dot);
+    border-radius: 50%;
+    background: hsl(220 10% 45%);
+    border: none;
+    cursor: pointer;
+    transition: transform 120ms ease, background-color 120ms ease;
+}
+.qc-dot.is-active {
+    width: var(--qc-dot-active);
+    height: var(--qc-dot-active);
+    background: hsl(0 0% 96%);
+    transform: translateY(-0.05rem);
+}
+
+/* Small screens: taller slides */
+@media (max-width: 48rem) {
+    .qc-slide { aspect-ratio: 4 / 3; }
+}
+
+/* Very small phones */
+@media (max-width: 30rem) {
+    .qc-slide { aspect-ratio: 1 / 1; }
+}

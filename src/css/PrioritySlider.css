@@ -1,0 +1,226 @@
+:root {
+    /* Color & look (override per bucket via inline --ps-color) */
+    --ps-color: hsl(190 100% 45%);
+    --ps-text: hsl(210 40% 96%);
+    --ps-muted: hsl(210 18% 70%);
+    --ps-bg: hsl(210 16% 20% / 0.28);
+    --ps-badge-bg: hsl(210 16% 20% / 0.22);
+
+    /* Sizing (relative) */
+    --ps-track-h: 0.5rem;
+    --ps-thumb: 1.25rem;
+    --ps-radius: 999rem;
+
+    /* Shadows (kept subtle; no px) */
+    --ps-thumb-shadow: 0 0 0 0.075em hsl(0 0% 0% / 0.25);
+    --ps-focus: 0 0 0 0.2rem hsl(190 100% 45% / 0.35);
+
+    /* Typography scale */
+    --ps-label: 0.95rem;
+    --ps-badge: 0.85rem;
+    --ps-mark: 0.75rem;
+    --ps-help: 0.85rem;
+
+    /* Spacing */
+    --ps-gap: 0.5rem;
+    --ps-gap-lg: 0.75rem;
+}
+
+.priority-slider {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ps-gap);
+    color: var(--ps-text);
+    user-select: none;
+}
+
+.priority-slider.is-disabled { opacity: 0.6; pointer-events: none; }
+
+.ps-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ps-gap-lg);
+}
+
+.ps-label {
+    font-size: var(--ps-label);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.ps-spacer { flex: 1 1 auto; }
+
+.ps-badge {
+    padding: 0.25em 0.6em;
+    border-radius: 0.6em;
+    background: var(--ps-badge-bg);
+    font-size: var(--ps-badge);
+    font-weight: 600;
+    color: var(--ps-text);
+}
+
+/* Track container */
+.ps-track-wrap {
+    position: relative;
+    height: var(--ps-thumb);
+    display: flex;
+    align-items: center;
+}
+
+/* Range input (base track) */
+.ps-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: var(--ps-track-h);
+    background: var(--ps-bg);
+    border-radius: var(--ps-radius);
+    outline: none;
+    position: relative;
+    z-index: 2; /* keep above progress for clickability */
+}
+
+/* WebKit thumb */
+.ps-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: var(--ps-thumb);
+    height: var(--ps-thumb);
+    border-radius: 50%;
+    background: #fff;
+    border: 0.12rem solid var(--ps-color);
+    box-shadow: var(--ps-thumb-shadow);
+    cursor: pointer;
+    position: relative;
+}
+.ps-input:focus-visible::-webkit-slider-thumb { box-shadow: var(--ps-thumb-shadow), var(--ps-focus); }
+
+/* Firefox thumb */
+.ps-input::-moz-range-thumb {
+    width: var(--ps-thumb);
+    height: var(--ps-thumb);
+    border-radius: 50%;
+    background: #fff;
+    border: 0.12rem solid var(--ps-color);
+    box-shadow: var(--ps-thumb-shadow);
+    cursor: pointer;
+}
+.ps-input:focus-visible::-moz-range-thumb { box-shadow: var(--ps-thumb-shadow), var(--ps-focus); }
+
+/* Firefox track */
+.ps-input::-moz-range-track {
+    height: var(--ps-track-h);
+    background: var(--ps-bg);
+    border-radius: var(--ps-radius);
+}
+
+/* Progress fill */
+.ps-progress {
+    position: absolute;
+    left: 0;
+    height: var(--ps-track-h);
+    background: linear-gradient(90deg, var(--ps-color), var(--ps-color));
+    border-radius: var(--ps-radius);
+    z-index: 1;
+    pointer-events: none;
+    transition: width 0.08s linear;
+}
+
+/* Marks / ticks */
+.ps-marks {
+    position: relative;
+    height: 1.4rem;
+    margin-top: 0.25rem;
+}
+.ps-mark {
+    position: absolute;
+    transform: translateX(-50%);
+    top: 0.15rem;
+    text-align: center;
+}
+.ps-tick {
+    display: block;
+    width: 0.12rem;
+    height: 0.5rem;
+    background: var(--ps-muted);
+    margin: 0 auto 0.2rem;
+    border-radius: 0.2rem;
+}
+.ps-mark-label {
+    font-size: var(--ps-mark);
+    color: var(--ps-muted);
+    white-space: nowrap;
+}
+
+/* Help text */
+.ps-help {
+    margin-top: 0.25rem;
+    font-size: var(--ps-help);
+    color: var(--ps-muted);
+}
+
+/* ==== Variants ==== */
+.priority-slider--bucket {
+    --ps-track-h: 0.6rem;
+    --ps-thumb: 1.4rem;
+    --ps-badge-bg: hsl(170 70% 40% / 0.16);
+    --ps-color: hsl(170 80% 45%);
+}
+.priority-slider--obligation {
+    --ps-track-h: 0.5rem;
+    --ps-thumb: 1.25rem;
+    --ps-color: hsl(190 100% 45%);
+}
+
+/* ==== Responsiveness (relative breakpoints) ==== */
+/* Large desktops default (≥ 64rem) */
+
+/* Medium screens (≤ 64rem) */
+@media (max-width: 64rem) {
+    :root {
+        --ps-label: 0.9rem;
+        --ps-badge: 0.825rem;
+        --ps-mark: 0.725rem;
+    }
+    .priority-slider--bucket { --ps-thumb: 1.35rem; --ps-track-h: 0.58rem; }
+}
+
+/* Tablets & small laptops (≤ 48rem) */
+@media (max-width: 48rem) {
+    :root {
+        --ps-label: 0.9rem;
+        --ps-badge: 0.8rem;
+        --ps-mark: 0.7rem;
+    }
+    .priority-slider { gap: 0.45rem; }
+    .ps-header { gap: 0.6rem; }
+    .priority-slider--bucket { --ps-thumb: 1.25rem; --ps-track-h: 0.54rem; }
+    .priority-slider--obligation { --ps-thumb: 1.15rem; --ps-track-h: 0.46rem; }
+}
+
+/* Phones (≤ 30rem ~ 480px if root is 16px) */
+@media (max-width: 30rem) {
+    :root {
+        --ps-label: 0.875rem;
+        --ps-badge: 0.775rem;
+        --ps-mark: 0.675rem;
+    }
+    .ps-badge { padding: 0.2em 0.5em; }
+    .ps-marks { height: 1.2rem; }
+    .ps-tick { height: 0.45rem; }
+    .priority-slider--bucket { --ps-thumb: 1.15rem; --ps-track-h: 0.5rem; }
+    .priority-slider--obligation { --ps-thumb: 1.05rem; --ps-track-h: 0.42rem; }
+}
+
+/* Ultra-narrow (≤ 22rem) */
+@media (max-width: 22rem) {
+    .ps-header { flex-wrap: wrap; row-gap: 0.25rem; }
+    .ps-badge { order: 2; }
+    .ps-label { order: 1; }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .ps-progress { transition: none; }
+}

@@ -1,174 +1,307 @@
-import React, { useState } from 'react';
-import { Link } from "react-router-dom";
-import QuestionCard from '../components/QuestionCard';
-import ContinueButton from '../components/ContinueButton';
-import BackButton from '../components/BackButton';
-import NumberInput from '../components/inputs/NumberInput';
-import TextInput from '../components/inputs/TextInput';
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+import QuestionCarousel from "../components/QuestionCarousel";
+import QuestionModal from "../components/QuestionModal";
+
+import PrioritySlider from "../components/inputs/PrioritySlider";
+import NumberInput from "../components/inputs/NumberInput";
+import TextInput from "../components/inputs/TextInput";
 import EnterClasses from "../components/inputs/EnterClasses";
-import TimeInput from '../components/inputs/TimeInput';
-import '../css/QuestionnairePage.css';
+import TimeInput from "../components/inputs/TimeInput";
+import BackButton from "../components/BackButton";
 
-import logo from '../assets/logo.png';
+import "../css/QuestionnairePage.css";
+import logo from "../assets/logo.png";
 
+/* --- Carousel images (imported so bundler resolves URLs) --- */
+import imgA from "../assets/class_synch_bg.png";
+import imgB from "../assets/logo.png";
+import imgC from "../assets/q_bg.png";
+const carouselImages = [imgA, imgB, imgC];
+
+/* --- Questionnaire definition (expand as you go) --- */
 const questionnaire = [
     {
-        bucket: 'School Work',
+        bucket: "School Work",
         questions: [
-            { id: 'q1', text: 'How many classes are you taking?', inputType: 'number', hint: 'Enter a number' },
-            { id: 'q2', text: 'Name your classes (or upload schedule)', inputType: 'enter-classes', hint: 'Type class names' }
-        ]
+            {
+                id: "bucket_priority_school_work",
+                text: "How much do you prioritize School Work this week?",
+                inputType: "priority",
+                hint: "Higher priority wins conflicts with other tasks",
+                default: 70, // UI 0–100
+            },
+            {
+                id: "q1",
+                text: "How many classes are you taking?",
+                inputType: "number",
+                hint: "Enter a number",
+            },
+            {
+                id: "q2",
+                text: "Name your classes (or upload schedule)",
+                inputType: "enter-classes",
+                hint: "Type class names",
+            },
+        ],
     },
     {
-        bucket: 'Sleep',
+        bucket: "Sleep",
         questions: [
-            { id: 'q3', text: 'How many hours would you like to sleep per night?', inputType: 'number', hint: 'Enter a number' },
-            { id: 'q4', text: 'What time do you usually go to bed?', inputType: 'time', hint: 'Choose a time' }
-        ]
+            {
+                id: "q3",
+                text: "How many hours would you like to sleep per night?",
+                inputType: "number",
+                hint: "Enter a number",
+            },
+            {
+                id: "q4",
+                text: "What time do you usually go to bed?",
+                inputType: "time",
+                hint: "Choose a time",
+            },
+        ],
+    },
+] as const;
+
+type QuestionItem = (typeof questionnaire)[number]["questions"][number] & {
+    __bucket: string;
+    __bi: number;
+    __qi: number;
+};
+
+function flattenQuestions(): QuestionItem[] {
+    const out: QuestionItem[] = [];
+    questionnaire.forEach((b, bi) => {
+        b.questions.forEach((q, qi) => out.push({ ...q, __bucket: b.bucket, __bi: bi, __qi: qi }));
+    });
+    return out;
+}
+
+/* Optional helpers to persist between reloads */
+const STORAGE_KEY = "classsynch.questionnaire.v1";
+const loadPersisted = () => {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch {
+        return null;
     }
-];
+};
+const savePersisted = (data: any) => {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {}
+};
 
 const QuestionnairePage: React.FC = () => {
-    const [bucketIndex, setBucketIndex] = useState(0);
-    const [questionIndex, setQuestionIndex] = useState(0);
-    const [inputValue, setInputValue] = useState('');
-    const [answers, setAnswers] = useState<{ [key: string]: string }>({});
-    const [classes, setClasses] = useState<string[]>([]); // ✅ track classes here
+    const navigate = useNavigate();
+    const flat = React.useMemo(() => flattenQuestions(), []);
+    const [linearIndex, setLinearIndex] = React.useState(0);
+    const current = flat[linearIndex];
 
-    const currentBucket = questionnaire[bucketIndex];
-    const currentQuestion = currentBucket?.questions[questionIndex];
+    // All answers (UI values; normalize later when generating schedule)
+    const [answers, setAnswers] = React.useState<Record<string, any>>(() => {
+        const persisted = loadPersisted();
+        return persisted?.answers ?? {};
+    });
+    const [classes, setClasses] = React.useState<string[]>(() => {
+        const persisted = loadPersisted();
+        return persisted?.classes ?? [];
+    });
 
-    const renderInput = () => {
-        if (!currentQuestion) return null;
+    // Modal state + per-question temp value
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [modalValue, setModalValue] = React.useState<any>("");
 
-        switch (currentQuestion.inputType) {
-            case 'number':
+    // Sync images with number of questions (cycle if fewer)
+    const images = React.useMemo(() => {
+        if (carouselImages.length >= flat.length) return carouselImages.slice(0, flat.length);
+        const r: string[] = [];
+        for (let i = 0; i < flat.length; i++) r.push(carouselImages[i % carouselImages.length]);
+        return r;
+    }, [flat.length]);
+
+    // Persist on changes (optional)
+    React.useEffect(() => {
+        savePersisted({ answers, classes, linearIndex });
+    }, [answers, classes, linearIndex]);
+
+    // Open modal for current question
+    const openModalForCurrent = React.useCallback(() => {
+        if (!current) return;
+        if (current.inputType === "enter-classes") {
+            setModalValue([...classes]);
+        } else if (current.inputType === "priority") {
+            setModalValue(answers[current.id] ?? current.default ?? 70);
+        } else {
+            setModalValue(answers[current.id] ?? "");
+        }
+        setIsModalOpen(true);
+        document.documentElement.classList.add("modal-open"); // enable page blur
+    }, [current, answers, classes]);
+
+    const closeModal = React.useCallback(() => {
+        setIsModalOpen(false);
+        document.documentElement.classList.remove("modal-open");
+    }, []);
+
+    // Validate the current modalValue for enabling submit
+    const modalValid = React.useMemo(() => {
+        if (!current) return false;
+        switch (current.inputType) {
+            case "priority":
+                return typeof modalValue === "number" && modalValue >= 0 && modalValue <= 100;
+            case "number":
+                return String(modalValue).trim().length > 0 && !Number.isNaN(Number(modalValue));
+            case "text":
+                return String(modalValue).trim().length > 0;
+            case "enter-classes":
+                return Array.isArray(modalValue) && modalValue.length > 0;
+            case "time":
+                return String(modalValue).trim().length > 0;
+            default:
+                return true;
+        }
+    }, [current, modalValue]);
+
+    // Submit answer and auto-advance
+    const submitModal = React.useCallback(() => {
+        if (!current || !modalValid) return;
+
+        if (current.inputType === "enter-classes") {
+            const arr = Array.isArray(modalValue) ? modalValue.slice() : [];
+            setAnswers((p) => ({ ...p, [current.id]: arr }));
+            setClasses(arr);
+        } else {
+            setAnswers((p) => ({ ...p, [current.id]: modalValue }));
+        }
+
+        closeModal();
+
+        setLinearIndex((i) => {
+            const next = i + 1;
+            if (next >= flat.length) {
+                // Finished (optional): navigate("/profile");
+                return i; // stay on last
+            }
+            return next;
+        });
+    }, [current, modalValue, modalValid, closeModal, flat.length, navigate]);
+
+    // Back button
+    const goBack = () => setLinearIndex((i) => Math.max(0, i - 1));
+
+    // Render the proper input inside the modal
+    const renderModalInput = () => {
+        if (!current) return null;
+
+        switch (current.inputType) {
+            case "priority":
+                return (
+                    <PrioritySlider
+                        variant="bucket"
+                        label={current.text}
+                        helpText={current.hint}
+                        value={Number(modalValue ?? 70)}
+                        onChange={(v) => setModalValue(v)}
+                    />
+                );
+
+            case "number":
                 return (
                     <NumberInput
-                        value={inputValue}
-                        onChange={setInputValue}
+                        value={String(modalValue ?? "")}
+                        onChange={(v) => setModalValue(v)}
                         placeholder="0"
                     />
                 );
-            case 'text':
+
+            case "text":
                 return (
                     <TextInput
-                        value={inputValue}
-                        onChange={setInputValue}
-                        placeholder={currentQuestion.hint}
+                        value={String(modalValue ?? "")}
+                        onChange={(v) => setModalValue(v)}
+                        placeholder={current.hint}
                     />
                 );
-            case 'enter-classes':
+
+            case "enter-classes":
                 return (
                     <EnterClasses
-                        value={classes}
-                        onChange={setClasses}
+                        value={Array.isArray(modalValue) ? modalValue : []}
+                        onChange={(arr) => setModalValue(arr)}
                     />
                 );
-            case 'time':
+
+            case "time":
                 return (
                     <TimeInput
-                        type="time"
-                        value={inputValue}
-                        onChange={setInputValue}
+                        value={String(modalValue ?? "")}
+                        onChange={(v) => setModalValue(v)}
                     />
                 );
+
             default:
-                return (
-                    <input
-                        type="text"
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        placeholder="Enter your answer"
-                    />
-                );
+                return null;
         }
     };
-
-    const handleContinue = () => {
-        if (!currentQuestion) return;
-
-        if (currentQuestion.inputType === 'enter-classes') {
-            setAnswers(prev => ({
-                ...prev,
-                [currentQuestion.id]: classes.join(',')
-            }));
-        } else {
-            setAnswers(prev => ({
-                ...prev,
-                [currentQuestion.id]: inputValue
-            }));
-            setInputValue('');
-        }
-
-        // ✅ Progress to next question
-        if (questionIndex < currentBucket.questions.length - 1) {
-            setQuestionIndex(prev => prev + 1);
-        } else if (bucketIndex < questionnaire.length - 1) {
-            setBucketIndex(prev => prev + 1);
-            setQuestionIndex(0);
-        } else {
-            console.log('🎉 Done! Answers:', answers);
-        }
-    };
-
-    const handleBack = () => {
-        if (questionIndex > 0) {
-            setQuestionIndex(prev => prev - 1);
-        } else if (bucketIndex > 0) {
-            const prevBucketIndex = bucketIndex - 1;
-            const prevQuestionIndex = questionnaire[prevBucketIndex].questions.length - 1;
-            setBucketIndex(prevBucketIndex);
-            setQuestionIndex(prevQuestionIndex);
-        }
-    };
-
-    const isClassesQuestion = currentQuestion?.inputType === 'enter-classes';
-    const disableContinue = isClassesQuestion
-        ? classes.length === 0
-        : !inputValue.trim();
 
     return (
         <div className="questionnaire-page">
-            <img src={logo} alt="App Logo" className="page-logo" />
-
-            <Link to="/">
+            {/* Home link / logo */}
+            <Link to="/" className="q-home-link" aria-label="Go to home">
                 <img src={logo} alt="App Logo" className="page-logo" />
             </Link>
 
-            <div className="questionnaire-layout">
-                <div className="card-side">
-                    {currentQuestion && (
-                        <QuestionCard
-                            category={currentBucket.bucket}
-                            questionIndex={questionIndex}
-                            question={currentQuestion.text}
-                            inputHint={currentQuestion.hint}
-                        />
-                    )}
+            {/* Centered, slightly smaller carousel */}
+            <div className="q-center">
+                <div className="q-carousel-wrap">
+                    <QuestionCarousel
+                        images={images}
+                        index={linearIndex}
+                        onIndexChange={setLinearIndex}
+                        autoAdvanceMs={undefined}
+                        dragBufferPx={50}
+                        showDots
+                    />
                 </div>
 
-                <div className="back-btn-wrapper">
-                    {currentQuestion && <BackButton onClick={handleBack} />}
-                </div>
-
-                <div className="form-side">
-                    {currentQuestion ? (
-                        <>{renderInput()}</>
-                    ) : (
-                        <p>🎉 All done! Thanks for completing the questionnaire.</p>
-                    )}
-                </div>
-
-                <div className="continue-btn-wrapper">
-                    {currentQuestion && (
-                        <ContinueButton
-                            onClick={handleContinue}
-                            disabled={disableContinue}
-                        />
-                    )}
+                {/* Only the Answer button centered below */}
+                <div className="q-center-actions">
+                    <button
+                        className="q-answer-btn"
+                        type="button"
+                        onClick={openModalForCurrent}
+                    >
+                        Answer Question
+                    </button>
                 </div>
             </div>
+
+            {/* Fixed Back button in bottom-left */}
+            <div className="q-back-fixed">
+                <BackButton onClick={goBack} disabled={linearIndex === 0} />
+            </div>
+
+            {/* Modal */}
+            <QuestionModal
+                isOpen={isModalOpen}
+                title={current?.text}
+                onClose={closeModal}
+                onSubmit={submitModal}
+                submitLabel="Submit"
+            >
+                {renderModalInput()}
+                {current?.hint ? <p className="q-hint">{current.hint}</p> : null}
+                {!modalValid && (
+                    <p className="q-validate-msg" role="alert">
+                        Please provide a valid answer to continue.
+                    </p>
+                )}
+            </QuestionModal>
         </div>
     );
 };
