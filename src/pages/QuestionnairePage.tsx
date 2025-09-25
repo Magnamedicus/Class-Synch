@@ -1,8 +1,10 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
+/* UI pieces */
 import QuestionCarousel from "../components/QuestionCarousel";
 import QuestionModal from "../components/QuestionModal";
+import IntroModal from "../components/IntroModal";
 
 import PrioritySlider from "../components/inputs/PrioritySlider";
 import NumberInput from "../components/inputs/NumberInput";
@@ -11,16 +13,21 @@ import EnterClasses from "../components/inputs/EnterClasses";
 import TimeInput from "../components/inputs/TimeInput";
 import BackButton from "../components/BackButton";
 
+/* Styles & assets */
 import "../css/QuestionnairePage.css";
 import logo from "../assets/logo.png";
 
-/* --- Carousel images (imported so bundler resolves URLs) --- */
+/* Carousel images (imported so bundler resolves hashed URLs) */
 import imgA from "../assets/class_synch_bg.png";
 import imgB from "../assets/logo.png";
 import imgC from "../assets/q_bg.png";
-const carouselImages = [imgA, imgB, imgC];
 
-/* --- Questionnaire definition (expand as you go) --- */
+/* Intro modal image (exact filename as requested) */
+import introImg from "../assets/questionnaire_intro_img.png";
+
+/* ================================================
+   Questionnaire definition (expand as you go)
+   ================================================ */
 const questionnaire = [
     {
         bucket: "School Work",
@@ -79,7 +86,9 @@ function flattenQuestions(): QuestionItem[] {
     return out;
 }
 
-/* Optional helpers to persist between reloads */
+/* ================================================
+   Local persistence (answers only — no intro memory)
+   ================================================ */
 const STORAGE_KEY = "classsynch.questionnaire.v1";
 const loadPersisted = () => {
     try {
@@ -96,13 +105,19 @@ const savePersisted = (data: any) => {
     } catch {}
 };
 
+/* ================================================
+   Component
+   ================================================ */
+const carouselImages = [imgA, imgB, imgC];
+
 const QuestionnairePage: React.FC = () => {
-    const navigate = useNavigate();
+    const location = useLocation();
+
     const flat = React.useMemo(() => flattenQuestions(), []);
     const [linearIndex, setLinearIndex] = React.useState(0);
     const current = flat[linearIndex];
 
-    // All answers (UI values; normalize later when generating schedule)
+    // Answers (store UI values; normalize later when generating schedule)
     const [answers, setAnswers] = React.useState<Record<string, any>>(() => {
         const persisted = loadPersisted();
         return persisted?.answers ?? {};
@@ -112,11 +127,36 @@ const QuestionnairePage: React.FC = () => {
         return persisted?.classes ?? [];
     });
 
-    // Modal state + per-question temp value
+    // Question modal
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [modalValue, setModalValue] = React.useState<any>("");
 
-    // Sync images with number of questions (cycle if fewer)
+    // Intro modal: ALWAYS open on page mount/arrival
+    const [showIntro, setShowIntro] = React.useState<boolean>(true);
+
+    // If your router keeps this component mounted, re-open intro when you navigate back here
+    React.useEffect(() => {
+        setShowIntro(true);
+    }, [location.pathname]);
+
+    // When any modal is open, add html.modal-open to blur background
+    React.useEffect(() => {
+        const active = isModalOpen || showIntro;
+        const el = document.documentElement;
+        if (active) el.classList.add("modal-open");
+        else el.classList.remove("modal-open");
+    }, [isModalOpen, showIntro]);
+
+    const closeIntro = React.useCallback(() => {
+        setShowIntro(false);
+    }, []);
+
+    // Persist progress (answers/classes/index)
+    React.useEffect(() => {
+        savePersisted({ answers, classes, linearIndex });
+    }, [answers, classes, linearIndex]);
+
+    // Map images to # of questions (cycle if fewer)
     const images = React.useMemo(() => {
         if (carouselImages.length >= flat.length) return carouselImages.slice(0, flat.length);
         const r: string[] = [];
@@ -124,12 +164,7 @@ const QuestionnairePage: React.FC = () => {
         return r;
     }, [flat.length]);
 
-    // Persist on changes (optional)
-    React.useEffect(() => {
-        savePersisted({ answers, classes, linearIndex });
-    }, [answers, classes, linearIndex]);
-
-    // Open modal for current question
+    // Open question modal for current item and preload value
     const openModalForCurrent = React.useCallback(() => {
         if (!current) return;
         if (current.inputType === "enter-classes") {
@@ -140,15 +175,11 @@ const QuestionnairePage: React.FC = () => {
             setModalValue(answers[current.id] ?? "");
         }
         setIsModalOpen(true);
-        document.documentElement.classList.add("modal-open"); // enable page blur
     }, [current, answers, classes]);
 
-    const closeModal = React.useCallback(() => {
-        setIsModalOpen(false);
-        document.documentElement.classList.remove("modal-open");
-    }, []);
+    const closeModal = React.useCallback(() => setIsModalOpen(false), []);
 
-    // Validate the current modalValue for enabling submit
+    // Modal validation (basic)
     const modalValid = React.useMemo(() => {
         if (!current) return false;
         switch (current.inputType) {
@@ -167,7 +198,7 @@ const QuestionnairePage: React.FC = () => {
         }
     }, [current, modalValue]);
 
-    // Submit answer and auto-advance
+    // Submit answer from modal and advance
     const submitModal = React.useCallback(() => {
         if (!current || !modalValid) return;
 
@@ -180,24 +211,14 @@ const QuestionnairePage: React.FC = () => {
         }
 
         closeModal();
+        setLinearIndex((i) => (i + 1 < flat.length ? i + 1 : i)); // stay on last if finished
+    }, [current, modalValue, modalValid, closeModal, flat.length]);
 
-        setLinearIndex((i) => {
-            const next = i + 1;
-            if (next >= flat.length) {
-                // Finished (optional): navigate("/profile");
-                return i; // stay on last
-            }
-            return next;
-        });
-    }, [current, modalValue, modalValid, closeModal, flat.length, navigate]);
-
-    // Back button
     const goBack = () => setLinearIndex((i) => Math.max(0, i - 1));
 
-    // Render the proper input inside the modal
+    // Render the proper input in the modal
     const renderModalInput = () => {
         if (!current) return null;
-
         switch (current.inputType) {
             case "priority":
                 return (
@@ -209,7 +230,6 @@ const QuestionnairePage: React.FC = () => {
                         onChange={(v) => setModalValue(v)}
                     />
                 );
-
             case "number":
                 return (
                     <NumberInput
@@ -218,7 +238,6 @@ const QuestionnairePage: React.FC = () => {
                         placeholder="0"
                     />
                 );
-
             case "text":
                 return (
                     <TextInput
@@ -227,7 +246,6 @@ const QuestionnairePage: React.FC = () => {
                         placeholder={current.hint}
                     />
                 );
-
             case "enter-classes":
                 return (
                     <EnterClasses
@@ -235,7 +253,6 @@ const QuestionnairePage: React.FC = () => {
                         onChange={(arr) => setModalValue(arr)}
                     />
                 );
-
             case "time":
                 return (
                     <TimeInput
@@ -243,7 +260,6 @@ const QuestionnairePage: React.FC = () => {
                         onChange={(v) => setModalValue(v)}
                     />
                 );
-
             default:
                 return null;
         }
@@ -251,7 +267,7 @@ const QuestionnairePage: React.FC = () => {
 
     return (
         <div className="questionnaire-page">
-            {/* Home link / logo */}
+            {/* Logo → home */}
             <Link to="/" className="q-home-link" aria-label="Go to home">
                 <img src={logo} alt="App Logo" className="page-logo" />
             </Link>
@@ -269,24 +285,28 @@ const QuestionnairePage: React.FC = () => {
                     />
                 </div>
 
-                {/* Only the Answer button centered below */}
+                {/* Single centered action */}
                 <div className="q-center-actions">
-                    <button
-                        className="q-answer-btn"
-                        type="button"
-                        onClick={openModalForCurrent}
-                    >
+                    <button className="q-answer-btn" type="button" onClick={openModalForCurrent}>
                         Answer Question
                     </button>
                 </div>
             </div>
 
-            {/* Fixed Back button in bottom-left */}
+            {/* Fixed Back in bottom-left */}
             <div className="q-back-fixed">
                 <BackButton onClick={goBack} disabled={linearIndex === 0} />
             </div>
 
-            {/* Modal */}
+            {/* Intro modal (ALWAYS on arrival) */}
+            <IntroModal
+                isOpen={showIntro}
+                imageSrc={introImg}
+                onClose={closeIntro}
+                buttonLabel="Get Started"
+            />
+
+            {/* Answer modal */}
             <QuestionModal
                 isOpen={isModalOpen}
                 title={current?.text}

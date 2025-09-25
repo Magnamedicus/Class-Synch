@@ -1,0 +1,189 @@
+:root {
+    /* Theme */
+    --im-overlay: hsl(222 16% 8% / 0.62);
+    --im-radius: 1.25rem;
+    --im-shadow-lg: 0 1.2rem 3.2rem rgba(0, 0, 0, 0.55);
+
+    --im-primary-1: #00d4aa;
+    --im-primary-2: #00c2ff;
+
+    /* Size */
+    --im-dialog-w: min(72rem, 96vw);
+    --im-dialog-h: min(90vh, 56rem);
+
+    /* Mat (inset gap around the image) */
+    --im-gap: 0.85rem;
+}
+
+/* ===== Overlay ===== */
+.im-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--im-overlay);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    display: grid;
+    place-items: center;
+    z-index: 10050;
+    padding: 1.25rem;
+    animation: im-fade 220ms ease-out;
+}
+
+/* ===== Dialog card ===== */
+.im-dialog.im-dialog--immersive {
+    position: relative;
+    width: var(--im-dialog-w);
+    height: var(--im-dialog-h);
+    border-radius: var(--im-radius);
+    overflow: hidden;
+    outline: none;
+    background: #0b1020; /* fallback while image loads */
+    box-shadow: var(--im-shadow-lg);
+    animation: im-pop 260ms cubic-bezier(.2,.8,.2,1);
+    isolation: isolate;
+}
+
+/* Big neon/gradient frame that pops against the page */
+.im-dialog--frame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+            radial-gradient(120% 120% at 10% -10%, rgba(0,210,170,.22), transparent 60%),
+            radial-gradient(120% 120% at 110% 10%, rgba(0,194,255,.20), transparent 60%),
+            linear-gradient(135deg, rgba(0,210,170,.12), rgba(0,194,255,.12));
+    pointer-events: none;
+    filter: blur(18px) saturate(120%);
+}
+.im-dialog--frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px; /* visible border thickness */
+    background: linear-gradient(135deg, #00d4aa, #00c2ff);
+    -webkit-mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+/* ===== Inset canvas (adds small void space around the image) ===== */
+.im-canvas {
+    position: absolute;
+    inset: var(--im-gap);
+    border-radius: calc(var(--im-radius) - var(--im-gap));
+    overflow: hidden;
+    background: #0b1020;
+}
+
+/* Blurred/dimmed backdrop to fill letterboxing while image is 'contain' */
+.im-backdrop {
+    position: absolute;
+    inset: 0;
+    background-position: center;
+    background-size: cover;
+    filter: blur(18px) saturate(110%);
+    transform: scale(1.08);
+    opacity: 0.35;                /* subtle — lets the main image read clearly */
+}
+
+/* Main image: show entire artwork (no cropping) */
+.im-img-bleed {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;          /* <-- key: no cropping of top text */
+    display: block;
+    opacity: 0;
+    transform: translateY(4px) scale(1.01);
+    animation: im-reveal 360ms 80ms ease-out forwards;
+}
+
+/* CTA overlay at bottom with gradient scrim for legibility */
+.im-cta {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    background:
+            linear-gradient(
+                    180deg,
+                    rgba(0, 0, 0, 0.00) 0%,
+                    rgba(0, 0, 0, 0.24) 38%,
+                    rgba(0, 0, 0, 0.46) 70%,
+                    rgba(0, 0, 0, 0.62) 100%
+            );
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+
+    padding:
+            calc(env(safe-area-inset-bottom, 0) + 1.1rem)
+            1rem
+            calc(env(safe-area-inset-bottom, 0) + 1.35rem);
+}
+
+/* Optional small note (left of button) */
+.im-note {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.96rem;
+    letter-spacing: .01em;
+    text-shadow: 0 1px 2px rgba(0,0,0,.35);
+}
+
+/* CTA button */
+.im-btn {
+    appearance: none;
+    border: none;
+    padding: 0.9rem 1.35rem;
+    border-radius: 0.9rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease, filter .12s ease;
+    will-change: transform;
+}
+.im-btn--primary {
+    background: linear-gradient(135deg, var(--im-primary-1), var(--im-primary-2));
+    color: white;
+    box-shadow: 0 0.65rem 1.6rem rgba(0, 194, 255, 0.28);
+}
+.im-btn--primary:hover { transform: translateY(-1px); box-shadow: 0 0.8rem 1.9rem rgba(0, 194, 255, 0.33); filter: brightness(1.03); }
+.im-btn--primary:active { transform: translateY(0); filter: brightness(0.98); }
+.im-btn--primary:focus-visible {
+    outline: 2px solid rgba(0,194,255,.9);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(0,194,255,.18);
+}
+
+/* Animations */
+@keyframes im-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes im-pop  { from { opacity: 0; transform: translateY(10px) scale(0.985);} to { opacity: 1; transform: translateY(0) scale(1);} }
+@keyframes im-reveal { to { opacity: 1; transform: translateY(0) scale(1);} }
+
+/* Responsive */
+@media (max-width: 48rem) {
+    :root { --im-dialog-h: min(88vh, 56rem); --im-gap: 0.7rem; }
+    .im-dialog.im-dialog--immersive { width: 96vw; }
+    .im-cta { gap: 0.75rem; }
+    .im-btn { padding: 0.82rem 1.15rem; border-radius: 0.82rem; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .im-overlay, .im-dialog, .im-img-bleed, .im-btn { animation: none; transition: none; }
+}
+
+/* No backdrop-filter fallback */
+@supports not ((backdrop-filter: blur(10px))) {
+    .im-overlay { background: rgba(0,0,0,.7); }
+}
