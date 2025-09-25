@@ -1,33 +1,31 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-/* UI pieces */
 import QuestionCarousel from "../components/QuestionCarousel";
-import QuestionModal from "../components/QuestionModal";
 import IntroModal from "../components/IntroModal";
+import QuestionModal from "../components/QuestionModal";
+
+import ContinueButton from "../components/ContinueButton"; // (not used here but kept if you reference elsewhere)
+import BackButton from "../components/BackButton";
 
 import PrioritySlider from "../components/inputs/PrioritySlider";
 import NumberInput from "../components/inputs/NumberInput";
 import TextInput from "../components/inputs/TextInput";
 import EnterClasses from "../components/inputs/EnterClasses";
 import TimeInput from "../components/inputs/TimeInput";
-import BackButton from "../components/BackButton";
 
-/* Styles & assets */
 import "../css/QuestionnairePage.css";
-import logo from "../assets/logo.png";
 
-/* Carousel images (imported so bundler resolves hashed URLs) */
+/* Assets */
+import logo from "../assets/logo.png";
+import introImg from "../assets/questionnaire_intro_img.png";
 import imgA from "../assets/class_synch_bg.png";
 import imgB from "../assets/logo.png";
 import imgC from "../assets/q_bg.png";
 
-/* Intro modal image (exact filename as requested) */
-import introImg from "../assets/questionnaire_intro_img.png";
-
-/* ================================================
-   Questionnaire definition (expand as you go)
-   ================================================ */
+/* ------------------------------------------------------------------ */
+/* Demo questionnaire data (same structure you were using)             */
+/* ------------------------------------------------------------------ */
 const questionnaire = [
     {
         bucket: "School Work",
@@ -37,37 +35,17 @@ const questionnaire = [
                 text: "How much do you prioritize School Work this week?",
                 inputType: "priority",
                 hint: "Higher priority wins conflicts with other tasks",
-                default: 70, // UI 0–100
+                default: 70,
             },
-            {
-                id: "q1",
-                text: "How many classes are you taking?",
-                inputType: "number",
-                hint: "Enter a number",
-            },
-            {
-                id: "q2",
-                text: "Name your classes (or upload schedule)",
-                inputType: "enter-classes",
-                hint: "Type class names",
-            },
+            { id: "q1", text: "How many classes are you taking?", inputType: "number", hint: "Enter a number" },
+            { id: "q2", text: "Name your classes (or upload schedule)", inputType: "enter-classes", hint: "Type class names" },
         ],
     },
     {
         bucket: "Sleep",
         questions: [
-            {
-                id: "q3",
-                text: "How many hours would you like to sleep per night?",
-                inputType: "number",
-                hint: "Enter a number",
-            },
-            {
-                id: "q4",
-                text: "What time do you usually go to bed?",
-                inputType: "time",
-                hint: "Choose a time",
-            },
+            { id: "q3", text: "How many hours would you like to sleep per night?", inputType: "number", hint: "Enter a number" },
+            { id: "q4", text: "What time do you usually go to bed?", inputType: "time", hint: "Choose a time" },
         ],
     },
 ] as const;
@@ -86,77 +64,119 @@ function flattenQuestions(): QuestionItem[] {
     return out;
 }
 
-/* ================================================
-   Local persistence (answers only — no intro memory)
-   ================================================ */
-const STORAGE_KEY = "classsynch.questionnaire.v1";
-const loadPersisted = () => {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return null;
-        return JSON.parse(raw);
-    } catch {
-        return null;
-    }
-};
-const savePersisted = (data: any) => {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch {}
-};
-
-/* ================================================
-   Component
-   ================================================ */
+/* Images for the carousel (cycled if fewer than questions) */
 const carouselImages = [imgA, imgB, imgC];
 
 const QuestionnairePage: React.FC = () => {
-    const location = useLocation();
-
+    /* ---------- data & navigation ---------- */
     const flat = React.useMemo(() => flattenQuestions(), []);
     const [linearIndex, setLinearIndex] = React.useState(0);
     const current = flat[linearIndex];
 
-    // Answers (store UI values; normalize later when generating schedule)
-    const [answers, setAnswers] = React.useState<Record<string, any>>(() => {
-        const persisted = loadPersisted();
-        return persisted?.answers ?? {};
-    });
-    const [classes, setClasses] = React.useState<string[]>(() => {
-        const persisted = loadPersisted();
-        return persisted?.classes ?? [];
-    });
+    /* ---------- answers ---------- */
+    const [answers, setAnswers] = React.useState<Record<string, any>>({});
+    const [textOrNumber, setTextOrNumber] = React.useState<string>("");
+    const [classes, setClasses] = React.useState<string[]>([]);
 
-    // Question modal
-    const [isModalOpen, setIsModalOpen] = React.useState(false);
-    const [modalValue, setModalValue] = React.useState<any>("");
-
-    // Intro modal: ALWAYS open on page mount/arrival
-    const [showIntro, setShowIntro] = React.useState<boolean>(true);
-
-    // If your router keeps this component mounted, re-open intro when you navigate back here
+    /* ---------- intro modal (always on arrival) ---------- */
+    const [showIntro, setShowIntro] = React.useState(true);
     React.useEffect(() => {
-        setShowIntro(true);
-    }, [location.pathname]);
+        // always show intro each time this page mounts
+        document.documentElement.classList.toggle("modal-open", showIntro);
+        return () => document.documentElement.classList.remove("modal-open");
+    }, [showIntro]);
 
-    // When any modal is open, add html.modal-open to blur background
-    React.useEffect(() => {
-        const active = isModalOpen || showIntro;
-        const el = document.documentElement;
-        if (active) el.classList.add("modal-open");
-        else el.classList.remove("modal-open");
-    }, [isModalOpen, showIntro]);
-
-    const closeIntro = React.useCallback(() => {
+    const closeIntro = () => {
         setShowIntro(false);
-    }, []);
+        document.documentElement.classList.remove("modal-open");
+    };
 
-    // Persist progress (answers/classes/index)
+    /* ---------- per-question modal ---------- */
+    const [isModalOpen, setModalOpen] = React.useState(false);
+    const [modalValid, setModalValid] = React.useState(true);
+
     React.useEffect(() => {
-        savePersisted({ answers, classes, linearIndex });
-    }, [answers, classes, linearIndex]);
+        document.documentElement.classList.toggle("modal-open", isModalOpen);
+        return () => document.documentElement.classList.remove("modal-open");
+    }, [isModalOpen]);
 
-    // Map images to # of questions (cycle if fewer)
+    const openModalForCurrent = () => {
+        setModalOpen(true);
+        setModalValid(true);
+    };
+    const closeModal = () => {
+        setModalOpen(false);
+    };
+
+    /* ---------- render the correct input in the question modal ---------- */
+    const renderModalInput = () => {
+        if (!current) return null;
+
+        switch (current.inputType) {
+            case "priority": {
+                const uiVal = answers[current.id] ?? current.default ?? 70;
+                return (
+                    <PrioritySlider
+                        variant="bucket"
+                        label={current.text}
+                        helpText={current.hint}
+                        value={Number(uiVal)}
+                        onChange={(v) => setAnswers((p) => ({ ...p, [current.id]: v }))}
+                    />
+                );
+            }
+            case "number":
+                return <NumberInput value={textOrNumber} onChange={setTextOrNumber} placeholder="0" />;
+            case "text":
+                return <TextInput value={textOrNumber} onChange={setTextOrNumber} placeholder={current.hint} />;
+            case "enter-classes":
+                return <EnterClasses value={classes} onChange={setClasses} />;
+            case "time":
+                return <TimeInput value={textOrNumber} onChange={setTextOrNumber} />;
+            default:
+                return (
+                    <input
+                        type="text"
+                        value={textOrNumber}
+                        onChange={(e) => setTextOrNumber(e.target.value)}
+                        placeholder="Enter your answer"
+                    />
+                );
+        }
+    };
+
+    /* ---------- submit logic ---------- */
+    const submitModal = () => {
+        if (!current) return;
+
+        let ok = true;
+        if (current.inputType === "enter-classes") {
+            ok = classes.length > 0;
+        } else if (current.inputType === "priority") {
+            ok = true; // slider stored live
+        } else {
+            ok = textOrNumber.trim().length > 0;
+        }
+        setModalValid(ok);
+        if (!ok) return;
+
+        if (current.inputType === "enter-classes") {
+            setAnswers((p) => ({ ...p, [current.id]: classes.slice() }));
+        } else if (current.inputType !== "priority") {
+            setAnswers((p) => ({ ...p, [current.id]: textOrNumber }));
+            setTextOrNumber("");
+        }
+
+        setModalOpen(false);
+        // advance to next question
+        setLinearIndex((i) => Math.min(i + 1, flat.length - 1));
+    };
+
+    const goBack = () => {
+        setLinearIndex((i) => Math.max(0, i - 1));
+    };
+
+    /* ---------- images aligned to questions ---------- */
     const images = React.useMemo(() => {
         if (carouselImages.length >= flat.length) return carouselImages.slice(0, flat.length);
         const r: string[] = [];
@@ -164,141 +184,46 @@ const QuestionnairePage: React.FC = () => {
         return r;
     }, [flat.length]);
 
-    // Open question modal for current item and preload value
-    const openModalForCurrent = React.useCallback(() => {
-        if (!current) return;
-        if (current.inputType === "enter-classes") {
-            setModalValue([...classes]);
-        } else if (current.inputType === "priority") {
-            setModalValue(answers[current.id] ?? current.default ?? 70);
-        } else {
-            setModalValue(answers[current.id] ?? "");
-        }
-        setIsModalOpen(true);
-    }, [current, answers, classes]);
-
-    const closeModal = React.useCallback(() => setIsModalOpen(false), []);
-
-    // Modal validation (basic)
-    const modalValid = React.useMemo(() => {
-        if (!current) return false;
-        switch (current.inputType) {
-            case "priority":
-                return typeof modalValue === "number" && modalValue >= 0 && modalValue <= 100;
-            case "number":
-                return String(modalValue).trim().length > 0 && !Number.isNaN(Number(modalValue));
-            case "text":
-                return String(modalValue).trim().length > 0;
-            case "enter-classes":
-                return Array.isArray(modalValue) && modalValue.length > 0;
-            case "time":
-                return String(modalValue).trim().length > 0;
-            default:
-                return true;
-        }
-    }, [current, modalValue]);
-
-    // Submit answer from modal and advance
-    const submitModal = React.useCallback(() => {
-        if (!current || !modalValid) return;
-
-        if (current.inputType === "enter-classes") {
-            const arr = Array.isArray(modalValue) ? modalValue.slice() : [];
-            setAnswers((p) => ({ ...p, [current.id]: arr }));
-            setClasses(arr);
-        } else {
-            setAnswers((p) => ({ ...p, [current.id]: modalValue }));
-        }
-
-        closeModal();
-        setLinearIndex((i) => (i + 1 < flat.length ? i + 1 : i)); // stay on last if finished
-    }, [current, modalValue, modalValid, closeModal, flat.length]);
-
-    const goBack = () => setLinearIndex((i) => Math.max(0, i - 1));
-
-    // Render the proper input in the modal
-    const renderModalInput = () => {
-        if (!current) return null;
-        switch (current.inputType) {
-            case "priority":
-                return (
-                    <PrioritySlider
-                        variant="bucket"
-                        label={current.text}
-                        helpText={current.hint}
-                        value={Number(modalValue ?? 70)}
-                        onChange={(v) => setModalValue(v)}
-                    />
-                );
-            case "number":
-                return (
-                    <NumberInput
-                        value={String(modalValue ?? "")}
-                        onChange={(v) => setModalValue(v)}
-                        placeholder="0"
-                    />
-                );
-            case "text":
-                return (
-                    <TextInput
-                        value={String(modalValue ?? "")}
-                        onChange={(v) => setModalValue(v)}
-                        placeholder={current.hint}
-                    />
-                );
-            case "enter-classes":
-                return (
-                    <EnterClasses
-                        value={Array.isArray(modalValue) ? modalValue : []}
-                        onChange={(arr) => setModalValue(arr)}
-                    />
-                );
-            case "time":
-                return (
-                    <TimeInput
-                        value={String(modalValue ?? "")}
-                        onChange={(v) => setModalValue(v)}
-                    />
-                );
-            default:
-                return null;
-        }
-    };
-
     return (
-        <div className="questionnaire-page">
-            {/* Logo → home */}
-            <Link to="/" className="q-home-link" aria-label="Go to home">
-                <img src={logo} alt="App Logo" className="page-logo" />
-            </Link>
+        <>
+            {/* Blur/disable ONLY this content when a modal is open */}
+            <div className="questionnaire-page">
+                <div className="questionnaire-content">
+                    {/* Logo → home */}
+                    <Link to="/" className="q-home-link" aria-label="Go to home">
+                        <img src={logo} alt="App Logo" className="page-logo" />
+                    </Link>
 
-            {/* Centered, slightly smaller carousel */}
-            <div className="q-center">
-                <div className="q-carousel-wrap">
-                    <QuestionCarousel
-                        images={images}
-                        index={linearIndex}
-                        onIndexChange={setLinearIndex}
-                        autoAdvanceMs={undefined}
-                        dragBufferPx={50}
-                        showDots
-                    />
-                </div>
+                    {/* Stack keeps the carousel lowered from the top and centers the CTA */}
+                    <section className="qc-stack">
+                        <div className="qc-safe-wrap">
+                            <div className="qc-frame">
+                                <QuestionCarousel
+                                    images={images}
+                                    index={linearIndex}
+                                    onIndexChange={setLinearIndex}
+                                    autoAdvanceMs={undefined}
+                                    dragBufferPx={50}
+                                    showDots
+                                />
+                            </div>
+                        </div>
 
-                {/* Single centered action */}
-                <div className="q-center-actions">
-                    <button className="q-answer-btn" type="button" onClick={openModalForCurrent}>
-                        Answer Question
-                    </button>
+                        <div className="q-center-actions">
+                            <button className="q-answer-btn" type="button" onClick={openModalForCurrent}>
+                                Answer Question
+                            </button>
+                        </div>
+                    </section>
+
+                    {/* Back button (fixed) */}
+                    <div className="q-back-fixed">
+                        <BackButton onClick={goBack} disabled={linearIndex === 0} />
+                    </div>
                 </div>
             </div>
 
-            {/* Fixed Back in bottom-left */}
-            <div className="q-back-fixed">
-                <BackButton onClick={goBack} disabled={linearIndex === 0} />
-            </div>
-
-            {/* Intro modal (ALWAYS on arrival) */}
+            {/* ⬇️ Render modals OUTSIDE the blurred container */}
             <IntroModal
                 isOpen={showIntro}
                 imageSrc={introImg}
@@ -306,7 +231,6 @@ const QuestionnairePage: React.FC = () => {
                 buttonLabel="Get Started"
             />
 
-            {/* Answer modal */}
             <QuestionModal
                 isOpen={isModalOpen}
                 title={current?.text}
@@ -322,8 +246,9 @@ const QuestionnairePage: React.FC = () => {
                     </p>
                 )}
             </QuestionModal>
-        </div>
+        </>
     );
+
 };
 
 export default QuestionnairePage;

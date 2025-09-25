@@ -1,74 +1,125 @@
 :root {
-    --qm-bg: hsl(222 16% 10% / 0.6);
-    --qm-panel: hsl(220 16% 16%);
-    --qm-text: hsl(210 40% 96%);
-    --qm-muted: hsl(215 16% 75%);
-    --qm-primary: hsl(170 80% 45%);
+    --qm-overlay: hsl(222 16% 8% / 0.62);
+    --qm-panel: hsl(222 24% 12% / 0.9);
+    --qm-text: hsl(210 40% 98%);
+    --qm-muted: hsl(215 16% 78%);
     --qm-radius: 1rem;
+    --qm-shadow: 0 1rem 3rem rgba(0,0,0,.5);
+
+    --qm-primary-1: #00d4aa;
+    --qm-primary-2: #00c2ff;
+
+    /* Desktop defaults */
+    --qm-w: min(44rem, 92vw);
+    --qm-h: min(78vh, 46rem);
+    --qm-border: 1px solid hsl(220 20% 30% / .35);
 }
 
+/* Overlay */
 .qm-overlay {
     position: fixed;
     inset: 0;
-    background: var(--qm-bg);
-    backdrop-filter: blur(0.35rem);
+    background: var(--qm-overlay);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     display: grid;
     place-items: center;
-    z-index: 10000;
-    padding: 1.5rem;
+    z-index: 10060;
+    padding:
+            max(1rem, env(safe-area-inset-top, 0))
+            max(1rem, env(safe-area-inset-right, 0))
+            max(1rem, env(safe-area-inset-bottom, 0))
+            max(1rem, env(safe-area-inset-left, 0));
+    box-sizing: border-box;
 }
 
+/* Dialog */
 .qm-dialog {
-    width: min(44rem, 96vw);
-    max-height: 86vh;
-    overflow: auto;
+    width: var(--qm-w);
+    max-width: calc(100vw - env(safe-area-inset-left, 0) - env(safe-area-inset-right, 0) - 1.5rem);
+    height: var(--qm-h);
+    max-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0) - 1.5rem);
+
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+
     background: var(--qm-panel);
     color: var(--qm-text);
     border-radius: var(--qm-radius);
-    box-shadow: 0 0.75rem 3rem rgba(0,0,0,.5);
-    padding: 1.25rem 1.25rem 1rem;
-    outline: none;
+    border: var(--qm-border);
+    box-shadow: var(--qm-shadow);
+    overflow: hidden;       /* keep rounded corners clean */
+    box-sizing: border-box; /* include borders in width */
 }
 
-.qm-title {
-    margin: 0 0 0.75rem;
-    font-size: 1.25rem;
+
+
+/* Header */
+.qm-header {
+    padding: 0.9rem 1rem;
     font-weight: 700;
-    letter-spacing: .02em;
+    border-bottom: var(--qm-border);
+    text-wrap: balance;
 }
 
+/* Body scrolls if content is long */
 .qm-body {
-    display: grid;
-    gap: 1rem;
+    padding: 1rem;
+    overflow: auto;
+    overscroll-behavior: contain;
 }
 
+/* Actions */
 .qm-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1rem;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem 0.9rem;
+    border-top: var(--qm-border);
 }
 
+/* Buttons */
 .qm-btn {
     appearance: none;
     border: none;
-    padding: 0.6rem 1rem;
-    border-radius: 0.75rem;
-    font-weight: 600;
+    border-radius: 0.7rem;
+    padding: 0.7rem 1rem;
+    font-weight: 700;
     cursor: pointer;
-}
-
-.qm-btn--primary {
-    background: var(--qm-primary);
-    color: white;
+    white-space: nowrap;
 }
 
 .qm-btn--ghost {
     background: transparent;
     color: var(--qm-muted);
-    outline: 1px solid hsl(215 16% 35%);
 }
 
-@media (max-width: 30rem) {
-    .qm-dialog { width: 96vw; padding: 1rem; }
+.qm-btn--primary {
+    background: linear-gradient(135deg, var(--qm-primary-1), var(--qm-primary-2));
+    color: white;
+    box-shadow: 0 .7rem 1.6rem rgba(0, 194, 255, 0.25);
+}
+
+/* Only blur/disable the page CONTENT, not the modals */
+html.modal-open .questionnaire-content {
+    filter: blur(2px) saturate(1.02);
+    pointer-events: none;
+    user-select: none;
+}
+
+
+/* Mobile tweaks */
+@media (max-width: 480px) {
+    :root {
+        --qm-w: 92vw;
+        --qm-h: 78vh;
+    }
+    .qm-dialog {
+        /* clamp width/height even harder for tiny devices */
+        max-width: calc(100vw - env(safe-area-inset-left, 0) - env(safe-area-inset-right, 0) - 1rem);
+        max-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0) - 1rem);
+    }
+    .qm-body { padding: 0.85rem; }
+    .qm-actions { padding: 0.6rem 0.85rem 0.75rem; }
+    .qm-btn { padding: 0.6rem 0.85rem; }
 }

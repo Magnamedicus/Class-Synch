@@ -1,142 +1,180 @@
-/* ===== Page shell ===== */
+/* =========================================================
+   Questionnaire Page — centered carousel + mobile safe areas
+   ========================================================= */
+
+:root {
+    --q-text: hsl(210 40% 98%);
+    --q-muted: hsl(215 16% 78%);
+    --q-primary-1: #00d4aa;
+    --q-primary-2: #00c2ff;
+    --q-shadow: 0 1.2rem 3.2rem rgba(0,0,0,.32);
+    --q-radius: 1rem;
+
+    /* Width caps */
+    --q-cap-desktop: 56rem;
+    --q-cap-mobile: 44rem;
+}
+
+/* Background page */
 .questionnaire-page {
     position: relative;
     min-height: 100svh;
-    @supports (height: 100dvh) { min-height: 100dvh; }
+    @supports (min-height: 100dvh) { min-height: 100dvh; }
     width: 100%;
+    color: var(--q-text);
     overflow-x: hidden;
 
-    /* Background */
     background-image: url("../assets/q_bg.png");
     background-repeat: no-repeat;
     background-position: center 20%;
     background-size: cover;
     background-attachment: scroll;
-
-    color: #e9f2ff;
 }
 
-/* Clickable logo */
-.q-home-link {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    z-index: 5;
+/* Blur page when any modal is open (Intro or Question) */
+html.modal-open .questionnaire-page {
+    filter: blur(2px) saturate(1.02);
+    pointer-events: none;
+    user-select: none;
 }
+
+/* Logo link */
+.q-home-link { position: relative; z-index: 5; }
 .page-logo {
-    height: 3rem;
+    position: absolute;
+    top: max(0.75rem, calc(env(safe-area-inset-top, 0) + 0.4rem));
+    left: max(0.9rem, calc(env(safe-area-inset-left, 0) + 0.6rem));
+    height: clamp(2rem, 6vw, 3rem);
     width: auto;
-    opacity: 0.85;
-    transition: transform .2s ease, opacity .2s ease, filter .2s ease;
-    cursor: pointer;
+    opacity: .85;
+    transition: transform .18s ease, opacity .18s ease, filter .18s ease;
 }
-.page-logo:hover {
-    opacity: 1;
-    transform: scale(1.04);
-    filter: drop-shadow(0 0 .35rem rgba(255,255,255,.6));
-}
+.page-logo:hover { transform: translateY(-1px) scale(1.03); opacity: 1; filter: drop-shadow(0 0 .35rem rgba(255,255,255,.45)); }
 
-/* ===== Centered carousel layout ===== */
-.q-center {
+/* ---------------- Stack: Carousel + CTA centered ---------------- */
+.qc-stack {
+    width: 100%;
     display: grid;
     justify-items: center;
-    gap: 1rem;
-    padding: 4.5rem 1rem 3rem; /* leave room for logo at top */
-}
-
-/* Slightly smaller than before so BG title is visible */
-.q-carousel-wrap {
-    width: min(70rem, 88vw);
-    transition: filter 160ms ease, transform 160ms ease, opacity 160ms ease;
-}
-
-/* Blur main content when modal is open */
-html.modal-open .q-carousel-wrap,
-html.modal-open .q-center-actions,
-html.modal-open .q-home-link {
-    filter: blur(0.15rem) saturate(0.9);
-    transform: scale(0.995);
-    opacity: 0.95;
-}
-
-/* Actions under the carousel */
-.q-center-actions {
-    display: flex;
+    align-content: start;
     gap: 0.75rem;
-    align-items: center;
+
+    /* push down from the very top; safe-area aware */
+    padding-top: clamp(1.25rem, 6vh, 5.5rem);
+    padding-left:  max(0.5rem, env(safe-area-inset-left, 0));
+    padding-right: max(0.5rem, env(safe-area-inset-right, 0));
+    padding-bottom: 2vh;
+
+    box-sizing: border-box;
 }
 
-/* Big friendly Answer button */
+/* safety wrapper ensures centering + no horizontal scroll */
+.qc-safe-wrap {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+/* hard cap so the carousel never exceeds the viewport */
+.qc-frame {
+    width: min(var(--q-cap-desktop), 88vw);
+    max-width: calc(100vw - env(safe-area-inset-left, 0) - env(safe-area-inset-right, 0) - 1rem);
+    margin-inline: auto;
+    box-sizing: border-box;
+    filter: drop-shadow(var(--q-shadow));
+}
+
+/* Center the action button */
+.q-center-actions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.25rem 0;
+}
+
 .q-answer-btn {
     appearance: none;
     border: none;
-    padding: 0.75rem 1.15rem;
-    border-radius: 0.9rem;
-    background: linear-gradient(135deg, #00d4aa, #00c2ff);
-    color: #fff;
+    border-radius: 9999px;
+    padding: .75rem 1.25rem;
+    background: linear-gradient(135deg, var(--q-primary-1), var(--q-primary-2));
+    color: white;
     font-weight: 800;
     letter-spacing: .02em;
+    box-shadow: 0 .8rem 1.9rem rgba(0, 194, 255, 0.27);
     cursor: pointer;
-    box-shadow: 0 0.6rem 1.6rem rgba(0, 194, 255, 0.28);
-    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
 }
-.q-answer-btn:hover { transform: translateY(-1px); box-shadow: 0 0.7rem 1.8rem rgba(0, 194, 255, 0.33); }
-.q-answer-btn:active { transform: translateY(0); }
-.q-answer-btn:disabled { opacity: .6; cursor: not-allowed; }
+.q-answer-btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
+.q-answer-btn:active { transform: translateY(0); filter: brightness(.98); }
+.q-answer-btn:focus-visible {
+    outline: 2px solid rgba(0,194,255,.9);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(0,194,255,.18);
+}
 
-/* Fixed Back button bottom-left (safe-area aware) */
+/* Back button fixed bottom-left (safe-area aware) */
 .q-back-fixed {
     position: fixed;
-    left: calc(env(safe-area-inset-left, 0) + 1rem);
-    bottom: calc(env(safe-area-inset-bottom, 0) + 1rem);
-    z-index: 6; /* above background; below modal */
-    pointer-events: auto;
+    left: max(.75rem, env(safe-area-inset-left, 0) + .5rem);
+    bottom: max(.9rem, env(safe-area-inset-bottom, 0) + .5rem);
+    z-index: 30;
 }
 
-/* Optional: blur the back button too when modal opens */
-html.modal-open .q-back-fixed {
-    filter: blur(0.15rem) saturate(0.9);
-    transform: scale(0.995);
-    opacity: 0.95;
+/* Hints/validation in the modal body */
+.q-hint { margin-top: .5rem; color: var(--q-muted); font-size: .95rem; }
+.q-validate-msg { margin-top: .5rem; color: #ffb2b2; font-weight: 600; }
+
+/* -------- Defensive caps for generic carousel internals -------- */
+.qc-frame :where(.question-carousel, .qc-root, .qc-viewport, .qc-track, .qc-slide) {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.qc-frame :where(.qc-viewport, .question-carousel__viewport) {
+    overflow: hidden;           /* clips drag/translate overflow cleanly */
+    border-radius: 0.75rem;
+}
+.qc-frame :where(.qc-slide img, .qc-slide picture, .qc-slide canvas, .slide-media, .question-carousel img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    border-radius: inherit;
+    object-fit: cover;          /* change to 'contain' to see full artwork */
 }
 
-/* Optional hint & validation inside modal body */
-.q-hint {
-    margin: .25rem 0 0;
-    font-size: .9rem;
-    color: rgba(233,242,255,.75);
-}
-.q-validate-msg {
-    margin: .25rem 0 0;
-    font-size: .9rem;
-    color: #ffb4b4;
+/* ------------------------- Responsive -------------------------- */
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .qc-frame { width: min(52rem, 90vw); }
 }
 
-/* ===== Responsiveness ===== */
-@media (max-width: 64rem) {
-    .q-carousel-wrap { width: min(54rem, 94vw); }
-}
-
-@media (max-width: 48rem) {
-    .q-center { padding: 4rem 0.75rem 2.25rem; }
-    .q-carousel-wrap { width: 96vw; }
-    .page-logo { height: 2.75rem; }
-}
-
-@media (max-width: 30rem) {
-    .q-center { padding-top: 3.5rem; }
-    .page-logo { height: 2.4rem; }
-    .q-answer-btn { padding: 0.65rem 1rem; border-radius: 0.8rem; }
-    .q-back-fixed {
-        bottom: calc(env(safe-area-inset-bottom, 0) + 1.25rem);
-        left: calc(env(safe-area-inset-left, 0) + 0.75rem);
+/* Phones */
+@media (max-width: 600px) {
+    .questionnaire-page {
+        background-image: url("../assets/q_bg_mobile.png");
+        background-position: top center;
+        background-size: cover;
+        background-color: #0b1120;
     }
+    .qc-frame {
+        width: min(var(--q-cap-mobile), 92vw);
+        max-width: calc(100vw - env(safe-area-inset-left, 0) - env(safe-area-inset-right, 0) - 0.75rem);
+    }
+    .q-answer-btn { padding: .68rem 1.05rem; font-size: .98rem; }
 }
 
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .q-carousel-wrap,
-    .q-answer-btn {
-        transition: none;
-    }
+/* Very small phones */
+@media (max-width: 380px) {
+    .page-logo { top: max(.6rem, calc(env(safe-area-inset-top, 0) + .25rem)); height: 2.4rem; }
+    .qc-frame { width: min(38rem, 94vw); }
+}
+
+/* Height-constrained (e.g., landscape phones) */
+@media (max-height: 560px) {
+    .qc-stack { padding-top: clamp(.75rem, 4.5vh, 3.5rem); }
 }
