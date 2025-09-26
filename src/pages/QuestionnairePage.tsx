@@ -19,8 +19,8 @@ import "../css/QuestionnairePage.css";
 /* Assets */
 import logo from "../assets/logo.png";
 import introImg from "../assets/questionnaire_intro_img.png";
-import imgA from "../assets/class_synch_bg.png";
-import imgB from "../assets/logo.png";
+import imgA from "../assets/SchoolWork_PriorityQ.png";
+import imgB from "../assets/SchoolWork_ClassAmountQ.png";
 import imgC from "../assets/q_bg.png";
 
 /* ------------------------------------------------------------------ */
