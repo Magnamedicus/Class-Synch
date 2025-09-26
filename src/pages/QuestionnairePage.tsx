@@ -34,7 +34,7 @@ const questionnaire = [
                 id: "bucket_priority_school_work",
                 text: "How much do you prioritize School Work this week?",
                 inputType: "priority",
-                hint: "Higher priority wins conflicts with other tasks",
+                hint: "",
                 default: 70,
             },
             { id: "q1", text: "How many classes are you taking?", inputType: "number", hint: "Enter a number" },
@@ -118,8 +118,10 @@ const QuestionnairePage: React.FC = () => {
                 return (
                     <PrioritySlider
                         variant="bucket"
-                        label={current.text}
-                        helpText={current.hint}
+                        /** Don't pass label; modal header already shows the question text */
+                        label={undefined}
+                        /** And don't pass helpText to suppress that description line */
+                        helpText={undefined}
                         value={Number(uiVal)}
                         onChange={(v) => setAnswers((p) => ({ ...p, [current.id]: v }))}
                     />
