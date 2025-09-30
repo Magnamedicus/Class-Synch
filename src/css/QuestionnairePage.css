@@ -43,8 +43,8 @@ html.modal-open .questionnaire-page {
 .page-logo {
     position: absolute;
     top: max(0.75rem, calc(env(safe-area-inset-top, 0) + 0.4rem));
-    left: max(0.9rem, calc(env(safe-area-inset-left, 0) + 0.6rem));
-    height: clamp(2rem, 6vw, 3rem);
+    left: max(0.9rem, calc(env(safe-area-inset-left, 0) + 2.6rem));
+    height: clamp(4.6rem, 11.5vw, 6rem); /* bigger, still responsive */
     width: auto;
     opacity: .85;
     transition: transform .18s ease, opacity .18s ease, filter .18s ease;
@@ -178,3 +178,33 @@ html.modal-open .questionnaire-page {
 @media (max-height: 560px) {
     .qc-stack { padding-top: clamp(.75rem, 4.5vh, 3.5rem); }
 }
+
+
+/* Compact, responsive layout for class meeting time inputs */
+.q-time-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.6rem;
+    align-items: start;
+}
+
+/* Slightly smaller inputs without changing your input component */
+.q-time-compact {
+    font-size: 0.95rem;
+}
+
+.q-time-compact input,
+.q-time-compact select {
+    font-size: 0.95rem;
+    padding: 0.5rem 0.6rem; /* gently tighter than default */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* On very small screens, ensure stacking (no sideways scroll) */
+@media (max-width: 520px) {
+    .q-time-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
