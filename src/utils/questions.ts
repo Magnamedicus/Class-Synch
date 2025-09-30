@@ -8,6 +8,7 @@ import schoolwork_StudyBreaks from "../assets/question_images/SchoolWork_StudyBr
 import schoolwork_Commute from "../assets/question_images/SchoolWork_CommuteQ.png"
 import schoolwork_NoStudy from "../assets/question_images/SchoolWork_NoStudyQ.png"
 import sleep_Priority from "../assets/question_images/Sleep_PriorityQ.png"
+import sleep_HoursNeed from "../assets/question_images/Sleep_HoursNeedQ.png"
 
 
 export type BucketId =
@@ -108,7 +109,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 id: "school_no_go_times",
                 image: schoolwork_NoStudy,
                 description:
-                    "Select any days in which you do not want studying to be scheduled?",
+                    "Select any days in which you do not want studying to be scheduled",
                 type: "day-selection",
             },
 
@@ -133,8 +134,8 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "sleep_hours_per_night",
-                image: IMG_PLACEHOLDER,
-                description: "Target hours of sleep per night (e.g., 7.5).",
+                image: sleep_HoursNeed,
+                description: "How many hours would you ideally like to sleep each night?",
                 type: "number",
             },
             {
