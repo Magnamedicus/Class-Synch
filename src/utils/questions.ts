@@ -7,6 +7,7 @@ import schoolwork_MaxStudy from "../assets/question_images/SchoolWork_MaxStudyQ.
 import schoolwork_StudyBreaks from "../assets/question_images/SchoolWork_StudyBreaksQ.png"
 import schoolwork_Commute from "../assets/question_images/SchoolWork_CommuteQ.png"
 import schoolwork_NoStudy from "../assets/question_images/SchoolWork_NoStudyQ.png"
+import sleep_Priority from "../assets/question_images/Sleep_PriorityQ.png"
 
 
 export type BucketId =
@@ -125,9 +126,9 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
         questions: [
             {
                 id: "sleep_priority",
-                image: IMG_PLACEHOLDER,
+                image: sleep_Priority,
                 description:
-                    "How important is getting your desired sleep each night? Set a percentage priority (0–100).",
+                    "How much priority do you place on getting good sleep each night? (0-100)",
                 type: "priority",
             },
             {
