@@ -5,6 +5,7 @@ import schoolwork_ClassAmount from "../assets/question_images/SchoolWork_ClassAm
 import schoolwork_AddClasses from "../assets/question_images/SchoolWork_AddClassesQ.png"
 import schoolwork_MaxStudy from "../assets/question_images/SchoolWork_MaxStudyQ.png"
 import schoolwork_StudyBreaks from "../assets/question_images/SchoolWork_StudyBreaksQ.png"
+import schoolwork_Commute from "../assets/question_images/SchoolWork_CommuteQ.png"
 
 
 export type BucketId =
@@ -96,8 +97,8 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "school_commute_time",
-                image: IMG_PLACEHOLDER,
-                description: "Average commute time to/from campus (in minutes).",
+                image: schoolwork_Commute,
+                description: "What is your average commute time to/from campus (in minutes).",
                 type: "number",
             },
             {
