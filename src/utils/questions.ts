@@ -4,6 +4,7 @@ import schoolwork_priority from "../assets/question_images/SchoolWork_PriorityQ.
 import schoolwork_ClassAmount from "../assets/question_images/SchoolWork_ClassAmountQ.png"
 import schoolwork_AddClasses from "../assets/question_images/SchoolWork_AddClassesQ.png"
 import schoolwork_MaxStudy from "../assets/question_images/SchoolWork_MaxStudyQ.png"
+import schoolwork_StudyBreaks from "../assets/question_images/SchoolWork_StudyBreaksQ.png"
 
 
 export type BucketId =
@@ -88,9 +89,9 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "school_break_frequency",
-                image: IMG_PLACEHOLDER,
+                image: schoolwork_StudyBreaks,
                 description:
-                    "How often do you prefer to take breaks during study sessions (minutes between breaks)?",
+                    "How often do you like to take breaks during study sessions (minutes between breaks)?",
                 type: "number",
             },
             {
