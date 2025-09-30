@@ -6,6 +6,7 @@ import schoolwork_AddClasses from "../assets/question_images/SchoolWork_AddClass
 import schoolwork_MaxStudy from "../assets/question_images/SchoolWork_MaxStudyQ.png"
 import schoolwork_StudyBreaks from "../assets/question_images/SchoolWork_StudyBreaksQ.png"
 import schoolwork_Commute from "../assets/question_images/SchoolWork_CommuteQ.png"
+import schoolwork_NoStudy from "../assets/question_images/SchoolWork_NoStudyQ.png"
 
 
 export type BucketId =
@@ -31,7 +32,8 @@ export type QuestionType =
     // Structured
     | "chips"
     | "enter-classes"
-    | "list";
+    | "list"
+    | "day-selection";
 
 export type Question = {
     id: string;              // unique within bucket
@@ -103,37 +105,14 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "school_no_go_times",
-                image: IMG_PLACEHOLDER,
+                image: schoolwork_NoStudy,
                 description:
-                    "Are there any times during weekdays when you absolutely cannot study (add intervals)?",
-                type: "weekday-time-intervals",
+                    "Select any days in which you do not want studying to be scheduled?",
+                type: "day-selection",
             },
-            {
-                id: "school_exam_blocks_known",
-                image: IMG_PLACEHOLDER,
-                description: "Do you have known exam windows you want to block off?",
-                type: "boolean",
-            },
-            {
-                id: "school_exam_time_windows",
-                image: IMG_PLACEHOLDER,
-                description: "Add exam windows (day/time ranges) if known.",
-                type: "weekday-time-intervals",
-            },
-            {
-                id: "school_preferred_locations",
-                image: IMG_PLACEHOLDER,
-                description:
-                    "List preferred study locations (library, café, home, etc.).",
-                type: "list",
-            },
-            {
-                id: "school_note",
-                image: IMG_PLACEHOLDER,
-                description:
-                    "Anything else about school work we should consider?",
-                type: "text",
-            },
+
+
+
         ],
     },
 

@@ -13,6 +13,8 @@ import NumberInput from "../components/inputs/NumberInput";
 import TextInput from "../components/inputs/TextInput";
 import EnterClasses from "../components/inputs/EnterClasses";
 import TimeInput from "../components/inputs/TimeInput";
+import DaySelection, { type DayName } from "../components/inputs/DaySelection";
+
 
 import "../css/QuestionnairePage.css";
 
@@ -45,7 +47,8 @@ type InputTypeExpected =
     | "number"
     | "text"
     | "enter-classes"
-    | "time";
+    | "time"
+    | "day-selection";
 
 function mapTypeToExpected(t: string): InputTypeExpected {
     switch (t) {
@@ -59,6 +62,8 @@ function mapTypeToExpected(t: string): InputTypeExpected {
             return "enter-classes";
         case "time":
             return "time";
+        case "day-selection":        // ← add this
+            return "day-selection";
         default:
             // Any not-yet-implemented types gracefully fall back to text
             return "text";
@@ -173,6 +178,8 @@ const QuestionnairePage: React.FC = () => {
     const [answers, setAnswers] = React.useState<Record<string, any>>({});
     const [textOrNumber, setTextOrNumber] = React.useState<string>("");
     const [classes, setClasses] = React.useState<string[]>([]);
+    const [selectedDays, setSelectedDays] = React.useState<DayName[]>([]);
+
 
     /* ---------- intro modal (unchanged behavior) ---------- */
     const [showIntro, setShowIntro] = React.useState(true);
@@ -226,6 +233,14 @@ const QuestionnairePage: React.FC = () => {
                 return <EnterClasses value={classes} onChange={setClasses} />;
             case "time":
                 return <TimeInput value={textOrNumber} onChange={setTextOrNumber} />;
+            case "day-selection":
+                return (
+                    <DaySelection
+                        value={selectedDays}
+                        onChange={setSelectedDays}
+                        ariaLabel="Select days (you can choose multiple)"
+                    />
+                );
             default:
                 return (
                     <input
@@ -484,6 +499,8 @@ const QuestionnairePage: React.FC = () => {
             ok = classes.length > 0;
         } else if (current.inputType === "priority") {
             ok = true; // slider stored live
+        } else if (current.inputType === "day-selection") {
+            ok = selectedDays.length > 0;        // require at least one day
         } else {
             ok = textOrNumber.trim().length > 0;
         }
@@ -491,18 +508,21 @@ const QuestionnairePage: React.FC = () => {
         if (!ok) return;
 
         if (current.inputType === "enter-classes") {
-            // Save classes, close this modal, then run per-class follow-ups
             setAnswers((p) => ({ ...p, [current.id]: classes.slice() }));
             setModalOpen(false);
             startClassFollowUps(classes.slice());
-            return; // do NOT advance linearIndex yet; we do it after follow-ups
-        } else if (current.inputType !== "priority") {
+            return;
+        } else if (current.inputType === "priority") {
+            // no-op: stored live
+        } else if (current.inputType === "day-selection") {
+            setAnswers((p) => ({ ...p, [current.id]: selectedDays.slice() }));
+            setSelectedDays([]); // reset for next time
+        } else {
             setAnswers((p) => ({ ...p, [current.id]: textOrNumber }));
             setTextOrNumber("");
         }
 
         setModalOpen(false);
-        // advance to next question
         setLinearIndex((i) => Math.min(i + 1, flat.length - 1));
     };
 

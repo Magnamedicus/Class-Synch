@@ -1,0 +1,146 @@
+/* src/css/DaySelection.css */
+
+/* ---- theme variables you can tweak ---- */
+:root {
+    --ds-bg: hsl(220 17% 11%);
+    --ds-surface: hsl(220 16% 18%);
+    --ds-surface-2: hsl(220 16% 20%);
+    --ds-hover: hsl(220 16% 24%);
+    --ds-text: hsl(210 40% 98%);
+    --ds-dim: hsl(215 16% 78%);
+    --ds-border: rgba(255,255,255,0.08);
+
+    --ds-accent-1: #00d4aa; /* teal */
+    --ds-accent-2: #00c2ff; /* cyan */
+    --ds-weekend-1: #b57aff; /* lavender */
+    --ds-weekend-2: #7aa5ff; /* periwinkle */
+
+    --ds-radius: 14px;
+    --ds-gap: 0.6rem;
+
+    --ds-shadow: 0 12px 28px rgba(0,0,0,0.28);
+    --ds-ring: 0 0 0 3px rgba(0,194,255,0.45);
+}
+
+/* Root container: 7-column grid, with soft frame and ambient shimmer */
+.daysel-root {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--ds-gap);
+    padding: 0.55rem;
+    border-radius: calc(var(--ds-radius) + 4px);
+    border: 1px solid var(--ds-border);
+    background:
+            linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+    box-shadow: var(--ds-shadow);
+    isolation: isolate; /* contain the ambient effect */
+    color: var(--ds-text);
+}
+
+/* Ambient backdrop sparkle */
+.daysel-root::before {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    z-index: -1;
+    background:
+            radial-gradient(30% 40% at 15% 10%, rgba(91, 140, 255, 0.12), transparent 60%),
+            radial-gradient(30% 40% at 85% 90%, rgba(0, 212, 170, 0.12), transparent 60%);
+    filter: blur(16px) saturate(1.2);
+    pointer-events: none;
+}
+
+/* Tile button */
+.daysel-cell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: 0.7rem 0.25rem;
+    border-radius: var(--ds-radius);
+    border: 1px solid var(--ds-border);
+    background: linear-gradient(180deg, var(--ds-surface), var(--ds-surface-2));
+    color: var(--ds-text);
+    cursor: pointer;
+    transition:
+            transform 80ms ease,
+            background-color 160ms ease,
+            border-color 160ms ease,
+            box-shadow 180ms ease,
+            filter 160ms ease;
+    overflow: hidden; /* for glow clip */
+}
+
+/* Hover & active */
+.daysel-cell:hover {
+    background: var(--ds-hover);
+    border-color: rgba(255,255,255,0.14);
+}
+.daysel-cell:active {
+    transform: translateY(1px);
+}
+
+/* Label text */
+.daysel-short {
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    font-size: 0.95rem;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+}
+
+/* Selection glow layer */
+.daysel-cell::after {
+    content: "";
+    position: absolute;
+    inset: -25%;
+    background:
+            radial-gradient(55% 60% at 50% 50%, rgba(0, 194, 255, 0.35), transparent 70%),
+            radial-gradient(50% 55% at 30% 20%, rgba(0, 212, 170, 0.28), transparent 70%);
+    opacity: 0;
+    filter: blur(6px);
+    transition: opacity 180ms ease, filter 180ms ease;
+    pointer-events: none;
+}
+
+/* Selected state */
+.daysel-cell.is-selected {
+    background: linear-gradient(135deg, var(--ds-accent-1), var(--ds-accent-2));
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 10px 28px rgba(0, 194, 255, 0.35);
+}
+.daysel-cell.is-selected::after {
+    opacity: 1;
+}
+
+/* Weekend accent (Sat = 6th, Sun = 7th) */
+.daysel-root .daysel-cell.is-selected:nth-child(6),
+.daysel-root .daysel-cell.is-selected:nth-child(7) {
+    background: linear-gradient(135deg, var(--ds-weekend-1), var(--ds-weekend-2));
+    box-shadow: 0 10px 28px rgba(181, 122, 255, 0.35);
+}
+
+/* Focus ring for keyboard nav */
+.daysel-cell:focus-visible {
+    outline: none;
+    box-shadow: var(--ds-ring);
+}
+
+/* Disabled state */
+.daysel-cell:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* Sizing tweaks for compact modals if needed */
+@media (max-width: 560px) {
+    :root { --ds-gap: 0.5rem; }
+    .daysel-short { font-size: 0.9rem; }
+}
+
+/* Very small phones: wrap into 4 columns cleanly */
+@media (max-width: 380px) {
+    .daysel-root {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
