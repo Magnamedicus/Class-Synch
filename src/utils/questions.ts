@@ -9,6 +9,9 @@ import schoolwork_Commute from "../assets/question_images/SchoolWork_CommuteQ.pn
 import schoolwork_NoStudy from "../assets/question_images/SchoolWork_NoStudyQ.png"
 import sleep_Priority from "../assets/question_images/Sleep_PriorityQ.png"
 import sleep_HoursNeed from "../assets/question_images/Sleep_HoursNeedQ.png"
+import sleep_BedTime from "../assets/question_images/Sleep_BedTimeQ.png"
+import sleep_WakeUp from "../assets/question_images/Sleep_WakeUpQ.png"
+
 
 
 export type BucketId =
@@ -140,13 +143,13 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "sleep_earliest_bedtime",
-                image: IMG_PLACEHOLDER,
-                description: "What’s your earliest acceptable bedtime (HH:MM)?",
+                image: sleep_BedTime,
+                description: "What’s your earliest acceptable bedtime?",
                 type: "time",
             },
             {
                 id: "sleep_latest_wake",
-                image: IMG_PLACEHOLDER,
+                image: sleep_WakeUp,
                 description: "What’s your latest acceptable wake time (HH:MM)?",
                 type: "time",
             },
