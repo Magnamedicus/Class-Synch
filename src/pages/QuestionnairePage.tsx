@@ -14,7 +14,7 @@ import TextInput from "../components/inputs/TextInput";
 import EnterClasses from "../components/inputs/EnterClasses";
 import TimeInput from "../components/inputs/TimeInput";
 import DaySelection, { type DayName } from "../components/inputs/DaySelection";
-
+import SunMoonBoolean from "../components/inputs/SunMoonBoolean";
 
 import "../css/QuestionnairePage.css";
 
@@ -48,7 +48,8 @@ type InputTypeExpected =
     | "text"
     | "enter-classes"
     | "time"
-    | "day-selection";
+    | "day-selection"
+    | "boolean";
 
 function mapTypeToExpected(t: string): InputTypeExpected {
     switch (t) {
@@ -62,8 +63,10 @@ function mapTypeToExpected(t: string): InputTypeExpected {
             return "enter-classes";
         case "time":
             return "time";
-        case "day-selection":        // ← add this
+        case "day-selection":
             return "day-selection";
+        case "boolean":
+            return "boolean";
         default:
             // Any not-yet-implemented types gracefully fall back to text
             return "text";
@@ -98,7 +101,7 @@ function buildFlatFromConfig(): FlatQuestionItem[] {
                 id: q.id,
                 text: q.description,                   // modal title
                 inputType: mapTypeToExpected(q.type),  // modal input type
-                hint: "",                              // keep your previous hint default
+                hint: "",
                 default: q.type === "priority" ? 70 : undefined,
                 __bucketLabel: label,
                 __bucketId: bid,
@@ -174,14 +177,13 @@ const QuestionnairePage: React.FC = () => {
         setLinearIndex(newLinear);
     };
 
-    /* ---------- answers (same pattern you used) ---------- */
+    /* ---------- answers ---------- */
     const [answers, setAnswers] = React.useState<Record<string, any>>({});
     const [textOrNumber, setTextOrNumber] = React.useState<string>("");
     const [classes, setClasses] = React.useState<string[]>([]);
     const [selectedDays, setSelectedDays] = React.useState<DayName[]>([]);
 
-
-    /* ---------- intro modal (unchanged behavior) ---------- */
+    /* ---------- intro modal ---------- */
     const [showIntro, setShowIntro] = React.useState(true);
     React.useEffect(() => {
         document.documentElement.classList.toggle("modal-open", showIntro);
@@ -193,7 +195,7 @@ const QuestionnairePage: React.FC = () => {
         document.documentElement.classList.remove("modal-open");
     };
 
-    /* ---------- per-question modal (unchanged behavior) ---------- */
+    /* ---------- per-question modal ---------- */
     const [isModalOpen, setModalOpen] = React.useState(false);
     const [modalValid, setModalValid] = React.useState(true);
 
@@ -241,6 +243,20 @@ const QuestionnairePage: React.FC = () => {
                         ariaLabel="Select days (you can choose multiple)"
                     />
                 );
+            case "boolean": {
+                const boolVal = Boolean(answers[current.id]);
+                return (
+                    <div className="q-center-control">
+                        <SunMoonBoolean
+                            value={boolVal}
+                            onChange={(v) => setAnswers((p) => ({ ...p, [current.id]: v }))}
+                            yesLabel="Yes"
+                            noLabel="No"
+                            ariaLabel="Toggle yes or no"
+                        />
+                    </div>
+                );
+            }
             default:
                 return (
                     <input
@@ -264,7 +280,7 @@ const QuestionnairePage: React.FC = () => {
     // local inputs for the follow-ups
     const [cfPriority, setCfPriority] = React.useState<number>(70);
 
-    // NEW: meeting days + time range
+    // meeting days + time range
     const [cfMeetDays, setCfMeetDays] = React.useState<string[]>([]);
     const [cfMeetStart, setCfMeetStart] = React.useState<string>("");
     const [cfMeetEnd, setCfMeetEnd] = React.useState<string>("");
@@ -396,7 +412,6 @@ const QuestionnairePage: React.FC = () => {
         }
 
         // Step 1: Meeting days + time range
-        // Step 1: Meeting days + time range
         if (classStep === 1) {
             const DAYS: Array<{ key: string; label: string }> = [
                 { key: "monday", label: "Mon" },
@@ -418,12 +433,15 @@ const QuestionnairePage: React.FC = () => {
                             gridTemplateColumns: "repeat(7, auto)",
                             gap: ".5rem",
                             marginBottom: "0.75rem",
-                            overflowX: "auto",           // just-in-case safety on very small screens
+                            overflowX: "auto",
                             paddingBottom: ".25rem",
                         }}
                     >
                         {DAYS.map((d) => (
-                            <label key={d.key} style={{ display: "flex", alignItems: "center", gap: ".35rem", whiteSpace: "nowrap" }}>
+                            <label
+                                key={d.key}
+                                style={{ display: "flex", alignItems: "center", gap: ".35rem", whiteSpace: "nowrap" }}
+                            >
                                 <input
                                     type="checkbox"
                                     checked={cfMeetDays.includes(d.key)}
@@ -437,13 +455,17 @@ const QuestionnairePage: React.FC = () => {
                     {/* Compact, responsive two-column layout for time range */}
                     <div className="q-time-grid" aria-label="Meeting time range">
                         <div className="q-time-compact">
-                            <label style={{ display: "block", fontSize: ".9rem", opacity: .9, marginBottom: ".25rem" }}>
+                            <label
+                                style={{ display: "block", fontSize: ".9rem", opacity: 0.9, marginBottom: ".25rem" }}
+                            >
                                 Start time
                             </label>
                             <TimeInput value={cfMeetStart} onChange={setCfMeetStart} />
                         </div>
                         <div className="q-time-compact">
-                            <label style={{ display: "block", fontSize: ".9rem", opacity: .9, marginBottom: ".25rem" }}>
+                            <label
+                                style={{ display: "block", fontSize: ".9rem", opacity: 0.9, marginBottom: ".25rem" }}
+                            >
                                 End time
                             </label>
                             <TimeInput value={cfMeetEnd} onChange={setCfMeetEnd} />
@@ -454,7 +476,6 @@ const QuestionnairePage: React.FC = () => {
                 </>
             );
         }
-
 
         // Step 2: Study hours per week
         if (classStep === 2) {
@@ -473,7 +494,11 @@ const QuestionnairePage: React.FC = () => {
         // Step 3: Preferred times (select all that apply)
         return (
             <>
-                <div role="group" aria-label="Preferred study times (select all that apply)" style={{ display: "grid", gap: "0.5rem" }}>
+                <div
+                    role="group"
+                    aria-label="Preferred study times (select all that apply)"
+                    style={{ display: "grid", gap: "0.5rem" }}
+                >
                     {(["morning", "afternoon", "evening", "night"] as const).map((opt) => (
                         <label key={opt} style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
                             <input
@@ -490,7 +515,7 @@ const QuestionnairePage: React.FC = () => {
         );
     }
 
-    /* ---------- submit logic (unchanged UX; adds follow-up trigger) ---------- */
+    /* ---------- submit logic ---------- */
     const submitModal = () => {
         if (!current) return;
 
@@ -499,8 +524,10 @@ const QuestionnairePage: React.FC = () => {
             ok = classes.length > 0;
         } else if (current.inputType === "priority") {
             ok = true; // slider stored live
+        } else if (current.inputType === "boolean") {
+            ok = true; // stored live on toggle
         } else if (current.inputType === "day-selection") {
-            ok = selectedDays.length > 0;        // require at least one day
+            ok = selectedDays.length > 0; // require at least one day
         } else {
             ok = textOrNumber.trim().length > 0;
         }
@@ -513,6 +540,8 @@ const QuestionnairePage: React.FC = () => {
             startClassFollowUps(classes.slice());
             return;
         } else if (current.inputType === "priority") {
+            // no-op: stored live
+        } else if (current.inputType === "boolean") {
             // no-op: stored live
         } else if (current.inputType === "day-selection") {
             setAnswers((p) => ({ ...p, [current.id]: selectedDays.slice() }));

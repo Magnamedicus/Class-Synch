@@ -208,3 +208,22 @@ html.modal-open .questionnaire-page {
     }
 }
 
+
+/* Center & scale for boolean control in the modal */
+.q-center-control {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.25rem 0 0.5rem;
+}
+
+.q-center-control .sunmoon-switch {
+    --toggle-size: 38px; /* increase size (default was ~30px) */
+}
+
+/* Optional: slightly larger Yes/No text */
+.q-center-control .sunmoon-label {
+    font-size: 1.1rem;
+}
+
+
