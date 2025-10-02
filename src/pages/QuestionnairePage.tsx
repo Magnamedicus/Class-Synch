@@ -16,31 +16,23 @@ import TimeInput from "../components/inputs/TimeInput";
 import DaySelection, { type DayName } from "../components/inputs/DaySelection";
 import SunMoonBoolean from "../components/inputs/SunMoonBoolean";
 
+import ProgressBuckets from "../components/ProgressBuckets";
+
 import "../css/QuestionnairePage.css";
 
 /* Assets */
 import logo from "../assets/logo.png";
 import introImg from "../assets/questionnaire_intro_img.png";
 
-/* Centralized questions config (images + question types) */
-import QUESTIONS, { type BucketId } from "../utils/questions";
+/* Centralized questions config (images + question types + conditions) */
+import QUESTIONS, {
+    BUCKET_ORDER,
+    type BucketId,
+    type Condition,
+} from "../utils/questions";
 
 /* ------------------------------------------------------------------ */
-/* Bucket order for the questionnaire                                 */
-/* ------------------------------------------------------------------ */
-const BUCKET_ORDER: BucketId[] = [
-    "school",
-    "sleep",
-    "work",
-    "social",
-    "selfCare",
-    "exercise",
-    "leisure",
-    "custom",
-];
-
-/* ------------------------------------------------------------------ */
-/* Map questions.ts types to your page’s expected modal input types    */
+/* Map questions.ts types to this page’s modal input components        */
 /* ------------------------------------------------------------------ */
 type InputTypeExpected =
     | "priority"
@@ -54,40 +46,33 @@ type InputTypeExpected =
 function mapTypeToExpected(t: string): InputTypeExpected {
     switch (t) {
         case "priority":
-            return "priority";
         case "number":
-            return "number";
         case "text":
-            return "text";
         case "enter-classes":
-            return "enter-classes";
         case "time":
-            return "time";
         case "day-selection":
-            return "day-selection";
         case "boolean":
-            return "boolean";
+            return t as InputTypeExpected;
         default:
-            // Any not-yet-implemented types gracefully fall back to text
             return "text";
     }
 }
 
 /* ------------------------------------------------------------------ */
-/* Flatten questions from config into a single linear sequence         */
-/* (keeps your existing linearIndex navigation & back button behavior) */
+/* Flatten from config (preserves bucket metadata for navigation)      */
 /* ------------------------------------------------------------------ */
 type FlatQuestionItem = {
     id: string;
-    text: string;          // used as modal title
+    text: string;
     inputType: InputTypeExpected;
     hint?: string;
-    default?: number;
-    __bucketLabel: string; // e.g., "School Work"
-    __bucketId: BucketId;  // e.g., "school"
-    __bi: number;          // bucket index in BUCKET_ORDER
-    __qi: number;          // index within bucket
-    __image: string;       // per-question image from QUESTIONS
+    default?: number | string | boolean;
+    when?: Condition;
+    __bucketLabel: string;
+    __bucketId: BucketId;
+    __bi: number;
+    __qi: number;
+    __image: string;
 };
 
 function buildFlatFromConfig(): FlatQuestionItem[] {
@@ -99,10 +84,16 @@ function buildFlatFromConfig(): FlatQuestionItem[] {
         (bucket.questions ?? []).forEach((q, qi) => {
             items.push({
                 id: q.id,
-                text: q.description,                   // modal title
-                inputType: mapTypeToExpected(q.type),  // modal input type
-                hint: "",
-                default: q.type === "priority" ? 70 : undefined,
+                text: q.description,
+                inputType: mapTypeToExpected(q.type),
+                hint: q.hint ?? "",
+                default:
+                    q.defaultValue !== undefined
+                        ? q.defaultValue
+                        : q.type === "priority"
+                            ? 70
+                            : undefined,
+                when: q.when,
                 __bucketLabel: label,
                 __bucketId: bid,
                 __bi: bi,
@@ -112,6 +103,31 @@ function buildFlatFromConfig(): FlatQuestionItem[] {
         });
     });
     return items;
+}
+
+/* ------------------------------------------------------------------ */
+/* Conditional visibility helpers                                      */
+/* ------------------------------------------------------------------ */
+function evalCondition(cond: Condition, answers: Record<string, any>): boolean {
+    if ("allOf" in cond) return cond.allOf.every((c) => evalCondition(c, answers));
+    if ("anyOf" in cond) return cond.anyOf.some((c) => evalCondition(c, answers));
+    const val = answers[cond.id];
+    if (Object.prototype.hasOwnProperty.call(cond, "equals")) {
+        // @ts-expect-error loose compare per schema
+        return val === cond.equals;
+    }
+    if (Object.prototype.hasOwnProperty.call(cond, "notEquals")) {
+        // @ts-expect-error loose compare per schema
+        return val !== cond.notEquals;
+    }
+    // @ts-expect-error truthy/falsy narrow
+    if (cond.truthy) return !!val;
+    // @ts-expect-error truthy/falsy narrow
+    if (cond.falsy) return !val;
+    return true;
+}
+function isVisible(q: FlatQuestionItem, answers: Record<string, any>): boolean {
+    return !q.when || evalCondition(q.when, answers);
 }
 
 /* ------------------------------------------------------------------ */
@@ -125,9 +141,38 @@ const QuestionnairePage: React.FC = () => {
     const [linearIndex, setLinearIndex] = React.useState(0);
     const current = flat[linearIndex];
 
-    /* ---------- Map linear index to current bucket + within-bucket --- */
+    /* ---------- Answers & local UI state ---------- */
+    const [answers, setAnswers] = React.useState<Record<string, any>>({});
+    const [textOrNumber, setTextOrNumber] = React.useState<string>("");
+    const [classes, setClasses] = React.useState<string[]>([]);
+    const [selectedDays, setSelectedDays] = React.useState<DayName[]>([]);
+
+    /* ---------- Intro modal ---------- */
+    const [showIntro, setShowIntro] = React.useState(true);
+    React.useEffect(() => {
+        document.documentElement.classList.toggle("modal-open", showIntro);
+        return () => document.documentElement.classList.remove("modal-open");
+    }, [showIntro]);
+    const closeIntro = () => {
+        setShowIntro(false);
+        document.documentElement.classList.remove("modal-open");
+    };
+
+    /* ---------- Per-question modal ---------- */
+    const [isModalOpen, setModalOpen] = React.useState(false);
+    const [modalValid, setModalValid] = React.useState(true);
+    React.useEffect(() => {
+        document.documentElement.classList.toggle("modal-open", isModalOpen);
+        return () => document.documentElement.classList.remove("modal-open");
+    }, [isModalOpen]);
+    const openModalForCurrent = () => {
+        setModalOpen(true);
+        setModalValid(true);
+    };
+    const closeModal = () => setModalOpen(false);
+
+    /* ---------- Bucket ranges for mapping (static from config order) ---------- */
     const bucketRanges = React.useMemo(() => {
-        // ranges like: [{bucketId, label, start, end, length}]
         const ranges: Array<{
             bucketId: BucketId;
             label: string;
@@ -135,7 +180,6 @@ const QuestionnairePage: React.FC = () => {
             end: number; // inclusive
             length: number;
         }> = [];
-
         let cursor = 0;
         BUCKET_ORDER.forEach((bid) => {
             const count = QUESTIONS[bid]?.questions.length ?? 0;
@@ -160,77 +204,147 @@ const QuestionnairePage: React.FC = () => {
         [bucketRanges, linearIndex]
     );
 
+    /* ---------- Visible questions (apply conditions) ---------- */
+    const visibleInCurrentBucket = React.useMemo(() => {
+        if (!currentRange) return [] as number[];
+        const list: number[] = [];
+        for (let i = currentRange.start; i <= currentRange.end; i++) {
+            if (isVisible(flat[i], answers)) list.push(i);
+        }
+        return list;
+    }, [currentRange, flat, answers]);
+
+    // If the current question becomes hidden due to a changed answer, auto-jump
+    React.useEffect(() => {
+        if (current && !isVisible(current, answers)) {
+            // try forward
+            for (let i = linearIndex + 1; i < flat.length; i++) {
+                if (isVisible(flat[i], answers)) {
+                    setLinearIndex(i);
+                    return;
+                }
+            }
+            // then backward
+            for (let i = linearIndex - 1; i >= 0; i--) {
+                if (isVisible(flat[i], answers)) {
+                    setLinearIndex(i);
+                    return;
+                }
+            }
+        }
+    }, [answers, current, flat, linearIndex]);
+
     const withinIndex = React.useMemo(() => {
-        if (!currentRange) return 0;
-        return linearIndex - currentRange.start;
-    }, [currentRange, linearIndex]);
+        if (!currentRange || visibleInCurrentBucket.length === 0) return 0;
+        const pos = visibleInCurrentBucket.indexOf(linearIndex);
+        return Math.max(0, pos);
+    }, [currentRange, visibleInCurrentBucket, linearIndex]);
 
     const images = React.useMemo(() => {
         if (!currentRange) return [];
-        const { start, end } = currentRange;
-        return flat.slice(start, end + 1).map((q) => q.__image);
-    }, [flat, currentRange]);
+        return visibleInCurrentBucket.map((idx) => flat[idx].__image);
+    }, [flat, currentRange, visibleInCurrentBucket]);
 
     const handleCarouselIndexChange = (newWithin: number) => {
-        if (!currentRange) return;
-        const newLinear = currentRange.start + Math.max(0, Math.min(newWithin, currentRange.length - 1));
-        setLinearIndex(newLinear);
+        if (!currentRange || visibleInCurrentBucket.length === 0) return;
+        const clampedWithin = Math.max(0, Math.min(newWithin, visibleInCurrentBucket.length - 1));
+        const targetLinear = visibleInCurrentBucket[clampedWithin];
+        setLinearIndex(targetLinear);
     };
 
-    /* ---------- answers ---------- */
-    const [answers, setAnswers] = React.useState<Record<string, any>>({});
-    const [textOrNumber, setTextOrNumber] = React.useState<string>("");
-    const [classes, setClasses] = React.useState<string[]>([]);
-    const [selectedDays, setSelectedDays] = React.useState<DayName[]>([]);
+    /* ---------- Progress bar (global visible progress + bucket landmarks) ---------- */
+    const visibleInfo = React.useMemo(() => {
+        let total = 0;
+        const buckets = bucketRanges.map((r) => {
+            const visIdx: number[] = [];
+            for (let i = r.start; i <= r.end; i++) {
+                if (isVisible(flat[i], answers)) visIdx.push(i);
+            }
+            const info = {
+                id: r.bucketId,
+                label: r.label,
+                count: visIdx.length,
+                offset: total,
+                firstVisibleLinearIndex: visIdx.length ? visIdx[0] : null,
+            };
+            total += visIdx.length;
+            return info;
+        });
 
-    /* ---------- intro modal ---------- */
-    const [showIntro, setShowIntro] = React.useState(true);
-    React.useEffect(() => {
-        document.documentElement.classList.toggle("modal-open", showIntro);
-        return () => document.documentElement.classList.remove("modal-open");
-    }, [showIntro]);
+        // completed = number of visible questions with index < linearIndex
+        let completed = 0;
+        for (let i = 0; i < flat.length; i++) {
+            if (!isVisible(flat[i], answers)) continue;
+            if (i < linearIndex) completed += 1;
+            else break;
+        }
 
-    const closeIntro = () => {
-        setShowIntro(false);
-        document.documentElement.classList.remove("modal-open");
+        return {
+            buckets,
+            totalVisible: total,
+            completedVisible: completed,
+        };
+    }, [bucketRanges, flat, answers, linearIndex]);
+
+    const onJumpToBucket = (bucketId: string) => {
+        const b = visibleInfo.buckets.find((x) => x.id === bucketId);
+        if (!b) return;
+        if (b.firstVisibleLinearIndex !== null) {
+            setLinearIndex(b.firstVisibleLinearIndex);
+        } else {
+            // if no visible items in that bucket, jump to next visible after it
+            const range = bucketRanges.find((r) => r.bucketId === bucketId);
+            if (!range) return;
+            for (let i = range.end + 1; i < flat.length; i++) {
+                if (isVisible(flat[i], answers)) {
+                    setLinearIndex(i);
+                    return;
+                }
+            }
+            // or previous visible
+            for (let i = range.start - 1; i >= 0; i--) {
+                if (isVisible(flat[i], answers)) {
+                    setLinearIndex(i);
+                    return;
+                }
+            }
+        }
     };
 
-    /* ---------- per-question modal ---------- */
-    const [isModalOpen, setModalOpen] = React.useState(false);
-    const [modalValid, setModalValid] = React.useState(true);
-
-    React.useEffect(() => {
-        document.documentElement.classList.toggle("modal-open", isModalOpen);
-        return () => document.documentElement.classList.remove("modal-open");
-    }, [isModalOpen]);
-
-    const openModalForCurrent = () => {
-        setModalOpen(true);
-        setModalValid(true);
-    };
-    const closeModal = () => setModalOpen(false);
-
-    /* ---------- render the correct input in the question modal ---------- */
+    /* ---------- Render the correct input in the question modal ---------- */
     const renderModalInput = () => {
-        if (!current) return null;
+        const item = flat[linearIndex];
+        if (!item) return null;
 
-        switch (current.inputType) {
+        switch (item.inputType) {
             case "priority": {
-                const uiVal = answers[current.id] ?? current.default ?? 70;
+                const uiVal = (answers[item.id] ?? item.default ?? 70) as number;
                 return (
                     <PrioritySlider
                         variant="bucket"
                         label={undefined}
                         helpText={undefined}
                         value={Number(uiVal)}
-                        onChange={(v) => setAnswers((p) => ({ ...p, [current.id]: v }))}
+                        onChange={(v) => setAnswers((p) => ({ ...p, [item.id]: v }))}
                     />
                 );
             }
             case "number":
-                return <NumberInput value={textOrNumber} onChange={setTextOrNumber} placeholder="0" />;
+                return (
+                    <NumberInput
+                        value={textOrNumber}
+                        onChange={setTextOrNumber}
+                        placeholder="0"
+                    />
+                );
             case "text":
-                return <TextInput value={textOrNumber} onChange={setTextOrNumber} placeholder={current.hint} />;
+                return (
+                    <TextInput
+                        value={textOrNumber}
+                        onChange={setTextOrNumber}
+                        placeholder={item.hint}
+                    />
+                );
             case "enter-classes":
                 return <EnterClasses value={classes} onChange={setClasses} />;
             case "time":
@@ -244,12 +358,14 @@ const QuestionnairePage: React.FC = () => {
                     />
                 );
             case "boolean": {
-                const boolVal = Boolean(answers[current.id]);
+                const boolVal =
+                    (answers[item.id] as boolean | undefined) ??
+                    (typeof item.default === "boolean" ? (item.default as boolean) : false);
                 return (
                     <div className="q-center-control">
                         <SunMoonBoolean
-                            value={boolVal}
-                            onChange={(v) => setAnswers((p) => ({ ...p, [current.id]: v }))}
+                            value={!!boolVal}
+                            onChange={(v) => setAnswers((p) => ({ ...p, [item.id]: v }))}
                             yesLabel="Yes"
                             noLabel="No"
                             ariaLabel="Toggle yes or no"
@@ -270,21 +386,18 @@ const QuestionnairePage: React.FC = () => {
     };
 
     /* ---------- Per-class follow-up mini-wizard (after EnterClasses) ---------- */
-    type SimpleClass = string; // using your current EnterClasses as string[]
+    type SimpleClass = string;
 
     const [classFollowupsOpen, setClassFollowupsOpen] = React.useState(false);
     const [classListForFollowups, setClassListForFollowups] = React.useState<SimpleClass[]>([]);
     const [classIdx, setClassIdx] = React.useState(0);
     const [classStep, setClassStep] = React.useState(0);
 
-    // local inputs for the follow-ups
+    // local inputs
     const [cfPriority, setCfPriority] = React.useState<number>(70);
-
-    // meeting days + time range
     const [cfMeetDays, setCfMeetDays] = React.useState<string[]>([]);
     const [cfMeetStart, setCfMeetStart] = React.useState<string>("");
     const [cfMeetEnd, setCfMeetEnd] = React.useState<string>("");
-
     const [cfStudyHours, setCfStudyHours] = React.useState<string>("");
     const [cfPrefTimes, setCfPrefTimes] = React.useState<string[]>([]);
 
@@ -325,8 +438,13 @@ const QuestionnairePage: React.FC = () => {
 
     function closeClassFollowUps() {
         setClassFollowupsOpen(false);
-        // After finishing all classes, advance to the next *question* in the linear flow
-        setLinearIndex((i) => Math.min(i + 1, flat.length - 1));
+        // advance to next *visible* question
+        setLinearIndex((i) => {
+            for (let n = i + 1; n < flat.length; n++) {
+                if (isVisible(flat[n], answers)) return n;
+            }
+            return i;
+        });
     }
 
     function submitClassFollowupStep() {
@@ -334,14 +452,12 @@ const QuestionnairePage: React.FC = () => {
         if (!currentClass) return;
         const keyBase = `class_${slugify(currentClass)}`;
 
-        // Step 0: Priority
         if (classStep === 0) {
             setAnswers((p) => ({ ...p, [`${keyBase}_priority`]: cfPriority }));
             setClassStep(1);
             return;
         }
 
-        // Step 1: Meeting days + time range (validate at least one day + both times)
         if (classStep === 1) {
             if (cfMeetDays.length === 0) return;
             if (!cfMeetStart.trim() || !cfMeetEnd.trim()) return;
@@ -354,7 +470,6 @@ const QuestionnairePage: React.FC = () => {
             return;
         }
 
-        // Step 2: Study hours (simple required)
         if (classStep === 2) {
             if (!cfStudyHours.trim()) return;
             setAnswers((p) => ({ ...p, [`${keyBase}_study_hours`]: cfStudyHours }));
@@ -362,23 +477,19 @@ const QuestionnairePage: React.FC = () => {
             return;
         }
 
-        // Step 3: Preferred times (multi-select; require at least one)
         if (cfPrefTimes.length === 0) return;
         setAnswers((p) => ({ ...p, [`${keyBase}_pref_times`]: cfPrefTimes.slice() }));
 
-        // Next class or finish
         const nextClass = classIdx + 1;
         if (nextClass < classListForFollowups.length) {
             setClassIdx(nextClass);
             setClassStep(0);
             resetFollowupInputsForNextClass();
         } else {
-            // done with all classes
             closeClassFollowUps();
         }
     }
 
-    // Toggle selection for multi-select chips (checkboxes for simplicity)
     function togglePrefTime(val: string) {
         setCfPrefTimes((prev) =>
             prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]
@@ -395,7 +506,6 @@ const QuestionnairePage: React.FC = () => {
         const name = classListForFollowups[classIdx] ?? "";
         if (!name) return null;
 
-        // Step 0: Priority
         if (classStep === 0) {
             return (
                 <>
@@ -411,7 +521,6 @@ const QuestionnairePage: React.FC = () => {
             );
         }
 
-        // Step 1: Meeting days + time range
         if (classStep === 1) {
             const DAYS: Array<{ key: string; label: string }> = [
                 { key: "monday", label: "Mon" },
@@ -440,7 +549,12 @@ const QuestionnairePage: React.FC = () => {
                         {DAYS.map((d) => (
                             <label
                                 key={d.key}
-                                style={{ display: "flex", alignItems: "center", gap: ".35rem", whiteSpace: "nowrap" }}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: ".35rem",
+                                    whiteSpace: "nowrap",
+                                }}
                             >
                                 <input
                                     type="checkbox"
@@ -452,11 +566,15 @@ const QuestionnairePage: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Compact, responsive two-column layout for time range */}
                     <div className="q-time-grid" aria-label="Meeting time range">
                         <div className="q-time-compact">
                             <label
-                                style={{ display: "block", fontSize: ".9rem", opacity: 0.9, marginBottom: ".25rem" }}
+                                style={{
+                                    display: "block",
+                                    fontSize: ".9rem",
+                                    opacity: 0.9,
+                                    marginBottom: ".25rem",
+                                }}
                             >
                                 Start time
                             </label>
@@ -464,7 +582,12 @@ const QuestionnairePage: React.FC = () => {
                         </div>
                         <div className="q-time-compact">
                             <label
-                                style={{ display: "block", fontSize: ".9rem", opacity: 0.9, marginBottom: ".25rem" }}
+                                style={{
+                                    display: "block",
+                                    fontSize: ".9rem",
+                                    opacity: 0.9,
+                                    marginBottom: ".25rem",
+                                }}
                             >
                                 End time
                             </label>
@@ -472,12 +595,13 @@ const QuestionnairePage: React.FC = () => {
                         </div>
                     </div>
 
-                    <p className="q-hint">Select meeting days and enter the usual start/end time for this class.</p>
+                    <p className="q-hint">
+                        Select meeting days and enter the usual start/end time for this class.
+                    </p>
                 </>
             );
         }
 
-        // Step 2: Study hours per week
         if (classStep === 2) {
             return (
                 <>
@@ -486,12 +610,13 @@ const QuestionnairePage: React.FC = () => {
                         onChange={setCfStudyHours}
                         placeholder="e.g., 6 (hours per week)"
                     />
-                    <p className="q-hint">How many hours per week would you like to study for this class?</p>
+                    <p className="q-hint">
+                        How many hours per week would you like to study for this class?
+                    </p>
                 </>
             );
         }
 
-        // Step 3: Preferred times (select all that apply)
         return (
             <>
                 <div
@@ -500,7 +625,10 @@ const QuestionnairePage: React.FC = () => {
                     style={{ display: "grid", gap: "0.5rem" }}
                 >
                     {(["morning", "afternoon", "evening", "night"] as const).map((opt) => (
-                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
+                        <label
+                            key={opt}
+                            style={{ display: "flex", alignItems: "center", gap: ".5rem" }}
+                        >
                             <input
                                 type="checkbox"
                                 checked={cfPrefTimes.includes(opt)}
@@ -510,56 +638,69 @@ const QuestionnairePage: React.FC = () => {
                         </label>
                     ))}
                 </div>
-                <p className="q-hint">What times of day do you prefer to study for this class? (Select all that apply)</p>
+                <p className="q-hint">
+                    What times of day do you prefer to study for this class? (Select all that
+                    apply)
+                </p>
             </>
         );
     }
 
-    /* ---------- submit logic ---------- */
+    /* ---------- Submit / Back (honor visibility) ---------- */
     const submitModal = () => {
-        if (!current) return;
+        const item = flat[linearIndex];
+        if (!item) return;
 
         let ok = true;
-        if (current.inputType === "enter-classes") {
+        if (item.inputType === "enter-classes") {
             ok = classes.length > 0;
-        } else if (current.inputType === "priority") {
-            ok = true; // slider stored live
-        } else if (current.inputType === "boolean") {
-            ok = true; // stored live on toggle
-        } else if (current.inputType === "day-selection") {
-            ok = selectedDays.length > 0; // require at least one day
+        } else if (item.inputType === "priority" || item.inputType === "boolean") {
+            ok = true; // stored live
+        } else if (item.inputType === "day-selection") {
+            ok = selectedDays.length > 0;
         } else {
             ok = textOrNumber.trim().length > 0;
         }
+
         setModalValid(ok);
         if (!ok) return;
 
-        if (current.inputType === "enter-classes") {
-            setAnswers((p) => ({ ...p, [current.id]: classes.slice() }));
+        if (item.inputType === "enter-classes") {
+            setAnswers((p) => ({ ...p, [item.id]: classes.slice() }));
             setModalOpen(false);
             startClassFollowUps(classes.slice());
             return;
-        } else if (current.inputType === "priority") {
-            // no-op: stored live
-        } else if (current.inputType === "boolean") {
-            // no-op: stored live
-        } else if (current.inputType === "day-selection") {
-            setAnswers((p) => ({ ...p, [current.id]: selectedDays.slice() }));
-            setSelectedDays([]); // reset for next time
+        } else if (item.inputType === "priority" || item.inputType === "boolean") {
+            // already in answers
+        } else if (item.inputType === "day-selection") {
+            setAnswers((p) => ({ ...p, [item.id]: selectedDays.slice() }));
+            setSelectedDays([]);
         } else {
-            setAnswers((p) => ({ ...p, [current.id]: textOrNumber }));
+            setAnswers((p) => ({ ...p, [item.id]: textOrNumber }));
             setTextOrNumber("");
         }
 
         setModalOpen(false);
-        setLinearIndex((i) => Math.min(i + 1, flat.length - 1));
+
+        // advance to next visible
+        for (let n = linearIndex + 1; n < flat.length; n++) {
+            if (isVisible(flat[n], answers)) {
+                setLinearIndex(n);
+                return;
+            }
+        }
     };
 
     const goBack = () => {
-        setLinearIndex((i) => Math.max(0, i - 1));
+        for (let p = linearIndex - 1; p >= 0; p--) {
+            if (isVisible(flat[p], answers)) {
+                setLinearIndex(p);
+                return;
+            }
+        }
     };
 
-    // Optional: finish callback (unchanged)
+    // Optional: finish callback
     const onFinishAll = () => navigate("/schedule");
 
     return (
@@ -572,14 +713,14 @@ const QuestionnairePage: React.FC = () => {
                         <img src={logo} alt="App Logo" className="page-logo" />
                     </Link>
 
-                    {/* Stack keeps the carousel lowered from the top and centers the CTA */}
+                    {/* Centered carousel + Answer CTA */}
                     <section className="qc-stack">
                         <div className="qc-safe-wrap">
                             <div className="qc-frame">
                                 <QuestionCarousel
-                                    images={images}                  // images for CURRENT BUCKET only
-                                    index={withinIndex}              // index within CURRENT BUCKET
-                                    onIndexChange={handleCarouselIndexChange} // dot/drag -> linear index mapping
+                                    images={images}
+                                    index={withinIndex}
+                                    onIndexChange={handleCarouselIndexChange}
                                     autoAdvanceMs={undefined}
                                     dragBufferPx={50}
                                     showDots
@@ -601,7 +742,16 @@ const QuestionnairePage: React.FC = () => {
                 </div>
             </div>
 
-            {/* ⬇️ Render modals OUTSIDE the blurred container */}
+            {/* Progress bar (fixed overlay; doesn’t shift layout) */}
+            <ProgressBuckets
+                buckets={visibleInfo.buckets}
+                totalVisible={visibleInfo.totalVisible}
+                completedVisible={visibleInfo.completedVisible}
+                currentBucketId={currentRange?.bucketId ?? null}
+                onJumpToBucket={onJumpToBucket}
+            />
+
+            {/* ⬇️ Modals (outside blurred container) */}
             <IntroModal
                 isOpen={showIntro}
                 imageSrc={introImg}
@@ -632,9 +782,11 @@ const QuestionnairePage: React.FC = () => {
                     classFollowupsOpen
                         ? (() => {
                             const name = classListForFollowups[classIdx] ?? "";
-                            if (classStep === 0) return `How much priority are you putting on ${name}?`;
+                            if (classStep === 0)
+                                return `How much priority are you putting on ${name}?`;
                             if (classStep === 1) return `When does ${name} meet?`;
-                            if (classStep === 2) return `How many hours per week would you like to study for ${name}?`;
+                            if (classStep === 2)
+                                return `How many hours per week would you like to study for ${name}?`;
                             return `What times of day do you prefer to study for ${name}?`;
                         })()
                         : ""

@@ -1,18 +1,19 @@
 // src/utils/questions.ts
 
-import schoolwork_priority from "../assets/question_images/SchoolWork_PriorityQ.png"
-import schoolwork_ClassAmount from "../assets/question_images/SchoolWork_ClassAmountQ.png"
-import schoolwork_AddClasses from "../assets/question_images/SchoolWork_AddClassesQ.png"
-import schoolwork_MaxStudy from "../assets/question_images/SchoolWork_MaxStudyQ.png"
-import schoolwork_StudyBreaks from "../assets/question_images/SchoolWork_StudyBreaksQ.png"
-import schoolwork_Commute from "../assets/question_images/SchoolWork_CommuteQ.png"
-import schoolwork_NoStudy from "../assets/question_images/SchoolWork_NoStudyQ.png"
-import sleep_Priority from "../assets/question_images/Sleep_PriorityQ.png"
-import sleep_HoursNeed from "../assets/question_images/Sleep_HoursNeedQ.png"
-import sleep_BedTime from "../assets/question_images/Sleep_BedTimeQ.png"
-import sleep_WakeUp from "../assets/question_images/Sleep_WakeUpQ.png"
+import schoolwork_priority from "../assets/question_images/SchoolWork_PriorityQ.png";
+import schoolwork_ClassAmount from "../assets/question_images/SchoolWork_ClassAmountQ.png";
+import schoolwork_AddClasses from "../assets/question_images/SchoolWork_AddClassesQ.png";
+import schoolwork_MaxStudy from "../assets/question_images/SchoolWork_MaxStudyQ.png";
+import schoolwork_StudyBreaks from "../assets/question_images/SchoolWork_StudyBreaksQ.png";
+import schoolwork_Commute from "../assets/question_images/SchoolWork_CommuteQ.png";
+import schoolwork_NoStudy from "../assets/question_images/SchoolWork_NoStudyQ.png";
 
+import sleep_Priority from "../assets/question_images/Sleep_PriorityQ.png";
+import sleep_HoursNeed from "../assets/question_images/Sleep_HoursNeedQ.png";
+import sleep_BedTime from "../assets/question_images/Sleep_BedTimeQ.png";
+import sleep_WakeUp from "../assets/question_images/Sleep_WakeUpQ.png";
 
+/* --------------------------------- Types ---------------------------------- */
 
 export type BucketId =
     | "school"
@@ -40,22 +41,47 @@ export type QuestionType =
     | "list"
     | "day-selection";
 
+export type Condition =
+    | { id: string; equals?: any; notEquals?: any; truthy?: boolean; falsy?: boolean }
+    | { allOf: Condition[] }
+    | { anyOf: Condition[] };
+
 export type Question = {
-    id: string;              // unique within bucket
-    image: string;           // path to placeholder (logo)
-    description: string;     // visible prompt
-    type: QuestionType;      // determines input UI
+    id: string;                // unique ID (recommend globally unique across all buckets)
+    image: string;             // question image path
+    description: string;       // prompt shown to the user
+    type: QuestionType;        // determines which input to render
+    // Optional metadata:
+    required?: boolean;        // UI-level enforcement (page can decide how to handle)
+    hint?: string;             // small helper text
+    defaultValue?: number | string | boolean;
+    options?: string[];        // for 'chips' etc.
+    when?: Condition;          // ⬅️ Conditional visibility
 };
 
 export type Bucket = {
     id: BucketId;
     name: string;
-    skippable: boolean;      // School & Sleep are not skippable
-    coverImage: string;      // path to placeholder (logo)
+    skippable: boolean;        // School & Sleep are not skippable
+    coverImage: string;
     questions: Question[];
 };
 
-const IMG_PLACEHOLDER = "src/assets/logo.png";
+/* ------------------------------ Config & Data ------------------------------ */
+
+export const IMG_PLACEHOLDER = "src/assets/logo.png";
+
+/** Single source of truth for bucket order */
+export const BUCKET_ORDER: BucketId[] = [
+    "school",
+    "sleep",
+    "work",
+    "social",
+    "selfCare",
+    "exercise",
+    "leisure",
+    "custom",
+];
 
 export const QUESTIONS: Record<BucketId, Bucket> = {
     /* ----------------------------------- SCHOOL ----------------------------------- */
@@ -68,56 +94,52 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "school_priority",
                 image: schoolwork_priority,
-                description:
-                    "How much do you prioritize schoolwork in your schedule? (0-100%)",
+                description: "How much do you prioritize schoolwork in your schedule? (0-100%)",
                 type: "priority",
+                required: true,
+                defaultValue: 70,
             },
-
             {
                 id: "school_class_amount",
                 image: schoolwork_ClassAmount,
-                description:
-                    "How many classes are you taking this semester?",
+                description: "How many classes are you taking this semester?",
                 type: "number",
+                required: true,
             },
             {
                 id: "school_classes",
                 image: schoolwork_AddClasses,
-                description:
-                    "Add each class you're taking right now, or upload your schedule",
+                description: "Add each class you're taking right now, or upload your schedule",
                 type: "enter-classes",
+                required: true,
             },
-
             {
                 id: "school_max_session_length",
                 image: schoolwork_MaxStudy,
-                description:
-                    "What's the longest amount of time you'd want to study in one sitting (enter minutes)?",
+                description: "What's the longest amount of time you'd want to study in one sitting (enter minutes)?",
                 type: "number",
+                hint: "Minutes, e.g., 90",
             },
             {
                 id: "school_break_frequency",
                 image: schoolwork_StudyBreaks,
-                description:
-                    "How often do you like to take breaks during study sessions (minutes between breaks)?",
+                description: "How often do you like to take breaks during study sessions (minutes between breaks)?",
                 type: "number",
+                hint: "Minutes between breaks, e.g., 45",
             },
             {
                 id: "school_commute_time",
                 image: schoolwork_Commute,
                 description: "What is your average commute time to/from campus (in minutes).",
                 type: "number",
+                hint: "One-way or round-trip—your call, just be consistent",
             },
             {
                 id: "school_no_go_times",
                 image: schoolwork_NoStudy,
-                description:
-                    "Select any days in which you do not want studying to be scheduled",
+                description: "Select any days in which you do not want studying to be scheduled",
                 type: "day-selection",
             },
-
-
-
         ],
     },
 
@@ -131,15 +153,16 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "sleep_priority",
                 image: sleep_Priority,
-                description:
-                    "How much priority do you place on getting good sleep each night? (0-100)",
+                description: "How much priority do you place on getting good sleep each night? (0-100)",
                 type: "priority",
+                defaultValue: 70,
             },
             {
                 id: "sleep_hours_per_night",
                 image: sleep_HoursNeed,
                 description: "How many hours would you ideally like to sleep each night?",
                 type: "number",
+                hint: "e.g., 7.5",
             },
             {
                 id: "sleep_earliest_bedtime",
@@ -156,26 +179,28 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "sleep_consistency",
                 image: IMG_PLACEHOLDER,
-                description: "Do you prefer consistent sleep times across all days?",
+                description: "Do you prefer to go to sleep at approximately the same time each night?",
                 type: "boolean",
+                defaultValue: true,
             },
             {
                 id: "sleep_naps",
                 image: IMG_PLACEHOLDER,
                 description: "Do you take naps during the day?",
                 type: "boolean",
+                defaultValue: false,
             },
             {
                 id: "sleep_nap_windows",
                 image: IMG_PLACEHOLDER,
                 description: "Preferred nap windows (weekday time intervals).",
                 type: "weekday-time-intervals",
+                when: { id: "sleep_naps", equals: true }, // ⬅️ only show if naps = Yes
             },
             {
                 id: "sleep_no_go_times",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Any times you must be awake (add intervals to avoid sleep then)?",
+                description: "Any times you must be awake (add intervals to avoid sleep then)?",
                 type: "weekday-time-intervals",
             },
             {
@@ -197,8 +222,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "work_priority",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "How important is Work relative to other areas? Set a percentage priority (0–100).",
+                description: "How important is Work relative to other areas? Set a percentage priority (0–100).",
                 type: "priority",
             },
             {
@@ -206,12 +230,14 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 image: IMG_PLACEHOLDER,
                 description: "Do you have fixed shift times each week?",
                 type: "boolean",
+                defaultValue: false,
             },
             {
                 id: "work_fixed_shift_times",
                 image: IMG_PLACEHOLDER,
                 description: "Add your fixed shift times (weekday intervals).",
                 type: "weekday-time-intervals",
+                when: { id: "work_has_fixed_shifts", equals: true }, // ⬅️ only if Yes
             },
             {
                 id: "work_hours_target",
@@ -222,9 +248,9 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "work_time_prefs",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Preferred times to work (morning, afternoon, evening, night).",
+                description: "Preferred times to work (morning, afternoon, evening, night).",
                 type: "chips",
+                options: ["morning", "afternoon", "evening", "night"],
             },
             {
                 id: "work_commute_time",
@@ -235,15 +261,13 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "work_break_frequency",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "How often would you like breaks while working (minutes between breaks)?",
+                description: "How often would you like breaks while working (minutes between breaks)?",
                 type: "number",
             },
             {
                 id: "work_max_session_length",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Maximum preferred continuous work session length (minutes).",
+                description: "Maximum preferred continuous work session length (minutes).",
                 type: "number",
             },
             {
@@ -255,8 +279,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "work_note",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Anything else about your job schedule we should consider?",
+                description: "Anything else about your job schedule we should consider?",
                 type: "text",
             },
         ],
@@ -272,8 +295,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "social_priority",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "How important is Social Life in your weekly plan? Set a percentage priority (0–100).",
+                description: "How important is Social Life in your weekly plan? Set a percentage priority (0–100).",
                 type: "priority",
             },
             {
@@ -285,29 +307,27 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "social_time_prefs",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Preferred times for social activities (morning, afternoon, evening, night).",
+                description: "Preferred times for social activities (morning, afternoon, evening, night).",
                 type: "chips",
+                options: ["morning", "afternoon", "evening", "night"],
             },
             {
                 id: "social_recurring_events",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Do you have recurring social events (add weekday intervals)?",
+                description: "Do you have recurring social events (add weekday intervals)?",
                 type: "weekday-time-intervals",
             },
             {
                 id: "social_friends_study_overlap",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Would you like to co-locate social time with group study sessions when possible?",
+                description: "Would you like to co-locate social time with group study sessions when possible?",
                 type: "boolean",
+                defaultValue: false,
             },
             {
                 id: "social_note",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Anything else about your social life we should consider?",
+                description: "Anything else about your social life we should consider?",
                 type: "text",
             },
         ],
@@ -323,36 +343,32 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "selfcare_priority",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "How important is Self Care? Set a percentage priority (0–100).",
+                description: "How important is Self Care? Set a percentage priority (0–100).",
                 type: "priority",
             },
             {
                 id: "selfcare_hours_target",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Target self care time per week (hours). Includes hygiene, journaling, mindfulness, etc.",
+                description: "Target self care time per week (hours). Includes hygiene, journaling, mindfulness, etc.",
                 type: "number",
             },
             {
                 id: "selfcare_time_prefs",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Preferred times for self care (morning routines, evenings, etc.).",
+                description: "Preferred times for self care (morning routines, evenings, etc.).",
                 type: "chips",
+                options: ["morning", "afternoon", "evening", "night"],
             },
             {
                 id: "selfcare_fixed_items",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Add any fixed self care routines (weekday time intervals).",
+                description: "Add any fixed self care routines (weekday time intervals).",
                 type: "weekday-time-intervals",
             },
             {
                 id: "selfcare_note",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Anything else about your self care we should consider?",
+                description: "Anything else about your self care we should consider?",
                 type: "text",
             },
         ],
@@ -368,8 +384,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "exercise_priority",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "How important is Exercise? Set a percentage priority (0–100).",
+                description: "How important is Exercise? Set a percentage priority (0–100).",
                 type: "priority",
             },
             {
@@ -381,15 +396,14 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "exercise_time_prefs",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Preferred exercise windows (morning, afternoon, evening, night).",
+                description: "Preferred exercise windows (morning, afternoon, evening, night).",
                 type: "chips",
+                options: ["morning", "afternoon", "evening", "night"],
             },
             {
                 id: "exercise_workout_type_note",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Workout types you prefer (strength, cardio, sports) — short note.",
+                description: "Workout types you prefer (strength, cardio, sports) — short note.",
                 type: "text",
             },
             {
@@ -401,15 +415,13 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "exercise_fixed_classes",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Any fixed exercise classes or team practices (weekday intervals).",
+                description: "Any fixed exercise classes or team practices (weekday intervals).",
                 type: "weekday-time-intervals",
             },
             {
                 id: "exercise_note",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Anything else about exercise we should consider?",
+                description: "Anything else about exercise we should consider?",
                 type: "text",
             },
         ],
@@ -425,8 +437,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "leisure_priority",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "How important is Leisure in your week? Set a percentage priority (0–100).",
+                description: "How important is Leisure in your week? Set a percentage priority (0–100).",
                 type: "priority",
             },
             {
@@ -438,28 +449,27 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "leisure_time_prefs",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Preferred leisure windows (morning, afternoon, evening, night).",
+                description: "Preferred leisure windows (morning, afternoon, evening, night).",
                 type: "chips",
+                options: ["morning", "afternoon", "evening", "night"],
             },
             {
                 id: "leisure_screen_free_pref",
                 image: IMG_PLACEHOLDER,
                 description: "Prefer screen-free leisure in late evenings?",
                 type: "boolean",
+                defaultValue: true,
             },
             {
                 id: "leisure_recurring_events",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Recurring leisure events (movie night, club meets — weekday time intervals).",
+                description: "Recurring leisure events (movie night, club meets — weekday time intervals).",
                 type: "weekday-time-intervals",
             },
             {
                 id: "leisure_note",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Anything else about leisure we should consider?",
+                description: "Anything else about leisure we should consider?",
                 type: "text",
             },
         ],
@@ -475,60 +485,91 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "custom_enabled",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Would you like to add a custom activity or commitment?",
+                description: "Would you like to add a custom activity or commitment?",
                 type: "boolean",
+                defaultValue: false,
             },
             {
                 id: "custom_name",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Name of your custom activity (e.g., Volunteering, Music Practice).",
+                description: "Name of your custom activity (e.g., Volunteering, Music Practice).",
                 type: "text",
+                when: { id: "custom_enabled", equals: true },
             },
             {
                 id: "custom_priority",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "How important is this custom activity? Set a percentage priority (0–100).",
+                description: "How important is this custom activity? Set a percentage priority (0–100).",
                 type: "priority",
+                when: { id: "custom_enabled", equals: true },
             },
             {
                 id: "custom_hours_target",
                 image: IMG_PLACEHOLDER,
                 description: "Target hours per week for this activity.",
                 type: "number",
+                when: { id: "custom_enabled", equals: true },
             },
             {
                 id: "custom_time_prefs",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Preferred time windows (morning, afternoon, evening, night).",
+                description: "Preferred time windows (morning, afternoon, evening, night).",
                 type: "chips",
+                options: ["morning", "afternoon", "evening", "night"],
+                when: { id: "custom_enabled", equals: true },
             },
             {
                 id: "custom_fixed_times",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Any fixed meeting times for this activity (weekday intervals).",
+                description: "Any fixed meeting times for this activity (weekday intervals).",
                 type: "weekday-time-intervals",
+                when: { id: "custom_enabled", equals: true },
             },
             {
                 id: "custom_max_session_length",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Maximum preferred continuous session length (minutes).",
+                description: "Maximum preferred continuous session length (minutes).",
                 type: "number",
+                when: { id: "custom_enabled", equals: true },
             },
             {
                 id: "custom_note",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Anything else about this custom activity we should consider?",
+                description: "Anything else about this custom activity we should consider?",
                 type: "text",
+                when: { id: "custom_enabled", equals: true },
             },
         ],
     },
 };
+
+/* ------------------------------- Small helpers ------------------------------ */
+
+/** Flatten into a single array with bucket metadata (handy for pages). */
+export function flattenQuestions() {
+    type Flat = Question & {
+        __bucketId: BucketId;
+        __bucketName: string;
+        __bucketIndex: number;
+        __qIndex: number;
+    };
+    const out: Flat[] = [];
+    let bi = 0;
+    for (const bId of BUCKET_ORDER) {
+        const bucket = QUESTIONS[bId];
+        if (!bucket) continue;
+        bucket.questions.forEach((q, qi) => {
+            out.push({
+                ...q,
+                __bucketId: bId,
+                __bucketName: bucket.name,
+                __bucketIndex: bi,
+                __qIndex: qi,
+            });
+        });
+        bi++;
+    }
+    return out;
+}
 
 export default QUESTIONS;
