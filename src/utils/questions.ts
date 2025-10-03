@@ -12,6 +12,8 @@ import sleep_Priority from "../assets/question_images/Sleep_PriorityQ.png";
 import sleep_HoursNeed from "../assets/question_images/Sleep_HoursNeedQ.png";
 import sleep_BedTime from "../assets/question_images/Sleep_BedTimeQ.png";
 import sleep_WakeUp from "../assets/question_images/Sleep_WakeUpQ.png";
+import sleep_ConsistantBedtime from "../assets/question_images/Sleep_ConsistantBedtimeQ.png";
+import sleep_NapBool from "../assets/question_images/Sleep_NapBool.png"
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -178,14 +180,14 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "sleep_consistency",
-                image: IMG_PLACEHOLDER,
+                image: sleep_ConsistantBedtime,
                 description: "Do you prefer to go to sleep at approximately the same time each night?",
                 type: "boolean",
-                defaultValue: true,
+                defaultValue: false,
             },
             {
                 id: "sleep_naps",
-                image: IMG_PLACEHOLDER,
+                image: sleep_NapBool,
                 description: "Do you take naps during the day?",
                 type: "boolean",
                 defaultValue: false,
