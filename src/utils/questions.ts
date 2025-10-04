@@ -15,6 +15,7 @@ import sleep_WakeUp from "../assets/question_images/Sleep_WakeUpQ.png";
 import sleep_ConsistentBedtime from "../assets/question_images/Sleep_ConsistentBedTimeQ.png";
 import sleep_NapBool from "../assets/question_images/Sleep_NapBool.png"
 import sleep_NapTimes from "../assets/question_images/Sleep_NapTimesQ.png"
+import sleep_NapLength from "../assets/question_images/Sleep_NapLengthQ.png"
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -203,7 +204,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "nap-length",
-                image: IMG_PLACEHOLDER,
+                image: sleep_NapLength,
                 description: "How long do you usually like to nap? (enter minutes)",
                 type: "number",
                 when: { id: "sleep_naps", equals: true },
