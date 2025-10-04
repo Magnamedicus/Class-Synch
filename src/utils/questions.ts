@@ -14,6 +14,7 @@ import sleep_BedTime from "../assets/question_images/Sleep_BedTimeQ.png";
 import sleep_WakeUp from "../assets/question_images/Sleep_WakeUpQ.png";
 import sleep_ConsistentBedtime from "../assets/question_images/Sleep_ConsistentBedTimeQ.png";
 import sleep_NapBool from "../assets/question_images/Sleep_NapBool.png"
+import sleep_NapTimes from "../assets/question_images/Sleep_NapTimesQ.png"
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -41,6 +42,7 @@ export type QuestionType =
     | "chips"
     | "enter-classes"
     | "list"
+    | "time-selection"
     | "day-selection";
 
 export type Condition =
@@ -194,9 +196,9 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "sleep_nap_windows",
-                image: IMG_PLACEHOLDER,
+                image: sleep_NapTimes,
                 description: "Preferred nap windows (weekday time intervals).",
-                type: "weekday-time-intervals",
+                type: "time-selection",
                 when: { id: "sleep_naps", equals: true }, // ⬅️ only show if naps = Yes
             },
             {

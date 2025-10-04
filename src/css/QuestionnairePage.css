@@ -226,4 +226,34 @@ html.modal-open .questionnaire-page {
     font-size: 1.1rem;
 }
 
+/* Make inputs readable inside any modal/dialog (works with portals) */
+[role="dialog"] input,
+[role="dialog"] textarea,
+[role="dialog"] select {
+    color: #eaf2ff !important;       /* light text on dark UI */
+    caret-color: #eaf2ff !important;
+    background-color: transparent;   /* or your dark bg if needed */
+}
+
+/* Placeholder color in modal */
+[role="dialog"] ::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Disabled/read-only in modal still readable */
+[role="dialog"] input[disabled],
+[role="dialog"] textarea[disabled],
+[role="dialog"] select[disabled] {
+    color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* Autofill (Chrome/Safari) inside modal */
+[role="dialog"] input:-webkit-autofill,
+[role="dialog"] textarea:-webkit-autofill,
+[role="dialog"] select:-webkit-autofill {
+    -webkit-text-fill-color: #eaf2ff !important;
+    box-shadow: 0 0 0px 1000px transparent inset !important;
+    transition: background-color 9999s ease-out;
+}
+
 

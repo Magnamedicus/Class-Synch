@@ -14,7 +14,9 @@ import TextInput from "../components/inputs/TextInput";
 import EnterClasses from "../components/inputs/EnterClasses";
 import TimeInput from "../components/inputs/TimeInput";
 import DaySelection, { type DayName } from "../components/inputs/DaySelection";
+import TimeOfDaySelection, { type TimeName } from "../components/inputs/TimeOfDaySelection";
 import SunMoonBoolean from "../components/inputs/SunMoonBoolean";
+
 
 import ProgressBuckets from "../components/ProgressBuckets";
 
@@ -41,7 +43,8 @@ type InputTypeExpected =
     | "enter-classes"
     | "time"
     | "day-selection"
-    | "boolean";
+    | "boolean"
+    | "time-selection";
 
 function mapTypeToExpected(t: string): InputTypeExpected {
     switch (t) {
@@ -50,6 +53,7 @@ function mapTypeToExpected(t: string): InputTypeExpected {
         case "text":
         case "enter-classes":
         case "time":
+        case "time-selection":
         case "day-selection":
         case "boolean":
             return t as InputTypeExpected;
@@ -146,6 +150,7 @@ const QuestionnairePage: React.FC = () => {
     const [textOrNumber, setTextOrNumber] = React.useState<string>("");
     const [classes, setClasses] = React.useState<string[]>([]);
     const [selectedDays, setSelectedDays] = React.useState<DayName[]>([]);
+    const [selectedTime, setSelectedTime] = React.useState<TimeName[]>([]);
 
     /* ---------- Intro modal ---------- */
     const [showIntro, setShowIntro] = React.useState(true);
@@ -355,6 +360,14 @@ const QuestionnairePage: React.FC = () => {
                         value={selectedDays}
                         onChange={setSelectedDays}
                         ariaLabel="Select days (you can choose multiple)"
+                    />
+                );
+            case "time-selection":
+                return (
+                    <TimeOfDaySelection
+                        value={selectedTime}
+                        onChange={setSelectedTime}
+                        ariaLabel="Select your preferred time of day (you can choose multiple)"
                     />
                 );
             case "boolean": {
@@ -652,12 +665,15 @@ const QuestionnairePage: React.FC = () => {
         if (!item) return;
 
         let ok = true;
+
         if (item.inputType === "enter-classes") {
             ok = classes.length > 0;
         } else if (item.inputType === "priority" || item.inputType === "boolean") {
             ok = true; // stored live
         } else if (item.inputType === "day-selection") {
             ok = selectedDays.length > 0;
+        } else if (item.inputType === "time-selection") {
+            ok = selectedTime.length > 0;            // ✅ validate time-of-day selection
         } else {
             ok = textOrNumber.trim().length > 0;
         }
@@ -671,10 +687,13 @@ const QuestionnairePage: React.FC = () => {
             startClassFollowUps(classes.slice());
             return;
         } else if (item.inputType === "priority" || item.inputType === "boolean") {
-            // already in answers
+            // already in answers (live-updated)
         } else if (item.inputType === "day-selection") {
             setAnswers((p) => ({ ...p, [item.id]: selectedDays.slice() }));
-            setSelectedDays([]);
+            setSelectedDays([]);                      // reset for next time
+        } else if (item.inputType === "time-selection") {
+            setAnswers((p) => ({ ...p, [item.id]: selectedTime.slice() }));  // ✅ store selection
+            setSelectedTime([]);                      // reset for next time
         } else {
             setAnswers((p) => ({ ...p, [item.id]: textOrNumber }));
             setTextOrNumber("");
@@ -690,6 +709,7 @@ const QuestionnairePage: React.FC = () => {
             }
         }
     };
+
 
     const goBack = () => {
         for (let p = linearIndex - 1; p >= 0; p--) {
