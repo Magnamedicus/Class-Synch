@@ -12,7 +12,7 @@ import sleep_Priority from "../assets/question_images/Sleep_PriorityQ.png";
 import sleep_HoursNeed from "../assets/question_images/Sleep_HoursNeedQ.png";
 import sleep_BedTime from "../assets/question_images/Sleep_BedTimeQ.png";
 import sleep_WakeUp from "../assets/question_images/Sleep_WakeUpQ.png";
-import sleep_ConsistantBedtime from "../assets/question_images/Sleep_ConsistantBedtimeQ.png";
+import sleep_ConsistentBedtime from "../assets/question_images/Sleep_ConsistentBedTimeQ.png";
 import sleep_NapBool from "../assets/question_images/Sleep_NapBool.png"
 
 /* --------------------------------- Types ---------------------------------- */
@@ -180,7 +180,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "sleep_consistency",
-                image: sleep_ConsistantBedtime,
+                image: sleep_ConsistentBedtime,
                 description: "Do you prefer to go to sleep at approximately the same time each night?",
                 type: "boolean",
                 defaultValue: false,
@@ -200,17 +200,13 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 when: { id: "sleep_naps", equals: true }, // ⬅️ only show if naps = Yes
             },
             {
-                id: "sleep_no_go_times",
+                id: "nap-length",
                 image: IMG_PLACEHOLDER,
-                description: "Any times you must be awake (add intervals to avoid sleep then)?",
-                type: "weekday-time-intervals",
+                description: "How long do you usually like to nap? (enter minutes)",
+                type: "number",
+                when: { id: "sleep_naps", equals: true },
             },
-            {
-                id: "sleep_note",
-                image: IMG_PLACEHOLDER,
-                description: "Anything else about your sleep we should consider?",
-                type: "text",
-            },
+
         ],
     },
 
