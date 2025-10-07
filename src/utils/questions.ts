@@ -16,6 +16,7 @@ import sleep_ConsistentBedtime from "../assets/question_images/Sleep_ConsistentB
 import sleep_NapBool from "../assets/question_images/Sleep_NapBool.png"
 import sleep_NapTimes from "../assets/question_images/Sleep_NapTimesQ.png"
 import sleep_NapLength from "../assets/question_images/Sleep_NapLengthQ.png"
+import work_Boolean from "../assets/question_images/Work_BooleanQ.png";
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -221,67 +222,112 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
         coverImage: IMG_PLACEHOLDER,
         questions: [
             {
-                id: "work_priority",
-                image: IMG_PLACEHOLDER,
-                description: "How important is Work relative to other areas? Set a percentage priority (0–100).",
-                type: "priority",
+                id: "work_is_employed", // primary gate for this bucket
+                image: work_Boolean,
+                description:
+                    "Are you currently employed? (Includes any kind of scheduled, paid or unpaid, work).",
+                type: "boolean",
+                defaultValue: true, // set to true so progress doesn’t bunch up (seed answers with defaults!)
             },
+
+            {
+                id: "work_priority", // primary gate for this bucket
+                image: IMG_PLACEHOLDER,
+                description:
+                    "How much do you prioritize your employment obligations?",
+                type: "priority",
+                defaultValue: 70,
+                when: { id: "work_is_employed", equals: true },
+
+            },
+
+            // Only if employed
             {
                 id: "work_has_fixed_shifts",
                 image: IMG_PLACEHOLDER,
                 description: "Do you have fixed shift times each week?",
                 type: "boolean",
-                defaultValue: false,
+                defaultValue: true,
+                when: { id: "work_is_employed", equals: true },
             },
+
+            // Only if employed AND has fixed shifts
             {
                 id: "work_fixed_shift_times",
                 image: IMG_PLACEHOLDER,
                 description: "Add your fixed shift times (weekday intervals).",
                 type: "weekday-time-intervals",
-                when: { id: "work_has_fixed_shifts", equals: true }, // ⬅️ only if Yes
+                when: {
+                    allOf: [
+                        { id: "work_is_employed", equals: true },
+                        { id: "work_has_fixed_shifts", equals: true },
+                    ],
+                },
             },
+
+            // Only if employed
             {
                 id: "work_hours_target",
                 image: IMG_PLACEHOLDER,
-                description: "Target total work hours per week (if flexible).",
+                description: "Total work hours per week.",
                 type: "number",
+                when: { id: "work_is_employed", equals: true },
             },
+
+            // Only if employed
             {
-                id: "work_time_prefs",
+                id: "work_commute",
                 image: IMG_PLACEHOLDER,
-                description: "Preferred times to work (morning, afternoon, evening, night).",
-                type: "chips",
-                options: ["morning", "afternoon", "evening", "night"],
+                description: "Do you commute from your home to work?",
+                type: "boolean",
+                defaultValue: true,
+                when: { id: "work_is_employed", equals: true },
             },
+
+            // Only if employed AND commutes
             {
                 id: "work_commute_time",
                 image: IMG_PLACEHOLDER,
                 description: "Average commute time to/from work (minutes).",
                 type: "number",
+                when: {
+                    allOf: [
+                        { id: "work_is_employed", equals: true },
+                        { id: "work_commute", equals: true },
+                    ],
+                },
             },
+
+            // If employed and *doesn't* commute, ask if they work from home
             {
-                id: "work_break_frequency",
+                id: "work_from_home",
                 image: IMG_PLACEHOLDER,
-                description: "How often would you like breaks while working (minutes between breaks)?",
-                type: "number",
+                description: "Do you work from home?",
+                type: "boolean",
+                defaultValue: false,
+                when: {
+                    allOf: [
+                        { id: "work_is_employed", equals: true },
+                        { id: "work_commute", equals: false },
+                    ],
+                },
             },
+
+            // Times you don't want work scheduled (only if employed; optionally tie to WFH like before)
             {
-                id: "work_max_session_length",
+                id: "work_cannot_schedule_times",
                 image: IMG_PLACEHOLDER,
-                description: "Maximum preferred continuous work session length (minutes).",
-                type: "number",
-            },
-            {
-                id: "work_no_go_times",
-                image: IMG_PLACEHOLDER,
-                description: "Times you absolutely cannot work (weekday intervals).",
+                description: "Are there any times when you do not want work to be scheduled?",
                 type: "weekday-time-intervals",
-            },
-            {
-                id: "work_note",
-                image: IMG_PLACEHOLDER,
-                description: "Anything else about your job schedule we should consider?",
-                type: "text",
+                when: {
+                    // show when employed; keep your older stricter logic by uncommenting the allOf below
+                    id: "work_is_employed",
+                    equals: true,
+                    allOf: [
+                      { id: "work_is_employed", equals: true },
+                       { id: "work_from_home", equals: true },
+                     ],
+                },
             },
         ],
     },

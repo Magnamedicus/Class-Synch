@@ -16,6 +16,8 @@ import TimeInput from "../components/inputs/TimeInput";
 import DaySelection, { type DayName } from "../components/inputs/DaySelection";
 import TimeOfDaySelection, { type TimeName } from "../components/inputs/TimeOfDaySelection";
 import SunMoonBoolean from "../components/inputs/SunMoonBoolean";
+import WeekdayIntervals, {type WeekdayIntervalsValue,} from "../components/inputs/WeekdayIntervals";
+
 
 
 import ProgressBuckets from "../components/ProgressBuckets";
@@ -44,7 +46,8 @@ type InputTypeExpected =
     | "time"
     | "day-selection"
     | "boolean"
-    | "time-selection";
+    | "time-selection"
+    |"weekday-time-intervals";
 
 function mapTypeToExpected(t: string): InputTypeExpected {
     switch (t) {
@@ -56,11 +59,13 @@ function mapTypeToExpected(t: string): InputTypeExpected {
         case "time-selection":
         case "day-selection":
         case "boolean":
+        case "weekday-time-intervals":   // ✅ add mapping
             return t as InputTypeExpected;
         default:
             return "text";
     }
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Flatten from config (preserves bucket metadata for navigation)      */
@@ -78,6 +83,17 @@ type FlatQuestionItem = {
     __qi: number;
     __image: string;
 };
+
+function buildDefaultAnswers(): Record<string, any> {
+    const out: Record<string, any> = {};
+    BUCKET_ORDER.forEach((bid) => {
+        const b = QUESTIONS[bid];
+        b?.questions.forEach((q) => {
+            if (q.defaultValue !== undefined) out[q.id] = q.defaultValue;
+        });
+    });
+    return out;
+}
 
 function buildFlatFromConfig(): FlatQuestionItem[] {
     const items: FlatQuestionItem[] = [];
@@ -146,11 +162,12 @@ const QuestionnairePage: React.FC = () => {
     const current = flat[linearIndex];
 
     /* ---------- Answers & local UI state ---------- */
-    const [answers, setAnswers] = React.useState<Record<string, any>>({});
+    const [answers, setAnswers] = React.useState<Record<string, any>>(() => buildDefaultAnswers());
     const [textOrNumber, setTextOrNumber] = React.useState<string>("");
     const [classes, setClasses] = React.useState<string[]>([]);
     const [selectedDays, setSelectedDays] = React.useState<DayName[]>([]);
     const [selectedTime, setSelectedTime] = React.useState<TimeName[]>([]);
+
 
     /* ---------- Intro modal ---------- */
     const [showIntro, setShowIntro] = React.useState(true);
@@ -384,6 +401,18 @@ const QuestionnairePage: React.FC = () => {
                             ariaLabel="Toggle yes or no"
                         />
                     </div>
+                );
+            }
+
+            case "weekday-time-intervals": {
+                const currentVal = (answers[item.id] as WeekdayIntervalsValue) ?? {};
+                return (
+                    <WeekdayIntervals
+                        value={currentVal}
+                        onChange={(v) =>
+                            setAnswers((p) => ({ ...p, [item.id]: v }))
+                        }
+                    />
                 );
             }
             default:
@@ -668,12 +697,22 @@ const QuestionnairePage: React.FC = () => {
 
         if (item.inputType === "enter-classes") {
             ok = classes.length > 0;
+
         } else if (item.inputType === "priority" || item.inputType === "boolean") {
             ok = true; // stored live
+
         } else if (item.inputType === "day-selection") {
             ok = selectedDays.length > 0;
+
         } else if (item.inputType === "time-selection") {
-            ok = selectedTime.length > 0;            // ✅ validate time-of-day selection
+            ok = selectedTime.length > 0;
+
+        } else if (item.inputType === "weekday-time-intervals") {
+            // ✅ validate at least one interval exists
+            const v = (answers[item.id] as Record<string, Array<{ start: string; end: string }>> | undefined) ?? {};
+            const count = Object.values(v).reduce((acc, arr) => acc + (arr?.length ?? 0), 0);
+            ok = count > 0;
+
         } else {
             ok = textOrNumber.trim().length > 0;
         }
@@ -686,15 +725,20 @@ const QuestionnairePage: React.FC = () => {
             setModalOpen(false);
             startClassFollowUps(classes.slice());
             return;
+
         } else if (item.inputType === "priority" || item.inputType === "boolean") {
-            // already in answers (live-updated)
+            // already saved live
+
         } else if (item.inputType === "day-selection") {
             setAnswers((p) => ({ ...p, [item.id]: selectedDays.slice() }));
-            setSelectedDays([]);                      // reset for next time
+            setSelectedDays([]);
+
         } else if (item.inputType === "time-selection") {
-            setAnswers((p) => ({ ...p, [item.id]: selectedTime.slice() }));  // ✅ store selection
-            setSelectedTime([]);                      // reset for next time
-        } else {
+            setAnswers((p) => ({ ...p, [item.id]: selectedTime.slice() }));
+            setSelectedTime([]);
+
+        } else if (item.inputType !== "weekday-time-intervals") {
+            // text/number/time etc.
             setAnswers((p) => ({ ...p, [item.id]: textOrNumber }));
             setTextOrNumber("");
         }
@@ -709,6 +753,7 @@ const QuestionnairePage: React.FC = () => {
             }
         }
     };
+
 
 
     const goBack = () => {

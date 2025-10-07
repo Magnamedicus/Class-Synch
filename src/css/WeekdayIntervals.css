@@ -1,0 +1,137 @@
+/* ==========================================================================
+   WeekdayIntervals — compact cards + inline picker modal
+   ========================================================================== */
+
+.wi-root {
+    --card-bg: rgba(255,255,255,0.06);
+    --card-br: rgba(255,255,255,0.12);
+    --inset: rgba(255,255,255,0.06);
+    --chip-bg: rgba(255,255,255,0.08);
+    --chip-br: rgba(255,255,255,0.22);
+    --error: #ffb3b3;
+    display: grid;
+    gap: .75rem;
+    width: 100%;
+}
+
+.wi-head { display:flex; align-items:baseline; gap:.75rem; }
+.wi-title { font-weight:800; letter-spacing:.02em; }
+.wi-sub { opacity:.75; font-size:.92rem; }
+
+/* Grid that auto-fits */
+.wi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: .6rem;
+}
+
+/* Cards */
+.wi-card {
+    padding: .6rem .6rem .55rem;
+    border-radius: .65rem;
+    background: var(--card-bg);
+    border: 1px solid var(--card-br);
+    box-shadow: 0 6px 16px rgba(0,0,0,.22), inset 0 1px 0 var(--inset);
+    backdrop-filter: blur(6px) saturate(1.05);
+    min-width: 0;
+}
+.wi-card__head { display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem; gap:.5rem; }
+.wi-day { font-weight:900; opacity:.95; letter-spacing:.02em; }
+.wi-addBtn {
+    appearance:none; border:1px solid var(--chip-br);
+    background: var(--chip-bg); color:#fff; font-weight:800;
+    border-radius:.55rem; padding:.3rem .65rem; cursor:pointer; white-space:nowrap; line-height:1;
+}
+.wi-addBtn:hover { filter: brightness(1.06); }
+.wi-addBtn:disabled { opacity:.5; cursor:default; }
+
+.wi-empty { opacity:.65; font-size:.92rem; padding:.15rem .1rem .35rem; }
+
+/* List of ranges */
+.wi-list { display:grid; gap:.45rem; margin:0; padding:0; list-style:none; }
+.wi-row  { display:grid; grid-template-columns: 1fr auto; gap:.4rem; align-items:center; }
+
+/* Pill chip for interval (click to edit) */
+.wi-chip{
+    appearance:none;
+    display:flex; align-items:center; justify-content:center; gap:.4rem;
+    background: var(--chip-bg); border:1px solid var(--chip-br);
+    color:#eaf2ff; font-weight:800;
+    border-radius: 999px; padding:.45rem .75rem;
+    cursor:pointer; width:100%;
+}
+.wi-chip:hover{ filter: brightness(1.06); }
+.wi-chip__time{ font-variant-numeric: tabular-nums; }
+.wi-chip__dash{ opacity:.7; }
+
+.wi-removeBtn{
+    appearance:none; border:none; background:rgba(255,255,255,.1); color:#fff;
+    font-weight:900; border-radius:.45rem; padding:.28rem .55rem; cursor:pointer; line-height:1;
+}
+.wi-removeBtn:hover{ filter:brightness(1.08); }
+
+/* ---------------- Inline Picker Modal ---------------- */
+.wi-overlay{
+    position: fixed; inset: 0; z-index: 1000;
+    display: grid; place-items: center;
+    background: rgba(0,0,0,.35);
+    animation: wi-fade .16s ease;
+}
+@keyframes wi-fade { from { opacity:0 } to { opacity:1 } }
+
+.wi-picker{
+    width: min(560px, 92vw);
+    background: rgba(16,22,33,.96);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: .85rem;
+    box-shadow: 0 24px 60px rgba(0,0,0,.55);
+    padding: 1rem;
+}
+.wi-picker__head{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:.6rem;
+}
+.wi-picker__title{
+    font-weight: 900; letter-spacing:.02em;
+    display:flex; align-items:center; gap:.5rem;
+}
+.wi-picker__badge{
+    font-size:.82rem; font-weight:800; opacity:.85;
+    padding:.1rem .5rem; border-radius:999px;
+    background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.22);
+}
+.wi-picker__close{
+    appearance:none; border:none; background:transparent; color:#fff;
+    font-size:1.4rem; line-height:1; cursor:pointer; padding:.15rem .25rem;
+}
+.wi-picker__body{ display:grid; gap:.65rem; }
+.wi-picker__row{ display:grid; gap:.35rem; }
+.wi-picker__label{ font-size:.92rem; opacity:.85; }
+
+.wi-picker__body input{
+    width: 100%;
+    padding:.6rem .75rem; font-size:1.05rem;
+    border-radius:.6rem; border:1px solid rgba(255,255,255,.2);
+    background: rgba(255,255,255,.06); color:#eaf2ff;
+}
+.wi-picker__body input:focus{
+    border-color: rgba(0,194,255,.7);
+    box-shadow: 0 0 0 3px rgba(0,194,255,.18);
+    outline: none;
+}
+
+.wi-picker__err{ color: var(--error); font-size:.92rem; }
+
+.wi-picker__actions{
+    display:flex; justify-content:flex-end; gap:.5rem; margin-top:.8rem;
+}
+.wi-btn{
+    appearance:none; border-radius:999px; padding:.6rem 1rem; font-weight:900; cursor:pointer;
+}
+.wi-btn--ghost{
+    background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.22); color:#fff;
+}
+.wi-btn--primary{
+    background: linear-gradient(135deg, #00d4aa, #00c2ff);
+    border: none; color: #fff;
+    box-shadow: 0 .8rem 1.9rem rgba(0,194,255,.27);
+}
