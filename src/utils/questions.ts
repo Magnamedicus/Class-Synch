@@ -46,7 +46,8 @@ export type QuestionType =
     | "enter-classes"
     | "list"
     | "time-selection"
-    | "day-selection";
+    | "day-selection"
+    | "enter-social";
 
 export type Condition =
     | { id: string; equals?: any; notEquals?: any; truthy?: boolean; falsy?: boolean }
@@ -340,30 +341,42 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
         skippable: true,
         coverImage: IMG_PLACEHOLDER,
         questions: [
+
+            {
+                id: "social_boolean",
+                image: IMG_PLACEHOLDER,
+                description: "Do you want social obligations included in your schedule?",
+                type: "boolean",
+                defaultValue: true
+            },
             {
                 id: "social_priority",
                 image: IMG_PLACEHOLDER,
-                description: "How important is Social Life in your weekly plan? Set a percentage priority (0–100).",
+                description: "How much priority do you place on your social life? (0–100).",
                 type: "priority",
+                when: {id: "social_boolean", equals: true }
             },
             {
                 id: "social_hours_target",
                 image: IMG_PLACEHOLDER,
-                description: "Target social time per week (hours).",
+                description: "How many hours per week do you anticipate socializing?",
                 type: "number",
+                when: {id: "social_boolean", equals: true }
             },
             {
                 id: "social_time_prefs",
                 image: IMG_PLACEHOLDER,
-                description: "Preferred times for social activities (morning, afternoon, evening, night).",
-                type: "chips",
+                description: "What time of day do you prefer to socialize?",
+                type: "time-selection",
                 options: ["morning", "afternoon", "evening", "night"],
+                when: {id: "social_boolean", equals:true}
             },
             {
-                id: "social_recurring_events",
+                id: "social_recurring_obligations",
                 image: IMG_PLACEHOLDER,
-                description: "Do you have recurring social events (add weekday intervals)?",
-                type: "weekday-time-intervals",
+                description: "List your recurring social obligations (we’ll ask days & times next).",
+                type: "enter-social", // NEW
+                when: { id: "social_boolean", equals: true },
             },
             {
                 id: "social_friends_study_overlap",
@@ -371,12 +384,14 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 description: "Would you like to co-locate social time with group study sessions when possible?",
                 type: "boolean",
                 defaultValue: false,
+                when: { id: "social_boolean", equals: true },
             },
             {
                 id: "social_note",
                 image: IMG_PLACEHOLDER,
                 description: "Anything else about your social life we should consider?",
                 type: "text",
+                when: { id: "social_boolean", equals: true },
             },
         ],
     },

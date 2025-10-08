@@ -17,6 +17,7 @@ import DaySelection, { type DayName } from "../components/inputs/DaySelection";
 import TimeOfDaySelection, { type TimeName } from "../components/inputs/TimeOfDaySelection";
 import SunMoonBoolean from "../components/inputs/SunMoonBoolean";
 import WeekdayIntervals, {type WeekdayIntervalsValue,} from "../components/inputs/WeekdayIntervals";
+import EnterObligations from "../components/inputs/EnterObligations";
 
 
 
@@ -43,6 +44,7 @@ type InputTypeExpected =
     | "number"
     | "text"
     | "enter-classes"
+    | "enter-social"
     | "time"
     | "day-selection"
     | "boolean"
@@ -55,6 +57,7 @@ function mapTypeToExpected(t: string): InputTypeExpected {
         case "number":
         case "text":
         case "enter-classes":
+        case "enter-social":
         case "time":
         case "time-selection":
         case "day-selection":
@@ -94,6 +97,12 @@ function buildDefaultAnswers(): Record<string, any> {
     });
     return out;
 }
+
+function slugify(s: string) {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+
 
 function buildFlatFromConfig(): FlatQuestionItem[] {
     const items: FlatQuestionItem[] = [];
@@ -168,6 +177,14 @@ const QuestionnairePage: React.FC = () => {
     const [selectedDays, setSelectedDays] = React.useState<DayName[]>([]);
     const [selectedTime, setSelectedTime] = React.useState<TimeName[]>([]);
 
+    const [socialObligations, setSocialObligations] = React.useState<string[]>([]);
+    const [socialFollowupsOpen, setSocialFollowupsOpen] = React.useState(false);
+    const [socialListForFollowups, setSocialListForFollowups] = React.useState<string[]>([]);
+    const [socialIdx, setSocialIdx] = React.useState(0);
+
+// Per-obligation intervals (use WeekdayIntervals inside the follow-up)
+    const [soIntervals, setSoIntervals] = React.useState<WeekdayIntervalsValue>({});
+
 
     /* ---------- Intro modal ---------- */
     const [showIntro, setShowIntro] = React.useState(true);
@@ -192,6 +209,72 @@ const QuestionnairePage: React.FC = () => {
         setModalValid(true);
     };
     const closeModal = () => setModalOpen(false);
+
+    function startSocialFollowUps(names: string[]) {
+        if (!names.length) return;
+        setSocialListForFollowups(names);
+        setSocialIdx(0);
+        setSoIntervals({});
+        setSocialFollowupsOpen(true);
+
+        document.documentElement.classList.add("modal-open");
+    }
+    function closeSocialFollowUps() {
+        setSocialFollowupsOpen(false);
+        document.documentElement.classList.remove("modal-open");
+        // advance to next visible question
+        setLinearIndex((i) => {
+            for (let n = i + 1; n < flat.length; n++) {
+                if (isVisible(flat[n], answers)) return n;
+            }
+            return i;
+        });
+    }
+
+    function submitSocialFollowupStep() {
+        const currentName = socialListForFollowups[socialIdx];
+        if (!currentName) return;
+
+        // Require at least one interval
+        const count = Object.values(soIntervals).reduce((acc, arr) => acc + (arr?.length ?? 0), 0);
+        if (count === 0) return;
+
+        const base = `social_${slugify(currentName)}`;
+        setAnswers((p) => ({
+            ...p,
+            [`${base}_intervals`]: JSON.parse(JSON.stringify(soIntervals)), // deep-ish copy
+        }));
+
+        // next obligation or finish
+        const next = socialIdx + 1;
+        if (next < socialListForFollowups.length) {
+            setSocialIdx(next);
+            setSoIntervals({});
+        } else {
+            closeSocialFollowUps();
+        }
+    }
+
+
+
+
+    function renderSocialFollowupBody() {
+        const name = socialListForFollowups[socialIdx] ?? "";
+        if (!name) return null;
+
+        return (
+            <>
+                <p className="q-hint">Add the recurring days & times for <strong>{name}</strong>.</p>
+                <WeekdayIntervals
+                    value={soIntervals}
+                    onChange={setSoIntervals}
+                />
+            </>
+        );
+    }
+
+
+
 
     /* ---------- Bucket ranges for mapping (static from config order) ---------- */
     const bucketRanges = React.useMemo(() => {
@@ -403,6 +486,16 @@ const QuestionnairePage: React.FC = () => {
                     </div>
                 );
             }
+
+            case "enter-social":
+                return (
+                    <EnterObligations
+                        value={socialObligations}
+                        onChange={setSocialObligations}
+                        label="Recurring Social Obligations"
+                        placeholder="Add a recurring social obligation (e.g., Club meeting, Choir, D&D night)…"
+                    />
+                );
 
             case "weekday-time-intervals": {
                 const currentVal = (answers[item.id] as WeekdayIntervalsValue) ?? {};
@@ -695,24 +788,19 @@ const QuestionnairePage: React.FC = () => {
 
         let ok = true;
 
+        // --- Validation rules ---
         if (item.inputType === "enter-classes") {
             ok = classes.length > 0;
-
+        } else if (item.inputType === "enter-social") {
+            ok = socialObligations.length > 0;
         } else if (item.inputType === "priority" || item.inputType === "boolean") {
             ok = true; // stored live
-
         } else if (item.inputType === "day-selection") {
             ok = selectedDays.length > 0;
-
         } else if (item.inputType === "time-selection") {
             ok = selectedTime.length > 0;
-
         } else if (item.inputType === "weekday-time-intervals") {
-            // ✅ validate at least one interval exists
-            const v = (answers[item.id] as Record<string, Array<{ start: string; end: string }>> | undefined) ?? {};
-            const count = Object.values(v).reduce((acc, arr) => acc + (arr?.length ?? 0), 0);
-            ok = count > 0;
-
+            ok = true; // validated in the inner component
         } else {
             ok = textOrNumber.trim().length > 0;
         }
@@ -720,32 +808,35 @@ const QuestionnairePage: React.FC = () => {
         setModalValid(ok);
         if (!ok) return;
 
+        // --- Handle specific submission types ---
         if (item.inputType === "enter-classes") {
             setAnswers((p) => ({ ...p, [item.id]: classes.slice() }));
             setModalOpen(false);
             startClassFollowUps(classes.slice());
             return;
-
+        } else if (item.inputType === "enter-social") {
+            setAnswers((p) => ({ ...p, [item.id]: socialObligations.slice() }));
+            setModalOpen(false);
+            startSocialFollowUps(socialObligations.slice());
+            return;
         } else if (item.inputType === "priority" || item.inputType === "boolean") {
-            // already saved live
-
+            // already stored live via onChange
         } else if (item.inputType === "day-selection") {
             setAnswers((p) => ({ ...p, [item.id]: selectedDays.slice() }));
             setSelectedDays([]);
-
         } else if (item.inputType === "time-selection") {
             setAnswers((p) => ({ ...p, [item.id]: selectedTime.slice() }));
             setSelectedTime([]);
-
-        } else if (item.inputType !== "weekday-time-intervals") {
-            // text/number/time etc.
+        } else if (item.inputType === "weekday-time-intervals") {
+            // handled within WeekdayIntervals, nothing additional here
+        } else {
             setAnswers((p) => ({ ...p, [item.id]: textOrNumber }));
             setTextOrNumber("");
         }
 
         setModalOpen(false);
 
-        // advance to next visible
+        // --- Advance to next visible question ---
         for (let n = linearIndex + 1; n < flat.length; n++) {
             if (isVisible(flat[n], answers)) {
                 setLinearIndex(n);
@@ -753,6 +844,7 @@ const QuestionnairePage: React.FC = () => {
             }
         }
     };
+
 
 
 
@@ -770,7 +862,7 @@ const QuestionnairePage: React.FC = () => {
 
     return (
         <>
-            {/* Blur/disable ONLY this content when a modal is open */}
+            {/* Main questionnaire page content */}
             <div className="questionnaire-page">
                 <div className="questionnaire-content">
                     {/* Logo → home */}
@@ -794,20 +886,24 @@ const QuestionnairePage: React.FC = () => {
                         </div>
 
                         <div className="q-center-actions">
-                            <button className="q-answer-btn" type="button" onClick={openModalForCurrent}>
+                            <button
+                                className="q-answer-btn"
+                                type="button"
+                                onClick={openModalForCurrent}
+                            >
                                 Answer Question
                             </button>
                         </div>
                     </section>
 
-                    {/* Back button (fixed) */}
+                    {/* Back button */}
                     <div className="q-back-fixed">
                         <BackButton onClick={goBack} disabled={linearIndex === 0} />
                     </div>
                 </div>
             </div>
 
-            {/* Progress bar (fixed overlay; doesn’t shift layout) */}
+            {/* Progress bar (bottom overlay) */}
             <ProgressBuckets
                 buckets={visibleInfo.buckets}
                 totalVisible={visibleInfo.totalVisible}
@@ -816,7 +912,7 @@ const QuestionnairePage: React.FC = () => {
                 onJumpToBucket={onJumpToBucket}
             />
 
-            {/* ⬇️ Modals (outside blurred container) */}
+            {/* 🟢 Intro modal */}
             <IntroModal
                 isOpen={showIntro}
                 imageSrc={introImg}
@@ -824,6 +920,7 @@ const QuestionnairePage: React.FC = () => {
                 buttonLabel="Get Started"
             />
 
+            {/* 🟡 Main question modal */}
             <QuestionModal
                 isOpen={isModalOpen}
                 title={current?.text}
@@ -840,7 +937,7 @@ const QuestionnairePage: React.FC = () => {
                 )}
             </QuestionModal>
 
-            {/* Per-class follow-up modal (appears after Enter Classes) */}
+            {/* 🟣 Class follow-up modal */}
             <QuestionModal
                 isOpen={classFollowupsOpen}
                 title={
@@ -868,8 +965,28 @@ const QuestionnairePage: React.FC = () => {
             >
                 {renderClassFollowupBody()}
             </QuestionModal>
+
+            {/* 🔵 Social follow-up modal */}
+            <QuestionModal
+                isOpen={socialFollowupsOpen}
+                title={
+                    socialFollowupsOpen
+                        ? `When does ${socialListForFollowups[socialIdx] ?? ""} happen?`
+                        : ""
+                }
+                onClose={closeSocialFollowUps}
+                onSubmit={submitSocialFollowupStep}
+                submitLabel={
+                    socialIdx < socialListForFollowups.length - 1
+                        ? "Next Obligation"
+                        : "Finish"
+                }
+            >
+                {renderSocialFollowupBody()}
+            </QuestionModal>
         </>
     );
+
 };
 
 export default QuestionnairePage;
