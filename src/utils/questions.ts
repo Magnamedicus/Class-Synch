@@ -18,6 +18,7 @@ import sleep_NapTimes from "../assets/question_images/Sleep_NapTimesQ.png"
 import sleep_NapLength from "../assets/question_images/Sleep_NapLengthQ.png"
 import work_Boolean from "../assets/question_images/Work_BooleanQ.png";
 import work_Priority from "../assets/question_images/Work_PriorityQ.png";
+import work_FixedShifts from "../assets/question_images/Work_FixedShiftsQ.png"
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -246,8 +247,8 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             // Only if employed
             {
                 id: "work_has_fixed_shifts",
-                image: IMG_PLACEHOLDER,
-                description: "Do you have fixed shift times each week?",
+                image: work_FixedShifts,
+                description: "Do you have scheduled shift times each week?",
                 type: "boolean",
                 defaultValue: true,
                 when: { id: "work_is_employed", equals: true },
