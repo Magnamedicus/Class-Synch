@@ -17,6 +17,7 @@ import sleep_NapBool from "../assets/question_images/Sleep_NapBool.png"
 import sleep_NapTimes from "../assets/question_images/Sleep_NapTimesQ.png"
 import sleep_NapLength from "../assets/question_images/Sleep_NapLengthQ.png"
 import work_Boolean from "../assets/question_images/Work_BooleanQ.png";
+import work_Priority from "../assets/question_images/Work_PriorityQ.png";
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -232,7 +233,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
 
             {
                 id: "work_priority", // primary gate for this bucket
-                image: IMG_PLACEHOLDER,
+                image: work_Priority,
                 description:
                     "How much do you prioritize your employment obligations?",
                 type: "priority",
