@@ -20,6 +20,7 @@ import work_Boolean from "../assets/question_images/Work_BooleanQ.png";
 import work_Priority from "../assets/question_images/Work_PriorityQ.png";
 import work_FixedShifts from "../assets/question_images/Work_FixedShiftsQ.png"
 import work_AddShifts from "../assets/question_images/Work_AddShifts.png"
+import work_HoursAmount from "../assets/question_images/Work_HoursAmountQ.png"
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -272,7 +273,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             // Only if employed
             {
                 id: "work_hours_target",
-                image: IMG_PLACEHOLDER,
+                image: work_HoursAmount,
                 description: "Total work hours per week.",
                 type: "number",
                 when: { id: "work_is_employed", equals: true },
