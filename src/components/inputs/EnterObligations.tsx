@@ -1,5 +1,5 @@
 import React from "react";
-import "../../css/EnterClasses.css"; // reuse styling
+import "../../css/EnterObligations.css"; // reuse styling
 
 interface EnterObligationsProps {
     value: string[];
