@@ -20,8 +20,9 @@ import SunMoonBoolean from "../components/inputs/SunMoonBoolean";
 import WeekdayIntervals, { type WeekdayIntervalsValue } from "../components/inputs/WeekdayIntervals";
 import EnterObligations from "../components/inputs/EnterObligations";
 
-/* NEW: Self-care selector */
+/* Custom selectors */
 import SelfCareSelector, { type SelfCarePrefs } from "../components/inputs/SelfCareSelector";
+import ExerciseSelector, { type ExercisePrefs } from "../components/inputs/ExerciseSelector";
 
 import ProgressBuckets from "../components/ProgressBuckets";
 
@@ -31,7 +32,7 @@ import "../css/QuestionnairePage.css";
 import logo from "../assets/logo.png";
 import introImg from "../assets/questionnaire_intro_img.png";
 
-/* Centralized questions config (images + question types + conditions) */
+/* Questions config */
 import QUESTIONS, {
     BUCKET_ORDER,
     type BucketId,
@@ -39,7 +40,7 @@ import QUESTIONS, {
 } from "../utils/questions";
 
 /* ------------------------------------------------------------------ */
-/* Map questions.ts types to this page’s modal input components        */
+/* Map questions.ts types to modal input components                    */
 /* ------------------------------------------------------------------ */
 type InputTypeExpected =
     | "priority"
@@ -52,7 +53,8 @@ type InputTypeExpected =
     | "boolean"
     | "time-selection"
     | "weekday-time-intervals"
-    | "selfcare-selector"; // NEW
+    | "selfcare-selector"
+    | "exercise-selector";
 
 function mapTypeToExpected(t: string): InputTypeExpected {
     switch (t) {
@@ -67,6 +69,7 @@ function mapTypeToExpected(t: string): InputTypeExpected {
         case "boolean":
         case "weekday-time-intervals":
         case "selfcare-selector":
+        case "exercise-selector":
             return t as InputTypeExpected;
         default:
             return "text";
@@ -151,9 +154,9 @@ function evalCondition(cond: Condition, answers: Record<string, any>): boolean {
         return val !== cond.notEquals;
     }
     // @ts-expect-error truthy/falsy narrow
-    if (cond.truthy) return !!val;
+    if ((cond as any).truthy) return !!val;
     // @ts-expect-error truthy/falsy narrow
-    if (cond.falsy) return !val;
+    if ((cond as any).falsy) return !val;
     return true;
 }
 function isVisible(q: FlatQuestionItem, answers: Record<string, any>): boolean {
@@ -172,7 +175,9 @@ const QuestionnairePage: React.FC = () => {
     const current = flat[linearIndex];
 
     /* ---------- Answers & local UI state ---------- */
-    const [answers, setAnswers] = React.useState<Record<string, any>>(() => buildDefaultAnswers());
+    const [answers, setAnswers] = React.useState<Record<string, any>>(
+        () => buildDefaultAnswers()
+    );
     const [textOrNumber, setTextOrNumber] = React.useState<string>("");
     const [classes, setClasses] = React.useState<string[]>([]);
     const [selectedDays, setSelectedDays] = React.useState<DayName[]>([]);
@@ -184,8 +189,9 @@ const QuestionnairePage: React.FC = () => {
     const [socialIdx, setSocialIdx] = React.useState(0);
     const [soIntervals, setSoIntervals] = React.useState<WeekdayIntervalsValue>({});
 
-    /* NEW: Self-care activities (SelfCareSelector stores a rich array) */
+    /* NEW: Rich arrays from custom selectors */
     const [selfCarePrefs, setSelfCarePrefs] = React.useState<SelfCarePrefs[]>([]);
+    const [exercisePrefs, setExercisePrefs] = React.useState<ExercisePrefs[]>([]);
 
     /* ---------- Intro modal ---------- */
     const [showIntro, setShowIntro] = React.useState(true);
@@ -235,7 +241,10 @@ const QuestionnairePage: React.FC = () => {
         if (!currentName) return;
 
         // Require at least one interval
-        const count = Object.values(soIntervals).reduce((acc, arr) => acc + (arr?.length ?? 0), 0);
+        const count = Object.values(soIntervals).reduce(
+            (acc, arr) => acc + (arr?.length ?? 0),
+            0
+        );
         if (count === 0) return;
 
         const base = `social_${slugify(currentName)}`;
@@ -266,7 +275,7 @@ const QuestionnairePage: React.FC = () => {
         );
     }
 
-    /* ---------- Bucket ranges for mapping (static from config order) ---------- */
+    /* ---------- Bucket ranges for mapping ---------- */
     const bucketRanges = React.useMemo(() => {
         const ranges: Array<{
             bucketId: BucketId;
@@ -299,7 +308,7 @@ const QuestionnairePage: React.FC = () => {
         [bucketRanges, linearIndex]
     );
 
-    /* ---------- Visible questions (apply conditions) ---------- */
+    /* ---------- Visible questions ---------- */
     const visibleInCurrentBucket = React.useMemo(() => {
         if (!currentRange) return [] as number[];
         const list: number[] = [];
@@ -417,13 +426,9 @@ const QuestionnairePage: React.FC = () => {
                 );
             }
             case "number":
-                return (
-                    <NumberInput value={textOrNumber} onChange={setTextOrNumber} placeholder="0" />
-                );
+                return <NumberInput value={textOrNumber} onChange={setTextOrNumber} placeholder="0" />;
             case "text":
-                return (
-                    <TextInput value={textOrNumber} onChange={setTextOrNumber} placeholder={item.hint} />
-                );
+                return <TextInput value={textOrNumber} onChange={setTextOrNumber} placeholder={item.hint} />;
             case "enter-classes":
                 return <EnterClasses value={classes} onChange={setClasses} />;
             case "time":
@@ -472,10 +477,12 @@ const QuestionnairePage: React.FC = () => {
             case "weekday-time-intervals": {
                 const currentVal = (answers[item.id] as WeekdayIntervalsValue) ?? {};
                 return (
-                    <WeekdayIntervals value={currentVal} onChange={(v) => setAnswers((p) => ({ ...p, [item.id]: v }))} />
+                    <WeekdayIntervals
+                        value={currentVal}
+                        onChange={(v) => setAnswers((p) => ({ ...p, [item.id]: v }))}
+                    />
                 );
             }
-            /* NEW: Self-care selector uses your existing inputs internally */
             case "selfcare-selector":
                 return (
                     <SelfCareSelector
@@ -483,6 +490,16 @@ const QuestionnairePage: React.FC = () => {
                         onChange={setSelfCarePrefs}
                         label="Choose self-care activities to include"
                         placeholder="Select an activity…"
+                    />
+                );
+            case "exercise-selector":
+                return (
+                    <ExerciseSelector
+                        value={exercisePrefs}
+                        onChange={setExercisePrefs}
+                        label="Choose exercise to include"
+                        inputPlaceholder="Enter an exercise…"
+                        selectPlaceholder="Or choose from presets…"
                     />
                 );
             default:
@@ -497,7 +514,7 @@ const QuestionnairePage: React.FC = () => {
         }
     };
 
-    /* ---------- Per-class follow-up mini-wizard (after EnterClasses) ---------- */
+    /* ---------- Per-class follow-up mini-wizard (unchanged) ---------- */
     type SimpleClass = string;
 
     const [classFollowupsOpen, setClassFollowupsOpen] = React.useState(false);
@@ -524,7 +541,6 @@ const QuestionnairePage: React.FC = () => {
         setClassIdx(0);
         setClassStep(0);
 
-        // reset inputs
         setCfPriority(70);
         setCfMeetDays([]);
         setCfMeetStart("");
@@ -610,11 +626,7 @@ const QuestionnairePage: React.FC = () => {
         if (classStep === 0) {
             return (
                 <>
-                    <PrioritySlider
-                        variant="bucket"
-                        value={cfPriority}
-                        onChange={setCfPriority}
-                    />
+                    <PrioritySlider variant="bucket" value={cfPriority} onChange={setCfPriority} />
                     <p className="q-hint">Set how much priority you’re placing on this class.</p>
                 </>
             );
@@ -712,7 +724,7 @@ const QuestionnairePage: React.FC = () => {
         );
     }
 
-    /* ---------- Submit / Back (honor visibility) ---------- */
+    /* ---------- Submit / Back ---------- */
     const submitModal = () => {
         const item = flat[linearIndex];
         if (!item) return;
@@ -732,7 +744,9 @@ const QuestionnairePage: React.FC = () => {
         } else if (item.inputType === "weekday-time-intervals") {
             ok = true;
         } else if (item.inputType === "selfcare-selector") {
-            ok = selfCarePrefs.length > 0; // require at least one self-care activity
+            ok = selfCarePrefs.length > 0;
+        } else if (item.inputType === "exercise-selector") {
+            ok = exercisePrefs.length > 0;
         } else {
             ok = textOrNumber.trim().length > 0;
         }
@@ -740,7 +754,7 @@ const QuestionnairePage: React.FC = () => {
         setModalValid(ok);
         if (!ok) return;
 
-        // --- Handle specific submission types ---
+        // store values
         if (item.inputType === "enter-classes") {
             setAnswers((p) => ({ ...p, [item.id]: classes.slice() }));
             setModalOpen(false);
@@ -751,8 +765,6 @@ const QuestionnairePage: React.FC = () => {
             setModalOpen(false);
             startSocialFollowUps(socialObligations.slice());
             return;
-        } else if (item.inputType === "priority" || item.inputType === "boolean") {
-            // already stored live via onChange
         } else if (item.inputType === "day-selection") {
             setAnswers((p) => ({ ...p, [item.id]: selectedDays.slice() }));
             setSelectedDays([]);
@@ -760,9 +772,13 @@ const QuestionnairePage: React.FC = () => {
             setAnswers((p) => ({ ...p, [item.id]: selectedTime.slice() }));
             setSelectedTime([]);
         } else if (item.inputType === "weekday-time-intervals") {
-            // stored from inside the component
+            // already stored within component
         } else if (item.inputType === "selfcare-selector") {
             setAnswers((p) => ({ ...p, [item.id]: selfCarePrefs.slice() }));
+        } else if (item.inputType === "exercise-selector") {
+            setAnswers((p) => ({ ...p, [item.id]: exercisePrefs.slice() }));
+        } else if (item.inputType === "priority" || item.inputType === "boolean") {
+            // stored live via onChange
         } else {
             setAnswers((p) => ({ ...p, [item.id]: textOrNumber }));
             setTextOrNumber("");
@@ -770,7 +786,7 @@ const QuestionnairePage: React.FC = () => {
 
         setModalOpen(false);
 
-        // Advance to next visible question
+        // advance to next visible
         for (let n = linearIndex + 1; n < flat.length; n++) {
             if (isVisible(flat[n], answers)) {
                 setLinearIndex(n);

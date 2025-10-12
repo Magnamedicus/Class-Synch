@@ -52,8 +52,9 @@ export type QuestionType =
     | "time-selection"
     | "day-selection"
     | "enter-social"
-    // NEW structured input:
-    | "selfcare-selector";
+    // Custom structured inputs
+    | "selfcare-selector"
+    | "exercise-selector";
 
 export type Condition =
     | { id: string; equals?: any; notEquals?: any; truthy?: boolean; falsy?: boolean }
@@ -354,7 +355,8 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "social_recurring_obligations",
                 image: IMG_PLACEHOLDER,
-                description: "List your recurring social obligations (we’ll ask days & times next).",
+                description:
+                    "List your recurring social obligations (we’ll ask days & times next).",
                 type: "enter-social",
                 when: { id: "social_boolean", equals: true },
             },
@@ -391,8 +393,6 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 type: "priority",
                 when: { id: "selfcare_boolean", equals: true },
             },
-
-            /* NEW: integrated SelfCareSelector */
             {
                 id: "selfcare_activities",
                 image: IMG_PLACEHOLDER,
@@ -401,8 +401,6 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 type: "selfcare-selector",
                 when: { id: "selfcare_boolean", equals: true },
             },
-
-
         ],
     },
 
@@ -414,48 +412,52 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
         coverImage: IMG_PLACEHOLDER,
         questions: [
             {
+                id: "exercise_boolean",
+                image: IMG_PLACEHOLDER,
+                description: "Do you want exercise to be included in your schedule?",
+                type: "boolean",
+                defaultValue: true,
+            },
+            {
                 id: "exercise_priority",
                 image: IMG_PLACEHOLDER,
                 description: "How important is Exercise? Set a percentage priority (0–100).",
                 type: "priority",
+                when: { id: "exercise_boolean", equals: true },
+            },
+            // NEW: integrated ExerciseSelector (includes rest-period prompt internally)
+            {
+                id: "exercise_activities",
+                image: IMG_PLACEHOLDER,
+                description:
+                    "Choose the exercise you want included (we’ll ask priority, preferred time, duration, frequency, rest period, and optional strict time windows for each).",
+                type: "exercise-selector",
+                when: { id: "exercise_boolean", equals: true },
+            },
+            // keep your other generic exercise questions if you still want them:
+            {
+                id: "exercise_gym_commute_boolean",
+                image: IMG_PLACEHOLDER,
+                description: "do you want travel time to and from your place of exercise to be included?",
+                type: "boolean",
+                defaultValue: false
             },
             {
-                id: "exercise_hours_target",
+                id: "exercise_gym_commute_time",
                 image: IMG_PLACEHOLDER,
-                description: "Target exercise time per week (hours).",
+                description: "How long does it take to travel to where you mainly workout?",
                 type: "number",
+                when: {id: "exercise_gym_commute_boolean", equals: true },
             },
             {
-                id: "exercise_time_prefs",
+                id: "exercise_gym_commute_recovery_boolean",
                 image: IMG_PLACEHOLDER,
-                description: "Preferred exercise windows (morning, afternoon, evening, night).",
-                type: "chips",
-                options: ["morning", "afternoon", "evening", "night"],
+                description: "Do you want your post-workout rest time, and your commute home, to be combined?",
+                type: "boolean",
+                defaultValue: false,
+                when: {id: "exercise_gym_commute_boolean", equals: true}
             },
-            {
-                id: "exercise_workout_type_note",
-                image: IMG_PLACEHOLDER,
-                description: "Workout types you prefer (strength, cardio, sports) — short note.",
-                type: "text",
-            },
-            {
-                id: "exercise_gym_commute",
-                image: IMG_PLACEHOLDER,
-                description: "Gym/travel time each way (minutes).",
-                type: "number",
-            },
-            {
-                id: "exercise_fixed_classes",
-                image: IMG_PLACEHOLDER,
-                description: "Any fixed exercise classes or team practices (weekday intervals).",
-                type: "weekday-time-intervals",
-            },
-            {
-                id: "exercise_note",
-                image: IMG_PLACEHOLDER,
-                description: "Anything else about exercise we should consider?",
-                type: "text",
-            },
+
         ],
     },
 
@@ -469,7 +471,8 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "leisure_priority",
                 image: IMG_PLACEHOLDER,
-                description: "How important is Leisure in your week? Set a percentage priority (0–100).",
+                description:
+                    "How important is Leisure in your week? Set a percentage priority (0–100).",
                 type: "priority",
             },
             {
@@ -481,7 +484,8 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "leisure_time_prefs",
                 image: IMG_PLACEHOLDER,
-                description: "Preferred leisure windows (morning, afternoon, evening, night).",
+                description:
+                    "Preferred leisure windows (morning, afternoon, evening, night).",
                 type: "chips",
                 options: ["morning", "afternoon", "evening", "night"],
             },
@@ -495,7 +499,8 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "leisure_recurring_events",
                 image: IMG_PLACEHOLDER,
-                description: "Recurring leisure events (movie night, club meets — weekday time intervals).",
+                description:
+                    "Recurring leisure events (movie night, club meets — weekday time intervals).",
                 type: "weekday-time-intervals",
             },
             {
@@ -531,7 +536,8 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "custom_priority",
                 image: IMG_PLACEHOLDER,
-                description: "How important is this custom activity? Set a percentage priority (0–100).",
+                description:
+                    "How important is this custom activity? Set a percentage priority (0–100).",
                 type: "priority",
                 when: { id: "custom_enabled", equals: true },
             },
@@ -604,4 +610,3 @@ export function flattenQuestions() {
 }
 
 export default QUESTIONS;
-

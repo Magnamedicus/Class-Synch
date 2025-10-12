@@ -5,109 +5,189 @@ import NumberInput from "./NumberInput";
 import SunMoonBoolean from "./SunMoonBoolean";
 import WeekdayIntervals, { type WeekdayIntervalsValue } from "./WeekdayIntervals";
 import QuestionModal from "../QuestionModal";
-import "../../css/SelfCareSelector.css";
+import "../../css/SelfCareSelector.css"; // reuse the dark/luxe styles
 import { X, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 /**
- * SelfCareSelector — now supports custom user-entered activities
- *
- * Users can:
- *  - pick from a dropdown of presets, OR
- *  - type a custom activity (e.g., "Skin fade + beard trim") and press Enter/Add
- *
- * Strict-time flow:
- *  - Boolean toggle → open WeekdayIntervals in a nested modal to set exact windows.
+ * ExerciseSelector — mirrors SelfCareSelector with:
+ *  - Presets + custom entry
+ *  - Per-activity follow-ups (priority, preferred times, duration, frequency)
+ *  - Strict-schedule boolean → opens WeekdayIntervals in a nested modal
+ *  - EXTRA: Rest period needed after the workout (minutes)
  */
 
-/* 1) Define presets first, so we can derive the union type from the array. */
-const PRESET_OPTIONS = [
-    "Hygiene",
-    "Skincare",
-    "Haircare",
-    "Laundry",
-    "House cleaning",
-    "Grocery shopping",
-    "Cooking / Meal prep",
-    "Eating",
-    "Dishes",
-    "Meditation",
-    "Yoga",
-    "Breathing exercises",
-    "Journaling",
-    "Reading (relaxation)",
-    "Nature walk",
-    "Digital detox",
+// ---- Long, comprehensive preset list ----
+const EXERCISE_PRESETS = [
+    // General / gym styles
+    "Gym",
+    "Weight Lifting",
+    "Powerlifting",
+    "Bodybuilding",
+    "Strength Training",
+    "Circuit Training",
+    "CrossFit",
+    "Calisthenics",
     "Stretching",
-    "Dog walking",
-    "Pet care",
-    "Physical therapy",
-    "Calling a friend",
-    "Therapy / Counseling",
-    "Family time",
-    "Quality time with partner",
-    "Volunteering",
-    "Decluttering",
-    "Self-reflection",
+    "Foam Rolling",
+    "Core / Abs",
+    "Balance Exercises",
+
+    // Split routines
+    "Push ups",
+    "Pull ups",
+    "Leg Training",
+    "Chest & Back Training",
+    "Shoulders & Arms",
+    "Full-Body Training",
+
+    // Cardio
+    "Running",
+    "Jogging",
+    "Sprinting",
+    "Track Workouts",
+    "Treadmill",
+    "Trail Running",
+    "Hiking",
+    "Rucking",
+    "Walking (Brisk)",
+    "Stair Climber",
+    "Elliptical",
+    "Rowing Machine",
+    "Outdoor Cycling",
+    "Indoor Cycling/Spinning",
+    "Swimming (Laps)",
+    "Open-Water Swimming",
+    "Jump Rope",
+
+    // Martial arts / combat sports
+    "Boxing",
+    "Kickboxing",
+    "Muay Thai",
+    "Brazilian Jiu-Jitsu",
+    "Wrestling",
+    "Judo",
+    "Karate",
+    "Taekwondo",
+    "MMA Drills",
+
+    // Classes / studio
+    "Yoga",
+    "Pilates",
+    "Dance Cardio",
+    "Zumba",
+
+    // Climbing / skills
+    "Rock Climbing (Top-Rope)",
+    "Bouldering",
+    "Parkour / Freerunning",
+    "Gymnastics",
+
+
+    // Court / field / team sports
+    "Basketball",
+    "Soccer",
+    "Football",
+    "Baseball",
+    "Softball",
+    "Volleyball",
+    "Rugby",
+    "Lacrosse",
+    "Field Hockey",
+    "Ice Hockey",
+    "Ultimate Frisbee",
+    "Pickleball",
+    "Tennis",
+    "Table Tennis",
+    "Badminton",
+    "Rowing",
+
+    // Outdoor & seasonal
+    "Disc Golf",
+    "Golf",
+    "Skiing",
+    "Snowboarding",
+    "Ice Skating",
+    "Inline Skating",
+    "Surfing",
+    "Paddleboarding",
+    "Kayaking",
+    "Canoeing",
+
+
+    // Conditioning / accessories
+    "Kettlebell Training",
+
+
+    // Rehab / recovery
+
+    "Low-Impact Cardio",
 ] as const;
 
-/* 2) Allow any custom string in addition to the presets */
-export type SelfCareActivity = (typeof PRESET_OPTIONS)[number] | (string & {});
+// Allow custom strings too
+export type ExerciseActivity = (typeof EXERCISE_PRESETS)[number] | (string & {});
 
-export interface SelfCarePrefs {
-    activity: SelfCareActivity;
-    priority: number;
-    preferredTimes: TimeName[];
-    durationMinutes: number;
+export interface ExercisePrefs {
+    activity: ExerciseActivity;
+    priority: number;               // 0..1
+    preferredTimes: TimeName[];     // morning/afternoon/evening/night (existing enum)
+    durationMinutes: number;        // typical session length
     timesPerDay: number;
     timesPerWeek: number;
+
+    // strict schedule flow (optional)
     strictSchedule?: boolean;
     strictIntervals?: WeekdayIntervalsValue;
+
+    // EXTRA: rest period needed after this workout (minutes)
+    restPeriodMinutes?: number;
 }
 
 interface Props {
-    value: SelfCarePrefs[];
-    onChange: (v: SelfCarePrefs[]) => void;
+    value: ExercisePrefs[];
+    onChange: (v: ExercisePrefs[]) => void;
     label?: string;
-    placeholder?: string;
+    inputPlaceholder?: string;  // text input placeholder
+    selectPlaceholder?: string; // dropdown placeholder
     id?: string;
     className?: string;
 }
 
-const DEFAULTS: Omit<SelfCarePrefs, "activity"> = {
+const DEFAULTS: Omit<ExercisePrefs, "activity"> = {
     priority: 0.5,
     preferredTimes: [],
-    durationMinutes: 30,
+    durationMinutes: 45,
     timesPerDay: 1,
     timesPerWeek: 3,
     strictSchedule: false,
     strictIntervals: {},
+    restPeriodMinutes: 10,
 };
 
-const SelfCareSelector: React.FC<Props> = ({
+const ExerciseSelector: React.FC<Props> = ({
                                                value,
                                                onChange,
-                                               label = "Choose self-care activities to include",
-                                               placeholder = "Enter or choose a self-care activity…", // updated default
+                                               label = "Choose exercise to include",
+                                               inputPlaceholder = "Enter an exercise…",
+                                               selectPlaceholder = "Or choose from presets…",
                                                id,
                                                className = "",
                                            }) => {
-    /* separate states: dropdown selection AND custom text */
-    const [draftSelect, setDraftSelect] = React.useState<string>("");
     const [draftCustom, setDraftCustom] = React.useState<string>("");
+    const [draftSelect, setDraftSelect] = React.useState<string>("");
     const [cursor, setCursor] = React.useState<number>(0);
 
-    // nested modal for strict intervals
+    // nested strict-times modal
     const [strictOpen, setStrictOpen] = React.useState(false);
     const [strictTemp, setStrictTemp] = React.useState<WeekdayIntervalsValue>({});
 
-    const selectedActivities = React.useMemo(() => value.map((p) => p.activity), [value]);
+    const selectedNames = React.useMemo(() => value.map(v => v.activity), [value]);
     const selectedLower = React.useMemo(
-        () => selectedActivities.map((s) => s.toLowerCase()),
-        [selectedActivities]
+        () => selectedNames.map(n => n.toLowerCase()),
+        [selectedNames]
     );
 
-    const available = PRESET_OPTIONS.filter(
-        (opt) => !selectedLower.includes(opt.toLowerCase())
+    const available = EXERCISE_PRESETS.filter(
+        opt => !selectedLower.includes(opt.toLowerCase())
     );
 
     const current = value[cursor];
@@ -116,35 +196,31 @@ const SelfCareSelector: React.FC<Props> = ({
         const raw = (draftCustom || draftSelect || "").trim();
         if (!raw) return;
 
-        const exists = selectedLower.includes(raw.toLowerCase());
-        if (exists) {
-            // choose already selected chip instead of duplicating
-            const idx = selectedActivities.findIndex(
-                (a) => a.toLowerCase() === raw.toLowerCase()
-            );
-            if (idx >= 0) setCursor(idx);
+        const dupIdx = selectedNames.findIndex(a => a.toLowerCase() === raw.toLowerCase());
+        if (dupIdx >= 0) {
+            setCursor(dupIdx);
             setDraftCustom("");
             setDraftSelect("");
             return;
         }
 
-        const next = [...value, { activity: raw as SelfCareActivity, ...DEFAULTS }];
+        const next = [...value, { activity: raw as ExerciseActivity, ...DEFAULTS }];
         onChange(next);
         setDraftCustom("");
         setDraftSelect("");
         setCursor(next.length - 1);
     };
 
-    const remove = (activity: SelfCareActivity) => {
-        const idx = value.findIndex((p) => p.activity.toLowerCase() === activity.toLowerCase());
+    const remove = (activity: ExerciseActivity) => {
+        const idx = value.findIndex(v => v.activity.toLowerCase() === activity.toLowerCase());
         if (idx < 0) return;
         const next = value.slice();
         next.splice(idx, 1);
         onChange(next);
-        setCursor((c) => Math.max(0, Math.min(c, next.length - 1)));
+        setCursor(c => Math.max(0, Math.min(c, next.length - 1)));
     };
 
-    const update = (partial: Partial<SelfCarePrefs>) => {
+    const update = (partial: Partial<ExercisePrefs>) => {
         const curr = value[cursor];
         if (!curr) return;
         const next = value.slice();
@@ -152,8 +228,8 @@ const SelfCareSelector: React.FC<Props> = ({
         onChange(next);
     };
 
-    const goPrev = () => setCursor((c) => Math.max(0, c - 1));
-    const goNext = () => setCursor((c) => Math.min(value.length - 1, c + 1));
+    const goPrev = () => setCursor(c => Math.max(0, c - 1));
+    const goNext = () => setCursor(c => Math.min(value.length - 1, c + 1));
 
     const openStrictModal = () => {
         const seed = (current?.strictIntervals ?? {}) as WeekdayIntervalsValue;
@@ -172,42 +248,31 @@ const SelfCareSelector: React.FC<Props> = ({
     };
 
     return (
-        <div className={`scsel ${className}`} id={id}>
-            {/* Add row: custom input + dropdown + Add button */}
+        <div className={`scsel exsel ${className}`} id={id}>
+            {/* Add row: custom + select + Add */}
             <div className="scsel-row">
-                {label ? (
-                    <label className="scsel-label" htmlFor="scsel-custom">
-                        {label}
-                    </label>
-                ) : null}
+                {label ? <label className="scsel-label" htmlFor="exsel-custom">{label}</label> : null}
                 <div className="scsel-add">
                     <input
-                        id="scsel-custom"
+                        id="exsel-custom"
                         className="scsel-input"
                         type="text"
                         value={draftCustom}
-                        placeholder= "Enter a self-care activity...."
+                        placeholder={inputPlaceholder}
                         onChange={(e) => setDraftCustom(e.target.value)}
                         onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                add();
-                            }
+                            if (e.key === "Enter") { e.preventDefault(); add(); }
                         }}
                     />
                     <select
-                        id="scsel-dd"
+                        id="exsel-dd"
                         className="scsel-select"
                         value={draftSelect}
                         onChange={(e) => setDraftSelect(e.target.value)}
                     >
-                        <option value="" disabled>
-                            Or choose from presets…
-                        </option>
+                        <option value="" disabled>{selectPlaceholder}</option>
                         {available.map((opt) => (
-                            <option key={opt} value={opt}>
-                                {opt}
-                            </option>
+                            <option key={opt} value={opt}>{opt}</option>
                         ))}
                     </select>
                     <button
@@ -215,17 +280,17 @@ const SelfCareSelector: React.FC<Props> = ({
                         className="scsel-btn scsel-btn-primary"
                         onClick={add}
                         disabled={!(draftCustom.trim() || draftSelect)}
-                        aria-label="Add self-care activity"
-                        title="Add self-care activity"
+                        aria-label="Add exercise"
+                        title="Add exercise"
                     >
                         <Plus size={16} /> Add
                     </button>
                 </div>
             </div>
 
-            {/* Chip list */}
+            {/* Chips */}
             {value.length > 0 && (
-                <div className="scsel-chips" role="list" aria-label="Selected self-care activities">
+                <div className="scsel-chips" role="list" aria-label="Selected exercises">
                     {value.map((p, i) => (
                         <button
                             key={`${p.activity}-${i}`}
@@ -238,10 +303,7 @@ const SelfCareSelector: React.FC<Props> = ({
                             <span>{p.activity}</span>
                             <span
                                 className="scsel-chip-close"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    remove(p.activity);
-                                }}
+                                onClick={(e) => { e.stopPropagation(); remove(p.activity); }}
                                 aria-label={`Remove ${p.activity}`}
                             >
                 <X size={14} aria-hidden />
@@ -251,7 +313,7 @@ const SelfCareSelector: React.FC<Props> = ({
                 </div>
             )}
 
-            {/* Wizard for current */}
+            {/* Config panel for current */}
             {current ? (
                 <div className="scsel-panel" aria-live="polite">
                     <div className="scsel-panel-header">
@@ -260,9 +322,7 @@ const SelfCareSelector: React.FC<Props> = ({
                             <button className="scsel-btn" onClick={goPrev} disabled={cursor === 0}>
                                 <ChevronLeft size={16} /> Prev
                             </button>
-                            <div className="scsel-step-info">
-                                {cursor + 1} / {value.length}
-                            </div>
+                            <div className="scsel-step-info">{cursor + 1} / {value.length}</div>
                             <button className="scsel-btn" onClick={goNext} disabled={cursor === value.length - 1}>
                                 Next <ChevronRight size={16} />
                             </button>
@@ -271,7 +331,7 @@ const SelfCareSelector: React.FC<Props> = ({
 
                     {/* Q1: Priority */}
                     <div className="scsel-question">
-                        <div className="scsel-question-label">How much do you prioritize this activity?</div>
+                        <div className="scsel-question-label">How much do you prioritize this workout?</div>
                         <div className="scsel-question-control">
                             <PrioritySlider
                                 value={current.priority}
@@ -285,7 +345,7 @@ const SelfCareSelector: React.FC<Props> = ({
 
                     {/* Q2: Preferred time(s) of day */}
                     <div className="scsel-question">
-                        <div className="scsel-question-label">What time of day do you prefer for this activity?</div>
+                        <div className="scsel-question-label">What time of day do you prefer for this workout?</div>
                         <div className="scsel-question-control scsel-tod">
                             <TimeOfDaySelection
                                 value={current.preferredTimes}
@@ -295,11 +355,9 @@ const SelfCareSelector: React.FC<Props> = ({
                         </div>
                     </div>
 
-                    {/* Q3: Duration (minutes) */}
+                    {/* Q3: Duration */}
                     <div className="scsel-question">
-                        <div className="scsel-question-label">
-                            For how long, on average, do you like to perform this activity? (minutes)
-                        </div>
+                        <div className="scsel-question-label">How long is this workout, on average? (minutes)</div>
                         <div className="scsel-question-control scsel-inline">
                             <NumberInput
                                 value={String(current.durationMinutes ?? 0)}
@@ -307,16 +365,14 @@ const SelfCareSelector: React.FC<Props> = ({
                                     const n = Math.max(0, Math.round(parseInt(s || "0", 10) || 0));
                                     update({ durationMinutes: n });
                                 }}
-                                placeholder={30}
+                                placeholder={45}
                             />
                         </div>
                     </div>
 
                     {/* Q4: Times per day */}
                     <div className="scsel-question">
-                        <div className="scsel-question-label">
-                            How many times per day would you want to perform this activity?
-                        </div>
+                        <div className="scsel-question-label">How many times per day do you want to do this workout?</div>
                         <div className="scsel-question-control scsel-inline">
                             <NumberInput
                                 value={String(current.timesPerDay ?? 0)}
@@ -331,9 +387,7 @@ const SelfCareSelector: React.FC<Props> = ({
 
                     {/* Q5: Times per week */}
                     <div className="scsel-question">
-                        <div className="scsel-question-label">
-                            How many times per week would you want to perform this activity?
-                        </div>
+                        <div className="scsel-question-label">How many times per week do you want to do this workout?</div>
                         <div className="scsel-question-control scsel-inline">
                             <NumberInput
                                 value={String(current.timesPerWeek ?? 0)}
@@ -346,9 +400,24 @@ const SelfCareSelector: React.FC<Props> = ({
                         </div>
                     </div>
 
-                    {/* Q6: Strict schedule? */}
+                    {/* Q6: EXTRA — Rest period after workout */}
                     <div className="scsel-question">
-                        <div className="scsel-question-label">Do you want strict times scheduled for this activity?</div>
+                        <div className="scsel-question-label">How long of a rest period do you need after this workout? (minutes)</div>
+                        <div className="scsel-question-control scsel-inline">
+                            <NumberInput
+                                value={String(current.restPeriodMinutes ?? 0)}
+                                onChange={(s) => {
+                                    const n = Math.max(0, Math.round(parseInt(s || "0", 10) || 0));
+                                    update({ restPeriodMinutes: n });
+                                }}
+                                placeholder={10}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Q7: Strict schedule? */}
+                    <div className="scsel-question">
+                        <div className="scsel-question-label">Do you want strict times scheduled for this workout?</div>
                         <div className="scsel-question-control">
                             <div className="q-center-control">
                                 <SunMoonBoolean
@@ -384,7 +453,7 @@ const SelfCareSelector: React.FC<Props> = ({
                     </div>
                 </div>
             ) : (
-                <p className="scsel-empty">No self-care activities selected yet.</p>
+                <p className="scsel-empty">No exercises selected yet.</p>
             )}
 
             {/* Nested modal for strict weekday intervals */}
@@ -401,4 +470,4 @@ const SelfCareSelector: React.FC<Props> = ({
     );
 };
 
-export default SelfCareSelector;
+export default ExerciseSelector;
