@@ -13,14 +13,15 @@ import sleep_HoursNeed from "../assets/question_images/Sleep_HoursNeedQ.png";
 import sleep_BedTime from "../assets/question_images/Sleep_BedTimeQ.png";
 import sleep_WakeUp from "../assets/question_images/Sleep_WakeUpQ.png";
 import sleep_ConsistentBedtime from "../assets/question_images/Sleep_ConsistentBedTimeQ.png";
-import sleep_NapBool from "../assets/question_images/Sleep_NapBool.png"
-import sleep_NapTimes from "../assets/question_images/Sleep_NapTimesQ.png"
-import sleep_NapLength from "../assets/question_images/Sleep_NapLengthQ.png"
+import sleep_NapBool from "../assets/question_images/Sleep_NapBool.png";
+import sleep_NapTimes from "../assets/question_images/Sleep_NapTimesQ.png";
+import sleep_NapLength from "../assets/question_images/Sleep_NapLengthQ.png";
+
 import work_Boolean from "../assets/question_images/Work_BooleanQ.png";
 import work_Priority from "../assets/question_images/Work_PriorityQ.png";
-import work_FixedShifts from "../assets/question_images/Work_FixedShiftsQ.png"
-import work_AddShifts from "../assets/question_images/Work_AddShifts.png"
-import work_HoursAmount from "../assets/question_images/Work_HoursAmountQ.png"
+import work_FixedShifts from "../assets/question_images/Work_FixedShiftsQ.png";
+import work_AddShifts from "../assets/question_images/Work_AddShifts.png";
+import work_HoursAmount from "../assets/question_images/Work_HoursAmountQ.png";
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -50,7 +51,9 @@ export type QuestionType =
     | "list"
     | "time-selection"
     | "day-selection"
-    | "enter-social";
+    | "enter-social"
+    // NEW structured input:
+    | "selfcare-selector";
 
 export type Condition =
     | { id: string; equals?: any; notEquals?: any; truthy?: boolean; falsy?: boolean }
@@ -58,22 +61,21 @@ export type Condition =
     | { anyOf: Condition[] };
 
 export type Question = {
-    id: string;                // unique ID (recommend globally unique across all buckets)
-    image: string;             // question image path
-    description: string;       // prompt shown to the user
-    type: QuestionType;        // determines which input to render
-    // Optional metadata:
-    required?: boolean;        // UI-level enforcement (page can decide how to handle)
-    hint?: string;             // small helper text
+    id: string;
+    image: string;
+    description: string;
+    type: QuestionType;
+    required?: boolean;
+    hint?: string;
     defaultValue?: number | string | boolean;
-    options?: string[];        // for 'chips' etc.
-    when?: Condition;          // ⬅️ Conditional visibility
+    options?: string[];
+    when?: Condition;
 };
 
 export type Bucket = {
     id: BucketId;
     name: string;
-    skippable: boolean;        // School & Sleep are not skippable
+    skippable: boolean;
     coverImage: string;
     questions: Question[];
 };
@@ -127,14 +129,16 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "school_max_session_length",
                 image: schoolwork_MaxStudy,
-                description: "What's the longest amount of time you'd want to study in one sitting (enter minutes)?",
+                description:
+                    "What's the longest amount of time you'd want to study in one sitting (enter minutes)?",
                 type: "number",
                 hint: "Minutes, e.g., 90",
             },
             {
                 id: "school_break_frequency",
                 image: schoolwork_StudyBreaks,
-                description: "How often do you like to take breaks during study sessions (minutes between breaks)?",
+                description:
+                    "How often do you like to take breaks during study sessions (minutes between breaks)?",
                 type: "number",
                 hint: "Minutes between breaks, e.g., 45",
             },
@@ -206,7 +210,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 image: sleep_NapTimes,
                 description: "Preferred nap windows (weekday time intervals).",
                 type: "time-selection",
-                when: { id: "sleep_naps", equals: true }, // ⬅️ only show if naps = Yes
+                when: { id: "sleep_naps", equals: true },
             },
             {
                 id: "nap-length",
@@ -215,7 +219,6 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 type: "number",
                 when: { id: "sleep_naps", equals: true },
             },
-
         ],
     },
 
@@ -227,26 +230,21 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
         coverImage: IMG_PLACEHOLDER,
         questions: [
             {
-                id: "work_is_employed", // primary gate for this bucket
+                id: "work_is_employed",
                 image: work_Boolean,
                 description:
                     "Are you currently employed? (Includes any kind of scheduled, paid or unpaid, work).",
                 type: "boolean",
-                defaultValue: true, // set to true so progress doesn’t bunch up (seed answers with defaults!)
+                defaultValue: true,
             },
-
             {
-                id: "work_priority", // primary gate for this bucket
+                id: "work_priority",
                 image: work_Priority,
-                description:
-                    "How much do you prioritize your employment obligations?",
+                description: "How much do you prioritize your employment obligations?",
                 type: "priority",
                 defaultValue: 70,
                 when: { id: "work_is_employed", equals: true },
-
             },
-
-            // Only if employed
             {
                 id: "work_has_fixed_shifts",
                 image: work_FixedShifts,
@@ -255,12 +253,10 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 defaultValue: true,
                 when: { id: "work_is_employed", equals: true },
             },
-
-            // Only if employed AND has fixed shifts
             {
                 id: "work_fixed_shift_times",
                 image: work_AddShifts,
-                description: "Add your scheduled shift times (weekday intervals).",
+                description: "Add your scheduled shift times (weekday time intervals).",
                 type: "weekday-time-intervals",
                 when: {
                     allOf: [
@@ -269,8 +265,6 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                     ],
                 },
             },
-
-            // Only if employed
             {
                 id: "work_hours_target",
                 image: work_HoursAmount,
@@ -278,8 +272,6 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 type: "number",
                 when: { id: "work_is_employed", equals: true },
             },
-
-            // Only if employed
             {
                 id: "work_commute",
                 image: IMG_PLACEHOLDER,
@@ -288,8 +280,6 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 defaultValue: true,
                 when: { id: "work_is_employed", equals: true },
             },
-
-            // Only if employed AND commutes
             {
                 id: "work_commute_time",
                 image: IMG_PLACEHOLDER,
@@ -302,8 +292,6 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                     ],
                 },
             },
-
-            // If employed and *doesn't* commute, ask if they work from home
             {
                 id: "work_from_home",
                 image: IMG_PLACEHOLDER,
@@ -317,22 +305,12 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                     ],
                 },
             },
-
-            // Times you don't want work scheduled (only if employed; optionally tie to WFH like before)
             {
                 id: "work_cannot_schedule_times",
                 image: IMG_PLACEHOLDER,
                 description: "Are there any times when you do not want work to be scheduled?",
                 type: "weekday-time-intervals",
-                when: {
-                    // show when employed; keep your older stricter logic by uncommenting the allOf below
-                    id: "work_is_employed",
-                    equals: true,
-                    allOf: [
-                      { id: "work_is_employed", equals: true },
-                       { id: "work_from_home", equals: true },
-                     ],
-                },
+                when: { id: "work_is_employed", equals: true },
             },
         ],
     },
@@ -344,27 +322,26 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
         skippable: true,
         coverImage: IMG_PLACEHOLDER,
         questions: [
-
             {
                 id: "social_boolean",
                 image: IMG_PLACEHOLDER,
                 description: "Do you want social obligations included in your schedule?",
                 type: "boolean",
-                defaultValue: true
+                defaultValue: true,
             },
             {
                 id: "social_priority",
                 image: IMG_PLACEHOLDER,
-                description: "How much priority do you place on your social life? (0–100).",
+                description: "How much do you place on your social life? (0–100).",
                 type: "priority",
-                when: {id: "social_boolean", equals: true }
+                when: { id: "social_boolean", equals: true },
             },
             {
                 id: "social_hours_target",
                 image: IMG_PLACEHOLDER,
                 description: "How many hours per week do you anticipate socializing?",
                 type: "number",
-                when: {id: "social_boolean", equals: true }
+                when: { id: "social_boolean", equals: true },
             },
             {
                 id: "social_time_prefs",
@@ -372,28 +349,22 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 description: "What time of day do you prefer to socialize?",
                 type: "time-selection",
                 options: ["morning", "afternoon", "evening", "night"],
-                when: {id: "social_boolean", equals:true}
+                when: { id: "social_boolean", equals: true },
             },
             {
                 id: "social_recurring_obligations",
                 image: IMG_PLACEHOLDER,
                 description: "List your recurring social obligations (we’ll ask days & times next).",
-                type: "enter-social", // NEW
+                type: "enter-social",
                 when: { id: "social_boolean", equals: true },
             },
             {
                 id: "social_friends_study_overlap",
                 image: IMG_PLACEHOLDER,
-                description: "Would you like to co-locate social time with group study sessions when possible?",
+                description:
+                    "Would you like to co-locate social time with group study sessions when possible?",
                 type: "boolean",
                 defaultValue: false,
-                when: { id: "social_boolean", equals: true },
-            },
-            {
-                id: "social_note",
-                image: IMG_PLACEHOLDER,
-                description: "Anything else about your social life we should consider?",
-                type: "text",
                 when: { id: "social_boolean", equals: true },
             },
         ],
@@ -407,36 +378,31 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
         coverImage: IMG_PLACEHOLDER,
         questions: [
             {
+                id: "selfcare_boolean",
+                image: IMG_PLACEHOLDER,
+                description: "Do you want self-care included in your schedule?",
+                type: "boolean",
+                defaultValue: true,
+            },
+            {
                 id: "selfcare_priority",
                 image: IMG_PLACEHOLDER,
                 description: "How important is Self Care? Set a percentage priority (0–100).",
                 type: "priority",
+                when: { id: "selfcare_boolean", equals: true },
             },
+
+            /* NEW: integrated SelfCareSelector */
             {
-                id: "selfcare_hours_target",
+                id: "selfcare_activities",
                 image: IMG_PLACEHOLDER,
-                description: "Target self care time per week (hours). Includes hygiene, journaling, mindfulness, etc.",
-                type: "number",
+                description:
+                    "Choose the self-care activities you want included (we’ll ask priority, preferred time, duration, and frequency for each).",
+                type: "selfcare-selector",
+                when: { id: "selfcare_boolean", equals: true },
             },
-            {
-                id: "selfcare_time_prefs",
-                image: IMG_PLACEHOLDER,
-                description: "Preferred times for self care (morning routines, evenings, etc.).",
-                type: "chips",
-                options: ["morning", "afternoon", "evening", "night"],
-            },
-            {
-                id: "selfcare_fixed_items",
-                image: IMG_PLACEHOLDER,
-                description: "Add any fixed self care routines (weekday time intervals).",
-                type: "weekday-time-intervals",
-            },
-            {
-                id: "selfcare_note",
-                image: IMG_PLACEHOLDER,
-                description: "Anything else about your self care we should consider?",
-                type: "text",
-            },
+
+
         ],
     },
 
@@ -611,7 +577,6 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
 
 /* ------------------------------- Small helpers ------------------------------ */
 
-/** Flatten into a single array with bucket metadata (handy for pages). */
 export function flattenQuestions() {
     type Flat = Question & {
         __bucketId: BucketId;
@@ -639,3 +604,4 @@ export function flattenQuestions() {
 }
 
 export default QUESTIONS;
+

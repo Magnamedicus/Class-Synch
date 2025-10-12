@@ -5,9 +5,10 @@ import QuestionCarousel from "../components/QuestionCarousel";
 import IntroModal from "../components/IntroModal";
 import QuestionModal from "../components/QuestionModal";
 
-import ContinueButton from "../components/ContinueButton"; // kept for consistency if you reference elsewhere
+import ContinueButton from "../components/ContinueButton";
 import BackButton from "../components/BackButton";
 
+/* Inputs */
 import PrioritySlider from "../components/inputs/PrioritySlider";
 import NumberInput from "../components/inputs/NumberInput";
 import TextInput from "../components/inputs/TextInput";
@@ -16,10 +17,11 @@ import TimeInput from "../components/inputs/TimeInput";
 import DaySelection, { type DayName } from "../components/inputs/DaySelection";
 import TimeOfDaySelection, { type TimeName } from "../components/inputs/TimeOfDaySelection";
 import SunMoonBoolean from "../components/inputs/SunMoonBoolean";
-import WeekdayIntervals, {type WeekdayIntervalsValue,} from "../components/inputs/WeekdayIntervals";
+import WeekdayIntervals, { type WeekdayIntervalsValue } from "../components/inputs/WeekdayIntervals";
 import EnterObligations from "../components/inputs/EnterObligations";
 
-
+/* NEW: Self-care selector */
+import SelfCareSelector, { type SelfCarePrefs } from "../components/inputs/SelfCareSelector";
 
 import ProgressBuckets from "../components/ProgressBuckets";
 
@@ -49,7 +51,8 @@ type InputTypeExpected =
     | "day-selection"
     | "boolean"
     | "time-selection"
-    |"weekday-time-intervals";
+    | "weekday-time-intervals"
+    | "selfcare-selector"; // NEW
 
 function mapTypeToExpected(t: string): InputTypeExpected {
     switch (t) {
@@ -62,13 +65,13 @@ function mapTypeToExpected(t: string): InputTypeExpected {
         case "time-selection":
         case "day-selection":
         case "boolean":
-        case "weekday-time-intervals":   // ✅ add mapping
+        case "weekday-time-intervals":
+        case "selfcare-selector":
             return t as InputTypeExpected;
         default:
             return "text";
     }
 }
-
 
 /* ------------------------------------------------------------------ */
 /* Flatten from config (preserves bucket metadata for navigation)      */
@@ -101,8 +104,6 @@ function buildDefaultAnswers(): Record<string, any> {
 function slugify(s: string) {
     return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
-
-
 
 function buildFlatFromConfig(): FlatQuestionItem[] {
     const items: FlatQuestionItem[] = [];
@@ -181,10 +182,10 @@ const QuestionnairePage: React.FC = () => {
     const [socialFollowupsOpen, setSocialFollowupsOpen] = React.useState(false);
     const [socialListForFollowups, setSocialListForFollowups] = React.useState<string[]>([]);
     const [socialIdx, setSocialIdx] = React.useState(0);
-
-// Per-obligation intervals (use WeekdayIntervals inside the follow-up)
     const [soIntervals, setSoIntervals] = React.useState<WeekdayIntervalsValue>({});
 
+    /* NEW: Self-care activities (SelfCareSelector stores a rich array) */
+    const [selfCarePrefs, setSelfCarePrefs] = React.useState<SelfCarePrefs[]>([]);
 
     /* ---------- Intro modal ---------- */
     const [showIntro, setShowIntro] = React.useState(true);
@@ -210,19 +211,18 @@ const QuestionnairePage: React.FC = () => {
     };
     const closeModal = () => setModalOpen(false);
 
+    /* ---------- Social follow-ups ---------- */
     function startSocialFollowUps(names: string[]) {
         if (!names.length) return;
         setSocialListForFollowups(names);
         setSocialIdx(0);
         setSoIntervals({});
         setSocialFollowupsOpen(true);
-
         document.documentElement.classList.add("modal-open");
     }
     function closeSocialFollowUps() {
         setSocialFollowupsOpen(false);
         document.documentElement.classList.remove("modal-open");
-        // advance to next visible question
         setLinearIndex((i) => {
             for (let n = i + 1; n < flat.length; n++) {
                 if (isVisible(flat[n], answers)) return n;
@@ -230,7 +230,6 @@ const QuestionnairePage: React.FC = () => {
             return i;
         });
     }
-
     function submitSocialFollowupStep() {
         const currentName = socialListForFollowups[socialIdx];
         if (!currentName) return;
@@ -242,10 +241,9 @@ const QuestionnairePage: React.FC = () => {
         const base = `social_${slugify(currentName)}`;
         setAnswers((p) => ({
             ...p,
-            [`${base}_intervals`]: JSON.parse(JSON.stringify(soIntervals)), // deep-ish copy
+            [`${base}_intervals`]: JSON.parse(JSON.stringify(soIntervals)),
         }));
 
-        // next obligation or finish
         const next = socialIdx + 1;
         if (next < socialListForFollowups.length) {
             setSocialIdx(next);
@@ -254,27 +252,19 @@ const QuestionnairePage: React.FC = () => {
             closeSocialFollowUps();
         }
     }
-
-
-
-
     function renderSocialFollowupBody() {
         const name = socialListForFollowups[socialIdx] ?? "";
         if (!name) return null;
 
         return (
             <>
-                <p className="q-hint">Add the recurring days & times for <strong>{name}</strong>.</p>
-                <WeekdayIntervals
-                    value={soIntervals}
-                    onChange={setSoIntervals}
-                />
+                <p className="q-hint">
+                    Add the recurring days & times for <strong>{name}</strong>.
+                </p>
+                <WeekdayIntervals value={soIntervals} onChange={setSoIntervals} />
             </>
         );
     }
-
-
-
 
     /* ---------- Bucket ranges for mapping (static from config order) ---------- */
     const bucketRanges = React.useMemo(() => {
@@ -282,7 +272,7 @@ const QuestionnairePage: React.FC = () => {
             bucketId: BucketId;
             label: string;
             start: number;
-            end: number; // inclusive
+            end: number;
             length: number;
         }> = [];
         let cursor = 0;
@@ -319,17 +309,14 @@ const QuestionnairePage: React.FC = () => {
         return list;
     }, [currentRange, flat, answers]);
 
-    // If the current question becomes hidden due to a changed answer, auto-jump
     React.useEffect(() => {
         if (current && !isVisible(current, answers)) {
-            // try forward
             for (let i = linearIndex + 1; i < flat.length; i++) {
                 if (isVisible(flat[i], answers)) {
                     setLinearIndex(i);
                     return;
                 }
             }
-            // then backward
             for (let i = linearIndex - 1; i >= 0; i--) {
                 if (isVisible(flat[i], answers)) {
                     setLinearIndex(i);
@@ -357,7 +344,7 @@ const QuestionnairePage: React.FC = () => {
         setLinearIndex(targetLinear);
     };
 
-    /* ---------- Progress bar (global visible progress + bucket landmarks) ---------- */
+    /* ---------- Progress bar ---------- */
     const visibleInfo = React.useMemo(() => {
         let total = 0;
         const buckets = bucketRanges.map((r) => {
@@ -376,7 +363,6 @@ const QuestionnairePage: React.FC = () => {
             return info;
         });
 
-        // completed = number of visible questions with index < linearIndex
         let completed = 0;
         for (let i = 0; i < flat.length; i++) {
             if (!isVisible(flat[i], answers)) continue;
@@ -397,7 +383,6 @@ const QuestionnairePage: React.FC = () => {
         if (b.firstVisibleLinearIndex !== null) {
             setLinearIndex(b.firstVisibleLinearIndex);
         } else {
-            // if no visible items in that bucket, jump to next visible after it
             const range = bucketRanges.find((r) => r.bucketId === bucketId);
             if (!range) return;
             for (let i = range.end + 1; i < flat.length; i++) {
@@ -406,7 +391,6 @@ const QuestionnairePage: React.FC = () => {
                     return;
                 }
             }
-            // or previous visible
             for (let i = range.start - 1; i >= 0; i--) {
                 if (isVisible(flat[i], answers)) {
                     setLinearIndex(i);
@@ -427,8 +411,6 @@ const QuestionnairePage: React.FC = () => {
                 return (
                     <PrioritySlider
                         variant="bucket"
-                        label={undefined}
-                        helpText={undefined}
                         value={Number(uiVal)}
                         onChange={(v) => setAnswers((p) => ({ ...p, [item.id]: v }))}
                     />
@@ -436,19 +418,11 @@ const QuestionnairePage: React.FC = () => {
             }
             case "number":
                 return (
-                    <NumberInput
-                        value={textOrNumber}
-                        onChange={setTextOrNumber}
-                        placeholder="0"
-                    />
+                    <NumberInput value={textOrNumber} onChange={setTextOrNumber} placeholder="0" />
                 );
             case "text":
                 return (
-                    <TextInput
-                        value={textOrNumber}
-                        onChange={setTextOrNumber}
-                        placeholder={item.hint}
-                    />
+                    <TextInput value={textOrNumber} onChange={setTextOrNumber} placeholder={item.hint} />
                 );
             case "enter-classes":
                 return <EnterClasses value={classes} onChange={setClasses} />;
@@ -486,7 +460,6 @@ const QuestionnairePage: React.FC = () => {
                     </div>
                 );
             }
-
             case "enter-social":
                 return (
                     <EnterObligations
@@ -496,18 +469,22 @@ const QuestionnairePage: React.FC = () => {
                         placeholder="Add a recurring social obligation (e.g., Club meeting, Choir, D&D night)…"
                     />
                 );
-
             case "weekday-time-intervals": {
                 const currentVal = (answers[item.id] as WeekdayIntervalsValue) ?? {};
                 return (
-                    <WeekdayIntervals
-                        value={currentVal}
-                        onChange={(v) =>
-                            setAnswers((p) => ({ ...p, [item.id]: v }))
-                        }
-                    />
+                    <WeekdayIntervals value={currentVal} onChange={(v) => setAnswers((p) => ({ ...p, [item.id]: v }))} />
                 );
             }
+            /* NEW: Self-care selector uses your existing inputs internally */
+            case "selfcare-selector":
+                return (
+                    <SelfCareSelector
+                        value={selfCarePrefs}
+                        onChange={setSelfCarePrefs}
+                        label="Choose self-care activities to include"
+                        placeholder="Select an activity…"
+                    />
+                );
             default:
                 return (
                     <input
@@ -541,10 +518,6 @@ const QuestionnairePage: React.FC = () => {
         return () => document.documentElement.classList.remove("modal-open");
     }, [classFollowupsOpen]);
 
-    function slugify(s: string) {
-        return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    }
-
     function startClassFollowUps(classNames: SimpleClass[]) {
         if (!classNames.length) return;
         setClassListForFollowups(classNames);
@@ -561,7 +534,6 @@ const QuestionnairePage: React.FC = () => {
 
         setClassFollowupsOpen(true);
     }
-
     function resetFollowupInputsForNextClass() {
         setCfPriority(70);
         setCfMeetDays([]);
@@ -570,10 +542,8 @@ const QuestionnairePage: React.FC = () => {
         setCfStudyHours("");
         setCfPrefTimes([]);
     }
-
     function closeClassFollowUps() {
         setClassFollowupsOpen(false);
-        // advance to next *visible* question
         setLinearIndex((i) => {
             for (let n = i + 1; n < flat.length; n++) {
                 if (isVisible(flat[n], answers)) return n;
@@ -581,7 +551,6 @@ const QuestionnairePage: React.FC = () => {
             return i;
         });
     }
-
     function submitClassFollowupStep() {
         const currentClass = classListForFollowups[classIdx];
         if (!currentClass) return;
@@ -624,19 +593,16 @@ const QuestionnairePage: React.FC = () => {
             closeClassFollowUps();
         }
     }
-
     function togglePrefTime(val: string) {
         setCfPrefTimes((prev) =>
             prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]
         );
     }
-
     function toggleMeetDay(val: string) {
         setCfMeetDays((prev) =>
             prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]
         );
     }
-
     function renderClassFollowupBody() {
         const name = classListForFollowups[classIdx] ?? "";
         if (!name) return null;
@@ -646,8 +612,6 @@ const QuestionnairePage: React.FC = () => {
                 <>
                     <PrioritySlider
                         variant="bucket"
-                        label={undefined}
-                        helpText={undefined}
                         value={cfPriority}
                         onChange={setCfPriority}
                     />
@@ -666,7 +630,6 @@ const QuestionnairePage: React.FC = () => {
                 { key: "saturday", label: "Sat" },
                 { key: "sunday", label: "Sun" },
             ];
-
             return (
                 <>
                     <div
@@ -703,36 +666,20 @@ const QuestionnairePage: React.FC = () => {
 
                     <div className="q-time-grid" aria-label="Meeting time range">
                         <div className="q-time-compact">
-                            <label
-                                style={{
-                                    display: "block",
-                                    fontSize: ".9rem",
-                                    opacity: 0.9,
-                                    marginBottom: ".25rem",
-                                }}
-                            >
+                            <label style={{ display: "block", fontSize: ".9rem", opacity: 0.9, marginBottom: ".25rem" }}>
                                 Start time
                             </label>
                             <TimeInput value={cfMeetStart} onChange={setCfMeetStart} />
                         </div>
                         <div className="q-time-compact">
-                            <label
-                                style={{
-                                    display: "block",
-                                    fontSize: ".9rem",
-                                    opacity: 0.9,
-                                    marginBottom: ".25rem",
-                                }}
-                            >
+                            <label style={{ display: "block", fontSize: ".9rem", opacity: 0.9, marginBottom: ".25rem" }}>
                                 End time
                             </label>
                             <TimeInput value={cfMeetEnd} onChange={setCfMeetEnd} />
                         </div>
                     </div>
 
-                    <p className="q-hint">
-                        Select meeting days and enter the usual start/end time for this class.
-                    </p>
+                    <p className="q-hint">Select meeting days and enter the usual start/end time for this class.</p>
                 </>
             );
         }
@@ -740,30 +687,17 @@ const QuestionnairePage: React.FC = () => {
         if (classStep === 2) {
             return (
                 <>
-                    <NumberInput
-                        value={cfStudyHours}
-                        onChange={setCfStudyHours}
-                        placeholder="e.g., 6 (hours per week)"
-                    />
-                    <p className="q-hint">
-                        How many hours per week would you like to study for this class?
-                    </p>
+                    <NumberInput value={cfStudyHours} onChange={setCfStudyHours} placeholder="e.g., 6 (hours per week)" />
+                    <p className="q-hint">How many hours per week would you like to study for this class?</p>
                 </>
             );
         }
 
         return (
             <>
-                <div
-                    role="group"
-                    aria-label="Preferred study times (select all that apply)"
-                    style={{ display: "grid", gap: "0.5rem" }}
-                >
+                <div role="group" aria-label="Preferred study times (select all that apply)" style={{ display: "grid", gap: "0.5rem" }}>
                     {(["morning", "afternoon", "evening", "night"] as const).map((opt) => (
-                        <label
-                            key={opt}
-                            style={{ display: "flex", alignItems: "center", gap: ".5rem" }}
-                        >
+                        <label key={opt} style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
                             <input
                                 type="checkbox"
                                 checked={cfPrefTimes.includes(opt)}
@@ -773,10 +707,7 @@ const QuestionnairePage: React.FC = () => {
                         </label>
                     ))}
                 </div>
-                <p className="q-hint">
-                    What times of day do you prefer to study for this class? (Select all that
-                    apply)
-                </p>
+                <p className="q-hint">What times of day do you prefer to study for this class? (Select all that apply)</p>
             </>
         );
     }
@@ -788,19 +719,20 @@ const QuestionnairePage: React.FC = () => {
 
         let ok = true;
 
-        // --- Validation rules ---
         if (item.inputType === "enter-classes") {
             ok = classes.length > 0;
         } else if (item.inputType === "enter-social") {
             ok = socialObligations.length > 0;
         } else if (item.inputType === "priority" || item.inputType === "boolean") {
-            ok = true; // stored live
+            ok = true;
         } else if (item.inputType === "day-selection") {
             ok = selectedDays.length > 0;
         } else if (item.inputType === "time-selection") {
             ok = selectedTime.length > 0;
         } else if (item.inputType === "weekday-time-intervals") {
-            ok = true; // validated in the inner component
+            ok = true;
+        } else if (item.inputType === "selfcare-selector") {
+            ok = selfCarePrefs.length > 0; // require at least one self-care activity
         } else {
             ok = textOrNumber.trim().length > 0;
         }
@@ -828,7 +760,9 @@ const QuestionnairePage: React.FC = () => {
             setAnswers((p) => ({ ...p, [item.id]: selectedTime.slice() }));
             setSelectedTime([]);
         } else if (item.inputType === "weekday-time-intervals") {
-            // handled within WeekdayIntervals, nothing additional here
+            // stored from inside the component
+        } else if (item.inputType === "selfcare-selector") {
+            setAnswers((p) => ({ ...p, [item.id]: selfCarePrefs.slice() }));
         } else {
             setAnswers((p) => ({ ...p, [item.id]: textOrNumber }));
             setTextOrNumber("");
@@ -836,7 +770,7 @@ const QuestionnairePage: React.FC = () => {
 
         setModalOpen(false);
 
-        // --- Advance to next visible question ---
+        // Advance to next visible question
         for (let n = linearIndex + 1; n < flat.length; n++) {
             if (isVisible(flat[n], answers)) {
                 setLinearIndex(n);
@@ -844,9 +778,6 @@ const QuestionnairePage: React.FC = () => {
             }
         }
     };
-
-
-
 
     const goBack = () => {
         for (let p = linearIndex - 1; p >= 0; p--) {
@@ -857,7 +788,6 @@ const QuestionnairePage: React.FC = () => {
         }
     };
 
-    // Optional: finish callback
     const onFinishAll = () => navigate("/schedule");
 
     return (
@@ -886,11 +816,7 @@ const QuestionnairePage: React.FC = () => {
                         </div>
 
                         <div className="q-center-actions">
-                            <button
-                                className="q-answer-btn"
-                                type="button"
-                                onClick={openModalForCurrent}
-                            >
+                            <button className="q-answer-btn" type="button" onClick={openModalForCurrent}>
                                 Answer Question
                             </button>
                         </div>
@@ -912,15 +838,10 @@ const QuestionnairePage: React.FC = () => {
                 onJumpToBucket={onJumpToBucket}
             />
 
-            {/* 🟢 Intro modal */}
-            <IntroModal
-                isOpen={showIntro}
-                imageSrc={introImg}
-                onClose={closeIntro}
-                buttonLabel="Get Started"
-            />
+            {/* Intro modal */}
+            <IntroModal isOpen={showIntro} imageSrc={introImg} onClose={closeIntro} buttonLabel="Get Started" />
 
-            {/* 🟡 Main question modal */}
+            {/* Main question modal */}
             <QuestionModal
                 isOpen={isModalOpen}
                 title={current?.text}
@@ -937,56 +858,39 @@ const QuestionnairePage: React.FC = () => {
                 )}
             </QuestionModal>
 
-            {/* 🟣 Class follow-up modal */}
+            {/* Class follow-up modal */}
             <QuestionModal
                 isOpen={classFollowupsOpen}
                 title={
                     classFollowupsOpen
                         ? (() => {
                             const name = classListForFollowups[classIdx] ?? "";
-                            if (classStep === 0)
-                                return `How much priority are you putting on ${name}?`;
+                            if (classStep === 0) return `How much priority are you putting on ${name}?`;
                             if (classStep === 1) return `When does ${name} meet?`;
-                            if (classStep === 2)
-                                return `How many hours per week would you like to study for ${name}?`;
+                            if (classStep === 2) return `How many hours per week would you like to study for ${name}?`;
                             return `What times of day do you prefer to study for ${name}?`;
                         })()
                         : ""
                 }
                 onClose={closeClassFollowUps}
                 onSubmit={submitClassFollowupStep}
-                submitLabel={
-                    classStep < 3
-                        ? "Next"
-                        : classIdx < classListForFollowups.length - 1
-                            ? "Next Class"
-                            : "Finish"
-                }
+                submitLabel={classStep < 3 ? "Next" : classIdx < classListForFollowups.length - 1 ? "Next Class" : "Finish"}
             >
                 {renderClassFollowupBody()}
             </QuestionModal>
 
-            {/* 🔵 Social follow-up modal */}
+            {/* Social follow-up modal */}
             <QuestionModal
                 isOpen={socialFollowupsOpen}
-                title={
-                    socialFollowupsOpen
-                        ? `When does ${socialListForFollowups[socialIdx] ?? ""} happen?`
-                        : ""
-                }
+                title={socialFollowupsOpen ? `When does ${socialListForFollowups[socialIdx] ?? ""} happen?` : ""}
                 onClose={closeSocialFollowUps}
                 onSubmit={submitSocialFollowupStep}
-                submitLabel={
-                    socialIdx < socialListForFollowups.length - 1
-                        ? "Next Obligation"
-                        : "Finish"
-                }
+                submitLabel={socialIdx < socialListForFollowups.length - 1 ? "Next Obligation" : "Finish"}
             >
                 {renderSocialFollowupBody()}
             </QuestionModal>
         </>
     );
-
 };
 
 export default QuestionnairePage;
