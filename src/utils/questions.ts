@@ -54,7 +54,9 @@ export type QuestionType =
     | "enter-social"
     // Custom structured inputs
     | "selfcare-selector"
-    | "exercise-selector";
+    | "exercise-selector"
+    | "leisure-selector"
+    | "custom-obligations-selector"; // ⬅️ NEW
 
 export type Condition =
     | { id: string; equals?: any; notEquals?: any; truthy?: boolean; falsy?: boolean }
@@ -425,7 +427,6 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 type: "priority",
                 when: { id: "exercise_boolean", equals: true },
             },
-            // NEW: integrated ExerciseSelector (includes rest-period prompt internally)
             {
                 id: "exercise_activities",
                 image: IMG_PLACEHOLDER,
@@ -434,30 +435,31 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 type: "exercise-selector",
                 when: { id: "exercise_boolean", equals: true },
             },
-            // keep your other generic exercise questions if you still want them:
             {
                 id: "exercise_gym_commute_boolean",
                 image: IMG_PLACEHOLDER,
-                description: "do you want travel time to and from your place of exercise to be included?",
+                description:
+                    "do you want travel time to and from your place of exercise to be included?",
                 type: "boolean",
-                defaultValue: false
+                defaultValue: false,
             },
             {
                 id: "exercise_gym_commute_time",
                 image: IMG_PLACEHOLDER,
-                description: "How long does it take to travel to where you mainly workout?",
+                description:
+                    "How long does it take to travel to where you mainly workout?",
                 type: "number",
-                when: {id: "exercise_gym_commute_boolean", equals: true },
+                when: { id: "exercise_gym_commute_boolean", equals: true },
             },
             {
                 id: "exercise_gym_commute_recovery_boolean",
                 image: IMG_PLACEHOLDER,
-                description: "Do you want your post-workout rest time, and your commute home, to be combined?",
+                description:
+                    "Do you want your post-workout rest time, and your commute home, to be combined?",
                 type: "boolean",
                 defaultValue: false,
-                when: {id: "exercise_gym_commute_boolean", equals: true}
+                when: { id: "exercise_gym_commute_boolean", equals: true },
             },
-
         ],
     },
 
@@ -469,45 +471,27 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
         coverImage: IMG_PLACEHOLDER,
         questions: [
             {
-                id: "leisure_priority",
+                id: "leisure_boolean",
                 image: IMG_PLACEHOLDER,
                 description:
-                    "How important is Leisure in your week? Set a percentage priority (0–100).",
-                type: "priority",
-            },
-            {
-                id: "leisure_hours_target",
-                image: IMG_PLACEHOLDER,
-                description: "Target leisure time per week (hours).",
-                type: "number",
-            },
-            {
-                id: "leisure_time_prefs",
-                image: IMG_PLACEHOLDER,
-                description:
-                    "Preferred leisure windows (morning, afternoon, evening, night).",
-                type: "chips",
-                options: ["morning", "afternoon", "evening", "night"],
-            },
-            {
-                id: "leisure_screen_free_pref",
-                image: IMG_PLACEHOLDER,
-                description: "Prefer screen-free leisure in late evenings?",
+                    "Do you want leisure activities to be included in your schedule?",
                 type: "boolean",
                 defaultValue: true,
             },
             {
-                id: "leisure_recurring_events",
+                id: "leisure_priority",
                 image: IMG_PLACEHOLDER,
-                description:
-                    "Recurring leisure events (movie night, club meets — weekday time intervals).",
-                type: "weekday-time-intervals",
+                description: "How much priority do you place on leisure?",
+                type: "priority",
+                when: { id: "leisure_boolean", equals: true },
             },
             {
-                id: "leisure_note",
+                id: "leisure_activities",
                 image: IMG_PLACEHOLDER,
-                description: "Anything else about leisure we should consider?",
-                type: "text",
+                description:
+                    "Choose the leisure & relaxation activities you want included (we’ll ask priority, preferred time, duration, and frequency for each).",
+                type: "leisure-selector",
+                when: { id: "leisure_boolean", equals: true },
             },
         ],
     },
@@ -522,59 +506,16 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             {
                 id: "custom_enabled",
                 image: IMG_PLACEHOLDER,
-                description: "Would you like to add a custom activity or commitment?",
+                description: "Would you like to add additional custom obligations/activities?",
                 type: "boolean",
                 defaultValue: false,
             },
             {
-                id: "custom_name",
-                image: IMG_PLACEHOLDER,
-                description: "Name of your custom activity (e.g., Volunteering, Music Practice).",
-                type: "text",
-                when: { id: "custom_enabled", equals: true },
-            },
-            {
-                id: "custom_priority",
+                id: "custom_obligations",
                 image: IMG_PLACEHOLDER,
                 description:
-                    "How important is this custom activity? Set a percentage priority (0–100).",
-                type: "priority",
-                when: { id: "custom_enabled", equals: true },
-            },
-            {
-                id: "custom_hours_target",
-                image: IMG_PLACEHOLDER,
-                description: "Target hours per week for this activity.",
-                type: "number",
-                when: { id: "custom_enabled", equals: true },
-            },
-            {
-                id: "custom_time_prefs",
-                image: IMG_PLACEHOLDER,
-                description: "Preferred time windows (morning, afternoon, evening, night).",
-                type: "chips",
-                options: ["morning", "afternoon", "evening", "night"],
-                when: { id: "custom_enabled", equals: true },
-            },
-            {
-                id: "custom_fixed_times",
-                image: IMG_PLACEHOLDER,
-                description: "Any fixed meeting times for this activity (weekday intervals).",
-                type: "weekday-time-intervals",
-                when: { id: "custom_enabled", equals: true },
-            },
-            {
-                id: "custom_max_session_length",
-                image: IMG_PLACEHOLDER,
-                description: "Maximum preferred continuous session length (minutes).",
-                type: "number",
-                when: { id: "custom_enabled", equals: true },
-            },
-            {
-                id: "custom_note",
-                image: IMG_PLACEHOLDER,
-                description: "Anything else about this custom activity we should consider?",
-                type: "text",
+                    "Add any additional custom obligations/activities (we’ll ask priority, preferred time, duration, frequency, and strict time windows for each).",
+                type: "custom-obligations-selector", // ⬅️ NEW
                 when: { id: "custom_enabled", equals: true },
             },
         ],

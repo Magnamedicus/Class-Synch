@@ -23,6 +23,8 @@ import EnterObligations from "../components/inputs/EnterObligations";
 /* Custom selectors */
 import SelfCareSelector, { type SelfCarePrefs } from "../components/inputs/SelfCareSelector";
 import ExerciseSelector, { type ExercisePrefs } from "../components/inputs/ExerciseSelector";
+import LeisureSelector, { type LeisurePrefs } from "../components/inputs/LeisureSelector";
+import CustomObligationsSelector, { type CustomObligationPrefs } from "../components/inputs/CustomObligationSelector";
 
 import ProgressBuckets from "../components/ProgressBuckets";
 
@@ -54,7 +56,9 @@ type InputTypeExpected =
     | "time-selection"
     | "weekday-time-intervals"
     | "selfcare-selector"
-    | "exercise-selector";
+    | "exercise-selector"
+    | "leisure-selector"
+    | "custom-obligations-selector"; // ⬅️ NEW
 
 function mapTypeToExpected(t: string): InputTypeExpected {
     switch (t) {
@@ -70,6 +74,8 @@ function mapTypeToExpected(t: string): InputTypeExpected {
         case "weekday-time-intervals":
         case "selfcare-selector":
         case "exercise-selector":
+        case "leisure-selector":
+        case "custom-obligations-selector":
             return t as InputTypeExpected;
         default:
             return "text";
@@ -156,7 +162,7 @@ function evalCondition(cond: Condition, answers: Record<string, any>): boolean {
     // @ts-expect-error truthy/falsy narrow
     if ((cond as any).truthy) return !!val;
     // @ts-expect-error truthy/falsy narrow
-    if ((cond as any).falsy) return !val;
+    if ( (cond as any).falsy) return !val;
     return true;
 }
 function isVisible(q: FlatQuestionItem, answers: Record<string, any>): boolean {
@@ -192,6 +198,8 @@ const QuestionnairePage: React.FC = () => {
     /* NEW: Rich arrays from custom selectors */
     const [selfCarePrefs, setSelfCarePrefs] = React.useState<SelfCarePrefs[]>([]);
     const [exercisePrefs, setExercisePrefs] = React.useState<ExercisePrefs[]>([]);
+    const [leisurePrefs, setLeisurePrefs] = React.useState<LeisurePrefs[]>([]);
+    const [customPrefs, setCustomPrefs] = React.useState<CustomObligationPrefs[]>([]); // ⬅️ NEW
 
     /* ---------- Intro modal ---------- */
     const [showIntro, setShowIntro] = React.useState(true);
@@ -240,7 +248,6 @@ const QuestionnairePage: React.FC = () => {
         const currentName = socialListForFollowups[socialIdx];
         if (!currentName) return;
 
-        // Require at least one interval
         const count = Object.values(soIntervals).reduce(
             (acc, arr) => acc + (arr?.length ?? 0),
             0
@@ -489,7 +496,7 @@ const QuestionnairePage: React.FC = () => {
                         value={selfCarePrefs}
                         onChange={setSelfCarePrefs}
                         label="Choose self-care activities to include"
-                        placeholder="Select an activity…"
+                        placeholder="Enter or choose a self-care activity…"
                     />
                 );
             case "exercise-selector":
@@ -500,6 +507,24 @@ const QuestionnairePage: React.FC = () => {
                         label="Choose exercise to include"
                         inputPlaceholder="Enter an exercise…"
                         selectPlaceholder="Or choose from presets…"
+                    />
+                );
+            case "leisure-selector":
+                return (
+                    <LeisureSelector
+                        value={leisurePrefs}
+                        onChange={setLeisurePrefs}
+                        label="Choose leisure activities to include"
+                        placeholder="Enter or choose a leisure activity…"
+                    />
+                );
+            case "custom-obligations-selector":
+                return (
+                    <CustomObligationsSelector
+                        value={customPrefs}
+                        onChange={setCustomPrefs}
+                        label="Add custom obligations/activities to include"
+                        placeholder="Enter a custom obligation or activity…"
                     />
                 );
             default:
@@ -516,13 +541,11 @@ const QuestionnairePage: React.FC = () => {
 
     /* ---------- Per-class follow-up mini-wizard (unchanged) ---------- */
     type SimpleClass = string;
-
     const [classFollowupsOpen, setClassFollowupsOpen] = React.useState(false);
     const [classListForFollowups, setClassListForFollowups] = React.useState<SimpleClass[]>([]);
     const [classIdx, setClassIdx] = React.useState(0);
     const [classStep, setClassStep] = React.useState(0);
 
-    // local inputs
     const [cfPriority, setCfPriority] = React.useState<number>(70);
     const [cfMeetDays, setCfMeetDays] = React.useState<string[]>([]);
     const [cfMeetStart, setCfMeetStart] = React.useState<string>("");
@@ -747,6 +770,10 @@ const QuestionnairePage: React.FC = () => {
             ok = selfCarePrefs.length > 0;
         } else if (item.inputType === "exercise-selector") {
             ok = exercisePrefs.length > 0;
+        } else if (item.inputType === "leisure-selector") {
+            ok = leisurePrefs.length > 0;
+        } else if (item.inputType === "custom-obligations-selector") {
+            ok = customPrefs.length > 0;
         } else {
             ok = textOrNumber.trim().length > 0;
         }
@@ -777,6 +804,10 @@ const QuestionnairePage: React.FC = () => {
             setAnswers((p) => ({ ...p, [item.id]: selfCarePrefs.slice() }));
         } else if (item.inputType === "exercise-selector") {
             setAnswers((p) => ({ ...p, [item.id]: exercisePrefs.slice() }));
+        } else if (item.inputType === "leisure-selector") {
+            setAnswers((p) => ({ ...p, [item.id]: leisurePrefs.slice() }));
+        } else if (item.inputType === "custom-obligations-selector") {
+            setAnswers((p) => ({ ...p, [item.id]: customPrefs.slice() }));
         } else if (item.inputType === "priority" || item.inputType === "boolean") {
             // stored live via onChange
         } else {
@@ -890,7 +921,9 @@ const QuestionnairePage: React.FC = () => {
                 }
                 onClose={closeClassFollowUps}
                 onSubmit={submitClassFollowupStep}
-                submitLabel={classStep < 3 ? "Next" : classIdx < classListForFollowups.length - 1 ? "Next Class" : "Finish"}
+                submitLabel={
+                    classStep < 3 ? "Next" : classIdx < classListForFollowups.length - 1 ? "Next Class" : "Finish"
+                }
             >
                 {renderClassFollowupBody()}
             </QuestionModal>
