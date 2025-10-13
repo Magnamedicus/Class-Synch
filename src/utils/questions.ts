@@ -22,6 +22,8 @@ import work_Priority from "../assets/question_images/Work_PriorityQ.png";
 import work_FixedShifts from "../assets/question_images/Work_FixedShiftsQ.png";
 import work_AddShifts from "../assets/question_images/Work_AddShifts.png";
 import work_HoursAmount from "../assets/question_images/Work_HoursAmountQ.png";
+import work_CommuteBoolean from "../assets/question_images/Work_CommuteBooleanQ.png";
+import work_CommuteLength from "../assets/question_images/Work_CommuteLengthQ.png";
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -277,7 +279,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "work_commute",
-                image: IMG_PLACEHOLDER,
+                image: work_CommuteBoolean,
                 description: "Do you commute from your home to work?",
                 type: "boolean",
                 defaultValue: true,
@@ -285,7 +287,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "work_commute_time",
-                image: IMG_PLACEHOLDER,
+                image: work_CommuteLength,
                 description: "Average commute time to/from work (minutes).",
                 type: "number",
                 when: {
@@ -313,7 +315,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
                 image: IMG_PLACEHOLDER,
                 description: "Are there any times when you do not want work to be scheduled?",
                 type: "weekday-time-intervals",
-                when: { id: "work_is_employed", equals: true },
+                when: { id: "work_from_home", equals: true },
             },
         ],
     },
