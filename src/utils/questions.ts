@@ -25,6 +25,7 @@ import work_HoursAmount from "../assets/question_images/Work_HoursAmountQ.png";
 import work_CommuteBoolean from "../assets/question_images/Work_CommuteBooleanQ.png";
 import work_CommuteLength from "../assets/question_images/Work_CommuteLengthQ.png";
 import work_HomeBoolean from "../assets/question_images/Work_HomeBoolean.png"
+import work_NoGo from "../assets/question_images/Work_NoGoQ.png"
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -313,7 +314,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "work_cannot_schedule_times",
-                image: IMG_PLACEHOLDER,
+                image: work_NoGo,
                 description: "Are there any times when you do not want work to be scheduled?",
                 type: "weekday-time-intervals",
                 when: { id: "work_from_home", equals: true },
