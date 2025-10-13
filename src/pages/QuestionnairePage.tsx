@@ -1,3 +1,4 @@
+// src/pages/QuestionnairePage.tsx
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -24,7 +25,9 @@ import EnterObligations from "../components/inputs/EnterObligations";
 import SelfCareSelector, { type SelfCarePrefs } from "../components/inputs/SelfCareSelector";
 import ExerciseSelector, { type ExercisePrefs } from "../components/inputs/ExerciseSelector";
 import LeisureSelector, { type LeisurePrefs } from "../components/inputs/LeisureSelector";
-import CustomObligationsSelector, { type CustomObligationPrefs } from "../components/inputs/CustomObligationSelector";
+import CustomObligationsSelector, {
+    type CustomObligationPrefs,
+} from "../components/inputs/CustomObligationSelector";
 
 import ProgressBuckets from "../components/ProgressBuckets";
 
@@ -35,11 +38,44 @@ import logo from "../assets/logo.png";
 import introImg from "../assets/questionnaire_intro_img.png";
 
 /* Questions config */
-import QUESTIONS, {
-    BUCKET_ORDER,
-    type BucketId,
-    type Condition,
-} from "../utils/questions";
+import QUESTIONS, { BUCKET_ORDER, type BucketId, type Condition } from "../utils/questions";
+
+/* ------------------- Identity + Storage helpers ------------------- */
+type Identity = { email: string; username?: string };
+
+function readJSON<T>(key: string, fallback: T): T {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as T) : fallback;
+    } catch {
+        return fallback;
+    }
+}
+function writeJSON(key: string, value: any) {
+    localStorage.setItem(key, JSON.stringify(value));
+}
+function emailKey(email: string) {
+    return encodeURIComponent((email || "").trim().toLowerCase());
+}
+function useCurrentIdentity(): Identity | null {
+    const [id, setId] = React.useState<Identity | null>(null);
+    React.useEffect(() => {
+        try {
+            const raw = localStorage.getItem("currentUser");
+            if (raw) setId(JSON.parse(raw) as Identity);
+            else setId(null);
+        } catch {
+            setId(null);
+        }
+    }, []);
+    return id;
+}
+function qaAnswersKey(email: string) {
+    return `QA::answers::${emailKey(email)}`;
+}
+function qaProgressKey(email: string) {
+    return `QA::progress::${emailKey(email)}`;
+}
 
 /* ------------------------------------------------------------------ */
 /* Map questions.ts types to modal input components                    */
@@ -58,7 +94,7 @@ type InputTypeExpected =
     | "selfcare-selector"
     | "exercise-selector"
     | "leisure-selector"
-    | "custom-obligations-selector"; // ⬅️ NEW
+    | "custom-obligations-selector";
 
 function mapTypeToExpected(t: string): InputTypeExpected {
     switch (t) {
@@ -126,12 +162,7 @@ function buildFlatFromConfig(): FlatQuestionItem[] {
                 text: q.description,
                 inputType: mapTypeToExpected(q.type),
                 hint: q.hint ?? "",
-                default:
-                    q.defaultValue !== undefined
-                        ? q.defaultValue
-                        : q.type === "priority"
-                            ? 70
-                            : undefined,
+                default: q.defaultValue !== undefined ? q.defaultValue : q.type === "priority" ? 70 : undefined,
                 when: q.when,
                 __bucketLabel: label,
                 __bucketId: bid,
@@ -162,7 +193,7 @@ function evalCondition(cond: Condition, answers: Record<string, any>): boolean {
     // @ts-expect-error truthy/falsy narrow
     if ((cond as any).truthy) return !!val;
     // @ts-expect-error truthy/falsy narrow
-    if ( (cond as any).falsy) return !val;
+    if ((cond as any).falsy) return !val;
     return true;
 }
 function isVisible(q: FlatQuestionItem, answers: Record<string, any>): boolean {
@@ -174,6 +205,13 @@ function isVisible(q: FlatQuestionItem, answers: Record<string, any>): boolean {
 /* ------------------------------------------------------------------ */
 const QuestionnairePage: React.FC = () => {
     const navigate = useNavigate();
+    const identity = useCurrentIdentity();
+
+    // If not logged in, send home
+    React.useEffect(() => {
+        if (identity === null) return; // still loading identity
+        if (!identity?.email) navigate("/");
+    }, [identity, navigate]);
 
     /* ---------- Build flat list and track the linear index ---------- */
     const flat = React.useMemo(() => buildFlatFromConfig(), []);
@@ -181,9 +219,7 @@ const QuestionnairePage: React.FC = () => {
     const current = flat[linearIndex];
 
     /* ---------- Answers & local UI state ---------- */
-    const [answers, setAnswers] = React.useState<Record<string, any>>(
-        () => buildDefaultAnswers()
-    );
+    const [answers, setAnswers] = React.useState<Record<string, any>>(() => buildDefaultAnswers());
     const [textOrNumber, setTextOrNumber] = React.useState<string>("");
     const [classes, setClasses] = React.useState<string[]>([]);
     const [selectedDays, setSelectedDays] = React.useState<DayName[]>([]);
@@ -199,7 +235,37 @@ const QuestionnairePage: React.FC = () => {
     const [selfCarePrefs, setSelfCarePrefs] = React.useState<SelfCarePrefs[]>([]);
     const [exercisePrefs, setExercisePrefs] = React.useState<ExercisePrefs[]>([]);
     const [leisurePrefs, setLeisurePrefs] = React.useState<LeisurePrefs[]>([]);
-    const [customPrefs, setCustomPrefs] = React.useState<CustomObligationPrefs[]>([]); // ⬅️ NEW
+    const [customPrefs, setCustomPrefs] = React.useState<CustomObligationPrefs[]>([]);
+
+    /* ---------- Load per-user saved state on mount / identity change ---------- */
+    React.useEffect(() => {
+        if (!identity?.email) return;
+
+        const existing = readJSON<Record<string, any>>(qaAnswersKey(identity.email), {});
+        const merged = { ...buildDefaultAnswers(), ...existing };
+        setAnswers(merged);
+
+        // hydrate rich selectors if present
+        setSelfCarePrefs(Array.isArray(merged["selfcare_activities"]) ? merged["selfcare_activities"] : []);
+        setExercisePrefs(Array.isArray(merged["exercise_activities"]) ? merged["exercise_activities"] : []);
+        setLeisurePrefs(Array.isArray(merged["leisure_activities"]) ? merged["leisure_activities"] : []);
+        setCustomPrefs(Array.isArray(merged["custom_obligations"]) ? merged["custom_obligations"] : []);
+
+        const prog = readJSON<{ linearIndex?: number }>(qaProgressKey(identity.email), { linearIndex: 0 });
+        setLinearIndex(Math.max(0, Math.min(flat.length - 1, prog.linearIndex ?? 0)));
+    }, [identity?.email, flat.length]);
+
+    /* ---------- Persist answers whenever they change (per-user) ---------- */
+    React.useEffect(() => {
+        if (!identity?.email) return;
+        writeJSON(qaAnswersKey(identity.email), answers);
+    }, [identity?.email, answers]);
+
+    /* ---------- Persist progress whenever it changes ---------- */
+    React.useEffect(() => {
+        if (!identity?.email) return;
+        writeJSON(qaProgressKey(identity.email), { linearIndex });
+    }, [identity?.email, linearIndex]);
 
     /* ---------- Intro modal ---------- */
     const [showIntro, setShowIntro] = React.useState(true);
@@ -248,10 +314,7 @@ const QuestionnairePage: React.FC = () => {
         const currentName = socialListForFollowups[socialIdx];
         if (!currentName) return;
 
-        const count = Object.values(soIntervals).reduce(
-            (acc, arr) => acc + (arr?.length ?? 0),
-            0
-        );
+        const count = Object.values(soIntervals).reduce((acc, arr) => acc + (arr?.length ?? 0), 0);
         if (count === 0) return;
 
         const base = `social_${slugify(currentName)}`;
@@ -271,7 +334,6 @@ const QuestionnairePage: React.FC = () => {
     function renderSocialFollowupBody() {
         const name = socialListForFollowups[socialIdx] ?? "";
         if (!name) return null;
-
         return (
             <>
                 <p className="q-hint">
@@ -483,12 +545,7 @@ const QuestionnairePage: React.FC = () => {
                 );
             case "weekday-time-intervals": {
                 const currentVal = (answers[item.id] as WeekdayIntervalsValue) ?? {};
-                return (
-                    <WeekdayIntervals
-                        value={currentVal}
-                        onChange={(v) => setAnswers((p) => ({ ...p, [item.id]: v }))}
-                    />
-                );
+                return <WeekdayIntervals value={currentVal} onChange={(v) => setAnswers((p) => ({ ...p, [item.id]: v }))} />;
             }
             case "selfcare-selector":
                 return (
@@ -538,6 +595,20 @@ const QuestionnairePage: React.FC = () => {
                 );
         }
     };
+
+    /* Keep rich-array selectors in the saved answers whenever they change (live) */
+    React.useEffect(() => {
+        setAnswers((p) => ({ ...p, selfcare_activities: selfCarePrefs }));
+    }, [selfCarePrefs]);
+    React.useEffect(() => {
+        setAnswers((p) => ({ ...p, exercise_activities: exercisePrefs }));
+    }, [exercisePrefs]);
+    React.useEffect(() => {
+        setAnswers((p) => ({ ...p, leisure_activities: leisurePrefs }));
+    }, [leisurePrefs]);
+    React.useEffect(() => {
+        setAnswers((p) => ({ ...p, custom_obligations: customPrefs }));
+    }, [customPrefs]);
 
     /* ---------- Per-class follow-up mini-wizard (unchanged) ---------- */
     type SimpleClass = string;
@@ -633,14 +704,10 @@ const QuestionnairePage: React.FC = () => {
         }
     }
     function togglePrefTime(val: string) {
-        setCfPrefTimes((prev) =>
-            prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]
-        );
+        setCfPrefTimes((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]));
     }
     function toggleMeetDay(val: string) {
-        setCfMeetDays((prev) =>
-            prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]
-        );
+        setCfMeetDays((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]));
     }
     function renderClassFollowupBody() {
         const name = classListForFollowups[classIdx] ?? "";
@@ -682,18 +749,9 @@ const QuestionnairePage: React.FC = () => {
                         {DAYS.map((d) => (
                             <label
                                 key={d.key}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: ".35rem",
-                                    whiteSpace: "nowrap",
-                                }}
+                                style={{ display: "flex", alignItems: "center", gap: ".35rem", whiteSpace: "nowrap" }}
                             >
-                                <input
-                                    type="checkbox"
-                                    checked={cfMeetDays.includes(d.key)}
-                                    onChange={() => toggleMeetDay(d.key)}
-                                />
+                                <input type="checkbox" checked={cfMeetDays.includes(d.key)} onChange={() => toggleMeetDay(d.key)} />
                                 <span>{d.label}</span>
                             </label>
                         ))}
@@ -799,7 +857,7 @@ const QuestionnairePage: React.FC = () => {
             setAnswers((p) => ({ ...p, [item.id]: selectedTime.slice() }));
             setSelectedTime([]);
         } else if (item.inputType === "weekday-time-intervals") {
-            // already stored within component
+            // already stored within component via onChange
         } else if (item.inputType === "selfcare-selector") {
             setAnswers((p) => ({ ...p, [item.id]: selfCarePrefs.slice() }));
         } else if (item.inputType === "exercise-selector") {
@@ -809,7 +867,7 @@ const QuestionnairePage: React.FC = () => {
         } else if (item.inputType === "custom-obligations-selector") {
             setAnswers((p) => ({ ...p, [item.id]: customPrefs.slice() }));
         } else if (item.inputType === "priority" || item.inputType === "boolean") {
-            // stored live via onChange
+            // already stored live via onChange
         } else {
             setAnswers((p) => ({ ...p, [item.id]: textOrNumber }));
             setTextOrNumber("");
@@ -921,9 +979,7 @@ const QuestionnairePage: React.FC = () => {
                 }
                 onClose={closeClassFollowUps}
                 onSubmit={submitClassFollowupStep}
-                submitLabel={
-                    classStep < 3 ? "Next" : classIdx < classListForFollowups.length - 1 ? "Next Class" : "Finish"
-                }
+                submitLabel={classStep < 3 ? "Next" : classIdx < classListForFollowups.length - 1 ? "Next Class" : "Finish"}
             >
                 {renderClassFollowupBody()}
             </QuestionModal>
