@@ -314,3 +314,129 @@
     }
 }
 
+
+/* Home auth form inputs: white text + better contrast */
+.home .auth-form input {
+    color: #fff;                 /* ← text color */
+    caret-color: #fff;           /* ← cursor color */
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+    outline: none;
+}
+
+/* Placeholder color */
+.home .auth-form input::placeholder {
+    color: rgba(0,0,0,0.65);
+}
+
+/* Focus state: clearer outline */
+.home .auth-form input:focus {
+    border-color: #8ab4ff;
+    box-shadow: 0 0 0 3px rgba(138,180,255,0.35);
+}
+
+/* Improve contrast on the dropdown menu container if needed */
+.home .dropdown__content {
+    background: #111;            /* dark panel so white text pops */
+    color: #fff;
+}
+
+/* Optional: label the buttons for contrast consistency */
+.home .auth-form button {
+    color: #111;
+    background: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.home .auth-form button:hover {
+    filter: brightness(0.95);
+}
+
+/* Chrome/Edge autofill (prevents yellow bg and dark text) */
+.home .auth-form input:-webkit-autofill,
+.home .auth-form input:-webkit-autofill:hover,
+.home .auth-form input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #fff;
+    transition: background-color 9999s ease-in-out 0s;
+    box-shadow: 0 0 0px 1000px rgba(255,255,255,0.08) inset;
+    caret-color: #fff;
+}
+
+
+/* 🔧 Consistent dark inputs on Home page */
+.home .auth-form input {
+    background-color: #000 !important;      /* always black background */
+    color: #fff !important;                 /* white text */
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s ease;
+    caret-color: #fff;
+}
+
+/* Keep placeholder visible */
+.home .auth-form input::placeholder {
+    color: rgba(255,255,255,0.6);
+}
+
+/* Focus outline */
+.home .auth-form input:focus {
+    border-color: #8ab4ff;
+    box-shadow: 0 0 0 3px rgba(138,180,255,0.25);
+}
+
+/* Fix Chrome/Edge autofill (forces black bg and white text) */
+.home .auth-form input:-webkit-autofill,
+.home .auth-form input:-webkit-autofill:hover,
+.home .auth-form input:-webkit-autofill:focus,
+.home .auth-form input:-webkit-autofill:active {
+    -webkit-text-fill-color: #fff !important;
+    -webkit-box-shadow: 0 0 0px 1000px #000 inset !important;
+    box-shadow: 0 0 0px 1000px #000 inset !important;
+    transition: background-color 9999s ease-in-out 0s;
+    caret-color: #fff;
+}
+
+/* Optional: style the dropdown form container too */
+.home .dropdown__content {
+    background: #000;
+    color: #fff;
+}
+
+/* 🔧 Keep the auth form nicely padded and centered */
+.home .auth-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;        /* left-align everything inside */
+    justify-content: flex-start;
+    padding: 0 1.5rem;              /* adds left/right breathing room */
+    box-sizing: border-box;
+    width: 100%;
+}
+
+/* Slight horizontal constraint on inputs */
+.home .auth-form input,
+.home .auth-form button {
+    width: 95%;                     /* prevents touching right edge */
+    max-width: 360px;               /* keeps form visually neat */
+    margin: 0.25rem 0;
+}
+
+/* Optional: center form overall in dropdown */
+.home .dropdown__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 1rem;
+}
+
+
+
+
