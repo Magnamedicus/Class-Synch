@@ -24,6 +24,7 @@ import work_AddShifts from "../assets/question_images/Work_AddShifts.png";
 import work_HoursAmount from "../assets/question_images/Work_HoursAmountQ.png";
 import work_CommuteBoolean from "../assets/question_images/Work_CommuteBooleanQ.png";
 import work_CommuteLength from "../assets/question_images/Work_CommuteLengthQ.png";
+import work_HomeBoolean from "../assets/question_images/Work_HomeBoolean.png"
 
 /* --------------------------------- Types ---------------------------------- */
 
@@ -299,7 +300,7 @@ export const QUESTIONS: Record<BucketId, Bucket> = {
             },
             {
                 id: "work_from_home",
-                image: IMG_PLACEHOLDER,
+                image: work_HomeBoolean,
                 description: "Do you work from home?",
                 type: "boolean",
                 defaultValue: false,
