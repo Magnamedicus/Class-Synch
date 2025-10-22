@@ -2,6 +2,7 @@
 import React from "react";
 import QUESTIONS, { type Condition } from "../../utils/questions";
 import "../../css/Profile.css";
+import "../../css/SelfCareTab.css";
 
 // Inputs used in the Self Care bucket
 import SunMoonBoolean from "../../components/inputs/SunMoonBoolean";
@@ -143,7 +144,7 @@ const SelfCareTab: React.FC = () => {
     const selfCareQs = QUESTIONS.selfCare.questions;
 
     return (
-        <div className="profile-tab-pane">
+        <div className="profile-tab-pane profile-tab--selfcare">
             <h2>🧘 Self Care Preferences</h2>
 
             <div className="profile-grid">

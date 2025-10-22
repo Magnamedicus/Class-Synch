@@ -1,0 +1,15 @@
+/* Dark text-entry fields only inside the Leisure tab */
+.profile-tab--leisure input[type="text"],
+.profile-tab--leisure textarea,
+.profile-tab--leisure .selector-input,
+.profile-tab--leisure .selector-input input {
+    background-color: #1b1c20 !important;
+    color: #fff !important;
+    border: 1px solid #333 !important;
+    border-radius: 6px;
+}
+
+.profile-tab--leisure input::placeholder,
+.profile-tab--leisure textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}

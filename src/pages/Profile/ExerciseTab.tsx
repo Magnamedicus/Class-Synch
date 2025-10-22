@@ -8,6 +8,7 @@ import SunMoonBoolean from "../../components/inputs/SunMoonBoolean";
 import PrioritySlider from "../../components/inputs/PrioritySlider";
 import NumberInput from "../../components/inputs/NumberInput";
 import ExerciseSelector, { type ExercisePrefs } from "../../components/inputs/ExerciseSelector";
+import "../../css/ExerciseTab.css";
 
 /* ---------------- Match QuestionnairePage storage helpers ---------------- */
 type AnswerMap = Record<string, any>;
@@ -156,7 +157,7 @@ const ExerciseTab: React.FC = () => {
     const exerciseQs = QUESTIONS.exercise.questions;
 
     return (
-        <div className="profile-tab-pane">
+        <div className="profile-tab-pane profile-tab--exercise">
             <h2>🏋️ Exercise Preferences</h2>
 
             <div className="profile-grid">

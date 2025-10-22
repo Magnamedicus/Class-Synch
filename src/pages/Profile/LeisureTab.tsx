@@ -2,6 +2,7 @@
 import React from "react";
 import QUESTIONS, { type Condition } from "../../utils/questions";
 import "../../css/Profile.css";
+import "../../css/LeisureTab.css";
 
 // Inputs used in the Leisure bucket
 import SunMoonBoolean from "../../components/inputs/SunMoonBoolean";
@@ -143,7 +144,7 @@ const LeisureTab: React.FC = () => {
     const leisureQs = QUESTIONS.leisure.questions;
 
     return (
-        <div className="profile-tab-pane">
+        <div className="profile-tab-pane profile-tab--leisure">
             <h2>🎮 Leisure Preferences</h2>
 
             <div className="profile-grid">

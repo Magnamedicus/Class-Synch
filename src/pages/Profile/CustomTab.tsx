@@ -2,6 +2,7 @@
 import React from "react";
 import QUESTIONS, { type Condition } from "../../utils/questions";
 import "../../css/Profile.css";
+import "../../css/CustomTab.css";
 
 // Inputs used in the Custom bucket
 import SunMoonBoolean from "../../components/inputs/SunMoonBoolean";
@@ -133,7 +134,7 @@ const CustomTab: React.FC = () => {
     const customQs = QUESTIONS.custom.questions;
 
     return (
-        <div className="profile-tab-pane">
+        <div className="profile-tab-pane  profile-tab--custom">
             <h2>🧩 Custom Obligations</h2>
 
             <div className="profile-grid">

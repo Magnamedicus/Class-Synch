@@ -1,0 +1,15 @@
+/* Dark text-entry fields only inside the Self-Care tab */
+.profile-tab--selfcare input[type="text"],
+.profile-tab--selfcare textarea,
+.profile-tab--selfcare .selector-input,
+.profile-tab--selfcare .selector-input input {
+    background-color: #1b1c20 !important;
+    color: #fff !important;
+    border: 1px solid #333 !important;
+    border-radius: 6px;
+}
+
+.profile-tab--selfcare input::placeholder,
+.profile-tab--selfcare textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
