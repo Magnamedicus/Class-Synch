@@ -4,11 +4,13 @@ import Navbar from "../../components/Navbar";
 import "../../css/Profile.css";
 
 const tabs = [
-    { path: "sleep", label: "🛏️ Sleep" },
     { path: "school", label: "📚 School" },
+    { path: "sleep", label: "🛏️ Sleep" },
     { path: "work", label: "💼 Work" },
+    { path: "exercise", label: "🏋️‍♀️ Exercise" },
     { path: "selfcare", label: "🧘 Self-Care" },
     { path: "leisure", label: "🎮 Leisure" },
+
 ];
 
 export default function ProfileLayout() {
