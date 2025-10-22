@@ -17,6 +17,7 @@ import WorkTab from "./pages/Profile/WorkTab";
 import SelfCareTab from "./pages/Profile/SelfCareTab";
 import LeisureTab from "./pages/Profile/LeisureTab";
 import ExerciseTab from "./pages/Profile/ExerciseTab";
+import CustomTab from "./pages/Profile/CustomTab";
 
 // === Router Definition ===
 const router = createBrowserRouter([
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
             { path: "selfcare", element: <SelfCareTab /> },
             { path: "leisure", element: <LeisureTab /> },
             { path: "exercise", element: <ExerciseTab /> },
+            { path: "custom", element: <CustomTab />}
         ],
     },
 ]);

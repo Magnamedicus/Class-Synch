@@ -10,6 +10,7 @@ const tabs = [
     { path: "exercise", label: "🏋️‍♀️ Exercise" },
     { path: "selfcare", label: "🧘 Self-Care" },
     { path: "leisure", label: "🎮 Leisure" },
+    { path: "custom", label: "❓ Custom" },
 
 ];
 
