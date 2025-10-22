@@ -21,32 +21,44 @@ const DAYS: Array<{ key: DayName; short: string; label: string }> = [
 ];
 
 export interface DaySelectionProps {
-    value: DayName[];                         // selected days
-    onChange: (days: DayName[]) => void;      // update selection
+    value?: DayName[]; // selected days (optional now)
+    onChange: (days: DayName[]) => void;
     disabled?: boolean;
     className?: string;
     ariaLabel?: string;
 }
 
 const DaySelection: React.FC<DaySelectionProps> = ({
-                                                       value,
+                                                       value = [], // ✅ fallback to empty array if undefined
                                                        onChange,
                                                        disabled = false,
                                                        className = "",
                                                        ariaLabel = "Select days of the week",
                                                    }) => {
-    const toggle = (d: DayName) => {
+    const toggle = (day: DayName) => {
         if (disabled) return;
-        const set = new Set(value);
-        if (set.has(d)) set.delete(d);
-        else set.add(d);
+
+        // ✅ ensure value is always an array
+        const current = Array.isArray(value) ? [...value] : [];
+        const set = new Set(current);
+
+        if (set.has(day)) set.delete(day);
+        else set.add(day);
+
         onChange(Array.from(set));
     };
 
     return (
-        <div className={`daysel-root ${className}`} role="group" aria-label={ariaLabel}>
+        <div
+            className={`daysel-root ${className}`}
+            role="group"
+            aria-label={ariaLabel}
+        >
             {DAYS.map((d) => {
-                const selected = value.includes(d.key);
+                // ✅ safely check for inclusion
+                const selected =
+                    Array.isArray(value) && value.includes(d.key);
+
                 return (
                     <button
                         key={d.key}

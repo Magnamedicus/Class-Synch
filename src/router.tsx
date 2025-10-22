@@ -1,33 +1,42 @@
 // src/router.tsx
 import { createBrowserRouter } from "react-router-dom";
-import Home from "./pages/home";
-import Profile from "./pages/Profile";
-import Scheduler from "./components/scheduler"; // if this is a page
-import About from "./pages/about";
-import QuestionnairePage from "./pages/QuestionnairePage.tsx";
 
-// Define routes
+// === Core Pages ===
+import Home from "./pages/home";
+import About from "./pages/about";
+import QuestionnairePage from "./pages/QuestionnairePage";
+import MySchedule from "./pages/MySchedule";
+
+// === Profile Tabs Layout ===
+import ProfileLayout from "./pages/Profile/ProfileLayout";
+
+// === Profile Tabs (Buckets) ===
+import SleepTab from "./pages/Profile/SleepTab";
+import SchoolTab from "./pages/Profile/SchoolTab";
+import WorkTab from "./pages/Profile/WorkTab";
+import SelfCareTab from "./pages/Profile/SelfCareTab";
+import LeisureTab from "./pages/Profile/LeisureTab";
+
+// === Router Definition ===
 const router = createBrowserRouter([
-    {
-        path: "/",
-        element: <Home />,
-    },
+    { path: "/", element: <Home /> },
+    { path: "/about", element: <About /> },
+    { path: "/questionnaire", element: <QuestionnairePage /> },
+    { path: "/schedule", element: <MySchedule /> },
+
+    // === Profile (Parent Layout + Child Tabs) ===
     {
         path: "/profile",
-        element: <Profile />,
+        element: <ProfileLayout />,
+        children: [
+            { index: true, element: <SleepTab /> }, // default to Sleep
+            { path: "sleep", element: <SleepTab /> },
+            { path: "school", element: <SchoolTab /> },
+            { path: "work", element: <WorkTab /> },
+            { path: "selfcare", element: <SelfCareTab /> },
+            { path: "leisure", element: <LeisureTab /> },
+        ],
     },
-    {
-        path: "/schedule",
-        element: <Scheduler />,
-    },
-    {
-        path: "/about",
-        element: <About />,
-    },
-    {
-        path: "/questionnaire",
-        element: <QuestionnairePage />,
-    }
 ]);
 
 export default router;

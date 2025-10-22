@@ -1,0 +1,151 @@
+/* -------------------------------
+   SchoolTab – classy dark accordions
+   ------------------------------- */
+
+:root {
+    --school-accent: #60a5fa;        /* blue-400 */
+    --school-accent-ink: #93c5fd;    /* blue-300 */
+    --school-surface: #0f172a;       /* slate-900 */
+    --school-surface-2: #111827;     /* gray-900 */
+    --school-border: #1f2937;        /* gray-800 */
+    --school-border-2: #243244;      /* deep slate line */
+    --school-ink: #e5e7eb;           /* gray-200 */
+    --school-ink-muted: #9ca3af;     /* gray-400 */
+    --school-chip-bg: #0b2546;       /* blue-950-ish */
+    --school-chip-line: #1e40af;     /* blue-800 */
+    --school-shadow: 0 10px 30px rgba(2, 6, 23, .45);
+}
+
+.profile-accordion {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.profile-accordion__item {
+    border: 1px solid var(--school-border);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #0b1220, #0c1423 60%, #0b0f1a);
+    box-shadow: var(--school-shadow);
+    overflow: clip;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.profile-accordion__item:hover {
+    border-color: color-mix(in srgb, var(--school-accent) 35%, var(--school-border));
+    box-shadow: 0 16px 40px rgba(2, 6, 23, .55);
+    transform: translateY(-1px);
+}
+
+.profile-accordion__summary {
+    cursor: pointer;
+    list-style: none;
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: .75rem;
+    align-items: center;
+    color: var(--school-ink);
+    padding: .9rem 1rem;
+    user-select: none;
+}
+
+.profile-accordion__summary::-webkit-details-marker { display: none; }
+
+/* Chevron as inline SVG so it renders crisply */
+.profile-accordion__chevron {
+    width: 18px;
+    height: 18px;
+    display: inline-grid;
+    place-items: center;
+    transform: rotate(0deg);
+    transition: transform .18s ease;
+    opacity: .9;
+}
+.profile-accordion__chevron svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    stroke: var(--school-accent-ink);
+    stroke-width: 2.4;
+    fill: none;
+    opacity: .95;
+}
+.profile-accordion__item[open] .profile-accordion__chevron { transform: rotate(90deg); }
+
+.class-summary-title {
+    font-weight: 800;
+    letter-spacing: .2px;
+    color: var(--school-ink);
+    line-height: 1.2;
+}
+
+.class-summary-meta {
+    display: inline-flex;
+    gap: .4rem;
+    align-items: center;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .28rem .6rem;
+    border-radius: 999px;
+    background: var(--school-chip-bg);
+    border: 1px solid var(--school-chip-line);
+    color: var(--school-accent-ink);
+    font-weight: 700;
+    font-size: .78rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.badge .dot {
+    width: .45rem;
+    height: .45rem;
+    border-radius: 999px;
+    background: var(--school-accent);
+}
+
+/* Divider + body */
+.profile-accordion__body {
+    border-top: 1px dashed var(--school-border-2);
+    padding: .65rem 1rem 1rem;
+    color: var(--school-ink);
+}
+
+/* The input cards inside: darker and tighter */
+.profile-accordion__body .profile-card.input-mode {
+    background: linear-gradient(180deg, #0b1320, #0b1524 60%, #0a1320);
+    border: 1px solid var(--school-border);
+    color: var(--school-ink);
+}
+
+/* Section headings in the tab */
+.profile-tab-pane > h3 {
+    color: var(--school-accent-ink);
+    font-weight: 900;
+    letter-spacing: .2px;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+}
+.profile-tab-pane > h3::before {
+    content: "";
+    width: .6rem;
+    height: .6rem;
+    border-radius: 999px;
+    background: var(--school-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--school-accent) 18%, transparent);
+}
+
+/* Make the grid breathe just a tad more in the accordion */
+.profile-accordion__body .profile-grid {
+    gap: .85rem;
+}
+
+/* Improve focus visibility for keyboard users */
+.profile-accordion__summary:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--school-accent) 55%, white 0%);
+    outline-offset: 3px;
+    border-radius: 12px;
+}
