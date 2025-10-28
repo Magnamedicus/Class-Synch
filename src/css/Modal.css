@@ -89,13 +89,28 @@
 }
 
 /* ---- Slider ---- */
+/* Range slider with dynamic fill up to thumb position */
 .modal-form input[type="range"] {
     -webkit-appearance: none;
+    appearance: none;
     width: 100%;
+    height: 24px; /* room for thumb */
+    background: transparent;
+    outline: none;
+    /* Variables to compute filled percentage */
+    --min: 0;
+    --max: 100;
+    --value: 0;
+    --track-color: #e5e7eb;   /* slate-200 */
+    --fill-color: #3b82f6;    /* blue-500 */
+    --pct: calc((var(--value) - var(--min)) * 100% / (var(--max) - var(--min)));
+}
+
+/* WebKit track */
+.modal-form input[type="range"]::-webkit-slider-runnable-track {
     height: 8px;
     border-radius: 5px;
-    background: linear-gradient(to right, #3b82f6, #60a5fa);
-    outline: none;
+    background: linear-gradient(to right, var(--fill-color) 0 var(--pct), var(--track-color) var(--pct) 100%);
 }
 
 .modal-form input[type="range"]::-webkit-slider-thumb {
@@ -108,6 +123,7 @@
     border: 2px solid #3b82f6;
     cursor: pointer;
     transition: transform 0.15s;
+    margin-top: -5px; /* center on 8px track */
 }
 
 .modal-form input[type="range"]::-webkit-slider-thumb:hover {
@@ -122,6 +138,18 @@
     border: 2px solid #3b82f6;
     cursor: pointer;
     transition: transform 0.15s;
+}
+
+/* Firefox track & progress */
+.modal-form input[type="range"]::-moz-range-track {
+    height: 8px;
+    border-radius: 5px;
+    background: var(--track-color);
+}
+.modal-form input[type="range"]::-moz-range-progress {
+    height: 8px;
+    border-radius: 5px;
+    background: var(--fill-color);
 }
 
 .modal-form input[type="range"]::-moz-range-thumb:hover {

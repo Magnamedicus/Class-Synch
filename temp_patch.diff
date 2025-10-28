@@ -1,0 +1,78 @@
+*** Begin Patch
+*** Update File: src/components/scheduler.tsx
+@@
+-    const updateBlock = () => {
++    // Merge identical labels separated by a small gap (<= 1 block) on a single row
++    const mergeNearIdenticalsOnRow = (row: (string | null)[], maxGap = 1) => {
++        let changed = true;
++        while (changed) {
++            changed = false;
++            let i = 0;
++            while (i < row.length) {
++                const lab = row[i];
++                if (!lab) { i++; continue; }
++                let j = i + 1;
++                while (j < row.length && row[j] === lab) j++;
++                let g = j;
++                while (g < row.length && row[g] === null) g++;
++                if (g < row.length && (g - j) > 0 && (g - j) <= maxGap) {
++                    let k = g;
++                    while (k < row.length && row[k] === lab) k++;
++                    if (k > g) {
++                        for (let p = j; p < g; p++) row[p] = lab;
++                        changed = true;
++                        j = k;
++                    }
++                }
++                i = j;
++            }
++        }
++    };
++
++    const updateBlock = () => {
+         if (!schedule || !selected) return;
+-        const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
++        const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
+@@
+-        for (let i = selected.startIdx; i < selected.startIdx + newLength; i++) {
++        for (let i = selected.startIdx; i < selected.startIdx + newLength; i++) {
+             if (i < updated[selected.day].length) {
+                 updated[selected.day][i] = newLabel;
+             }
+         }
++
++        // After manual edit, merge any identical labels separated by <= 1 block on this day
++        mergeNearIdenticalsOnRow(updated[selected.day]);
+@@
+-                    onMoveBlock={(fromDay, fromStartIdx, length, label, toDay, toStartIdx) => {
++                    onMoveBlock={(fromDay, fromStartIdx, length, label, toDay, toStartIdx) => {
+                         setSchedule((prev) => {
+                             if (!prev) return prev;
+@@
+-                            // place at destination
++                            // place at destination
+                             for (let k = 0; k < length; k++) {
+                                 next[toDay as keyof Schedule][toStartIdx + k] = label;
+                             }
++                            // Merge identical labels with tiny gaps on involved days
++                            mergeNearIdenticalsOnRow(next[fromDay as keyof Schedule]);
++                            mergeNearIdenticalsOnRow(next[toDay as keyof Schedule]);
+                             persist(next);
+                             return next;
+                         });
+                     }}
+@@
+-                        for (let k = 0; k < length; k++) next[fromDay as keyof Schedule][startIdx + k] = null;
+-                        for (let k = 0; k < length; k++) next[day as keyof Schedule][idx + k] = label;
++                        for (let k = 0; k < length; k++) next[fromDay as keyof Schedule][startIdx + k] = null;
++                        for (let k = 0; k < length; k++) next[day as keyof Schedule][idx + k] = label;
++                        // Merge identical labels with tiny gaps on involved days
++                        mergeNearIdenticalsOnRow(next[fromDay as keyof Schedule]);
++                        mergeNearIdenticalsOnRow(next[day as keyof Schedule]);
+                         setSchedule(next);
+                         persist(next);
+                         setMoveCandidate(null);
+                         setToast("Moved");
+                     }}
+                 />
+*** End Patch

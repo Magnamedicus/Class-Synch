@@ -3,6 +3,7 @@ import {
     forwardRef,
     useImperativeHandle,
     useMemo,
+    useEffect,
 } from "react";
 import { generateSchedule } from "../utils/simulatedAnnealingScheduler";
 import { qaAnswersToCategories } from "../utils/qaAnswersToCategories";
@@ -21,6 +22,7 @@ import "../css/scheduler.css";
 ========================= */
 export type SchedulerHandle = {
     generate: () => Promise<Schedule | void>;
+    load: (s: Schedule) => void;
 };
 
 /* =========================
@@ -171,6 +173,21 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         }
     };
 
+    // Restore last saved schedule on mount so it persists across navigation
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('lastSchedule');
+            if (stored) {
+                const parsed = JSON.parse(stored) as Schedule;
+                if (parsed && parsed.monday && parsed.sunday) {
+                    setSchedule(parsed);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to restore lastSchedule:', e);
+        }
+    }, []);
+
     const handleGenerateSchedule = async (): Promise<Schedule | void> => {
         try {
             setLoading(true);
@@ -184,6 +201,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
             setSchedule(result);
             setMs(t1 - t0);
             persist(result);
+            try { localStorage.setItem('scheduleClosed', 'false'); } catch {}
             return result;
         } catch (err) {
             console.error("❌ Error generating schedule:", err);
@@ -194,6 +212,13 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
 
     useImperativeHandle(ref, () => ({
         generate: handleGenerateSchedule,
+        load: (s: Schedule) => {
+            setSchedule(s);
+            try {
+                localStorage.setItem('lastSchedule', JSON.stringify(s));
+                localStorage.setItem('scheduleClosed', 'false');
+            } catch {}
+        },
     }));
 
     const handleBlockClick = (
@@ -218,6 +243,33 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         setModalOpen(false);
     };
 
+    // Merge identical labels separated by a small gap (<= 1 block) on a single row
+    const mergeNearIdenticalsOnRow = (row: (string | null)[], maxGap = 1) => {
+        let changed = true;
+        while (changed) {
+            changed = false;
+            let i = 0;
+            while (i < row.length) {
+                const lab = row[i];
+                if (!lab) { i++; continue; }
+                let j = i + 1;
+                while (j < row.length && row[j] === lab) j++;
+                let g = j;
+                while (g < row.length && row[g] === null) g++;
+                if (g < row.length && (g - j) > 0 && (g - j) <= maxGap) {
+                    let k = g;
+                    while (k < row.length && row[k] === lab) k++;
+                    if (k > g) {
+                        for (let p = j; p < g; p++) row[p] = lab;
+                        changed = true;
+                        j = k;
+                    }
+                }
+                i = j;
+            }
+        }
+    };
+
     const updateBlock = () => {
         if (!schedule || !selected) return;
         const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
@@ -231,12 +283,26 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
             }
         }
 
+        // After manual edit, merge any identical labels separated by <= 1 block on this day
+        mergeNearIdenticalsOnRow(updated[selected.day]);
+
         setSchedule(updated);
         persist(updated);
         setModalOpen(false);
     };
 
     const currentCategories = getUserCategories();
+
+    // Format minutes as "X hours and Y minutes" when >= 60
+    const formatMinutes = (mins: number) => {
+        if (mins < 60) return `${mins} minutes`;
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        const hPart = `${h} ${h === 1 ? 'hour' : 'hours'}`;
+        if (m === 0) return hPart;
+        const mPart = `${m} ${m === 1 ? 'minute' : 'minutes'}`;
+        return `${hPart} and ${mPart}`;
+    };
 
     // Build dropdown options from what's currently visible on the grid,
     // so user can convert any block into any label that exists on the schedule.
@@ -251,6 +317,19 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         return Array.from(set).sort((a, b) => a.localeCompare(b));
     }, [schedule, selected?.label]);
     const blockEnd = selected ? selected.startIdx + newLength : null;
+
+    // Compute how many 15m blocks are free to the right of the selected block
+    const freeExtendRight = useMemo(() => {
+        if (!schedule || !selected) return 0;
+        const row = schedule[selected.day as keyof Schedule];
+        if (!row) return 0;
+        let free = 0;
+        for (let i = selected.startIdx + selected.length; i < row.length; i++) {
+            if (row[i] === null) free++;
+            else break;
+        }
+        return free;
+    }, [schedule, selected?.day, selected?.startIdx, selected?.length]);
 
     return (
         <div style={{ padding: 16 }}>
@@ -306,6 +385,9 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                             for (let k = 0; k < length; k++) {
                                 next[toDay as keyof Schedule][toStartIdx + k] = label;
                             }
+                            // Merge identical labels with tiny gaps on involved days
+                            mergeNearIdenticalsOnRow(next[fromDay as keyof Schedule]);
+                            mergeNearIdenticalsOnRow(next[toDay as keyof Schedule]);
                             persist(next);
                             return next;
                         });
@@ -340,6 +422,9 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                         };
                         for (let k = 0; k < length; k++) next[fromDay as keyof Schedule][startIdx + k] = null;
                         for (let k = 0; k < length; k++) next[day as keyof Schedule][idx + k] = label;
+                        // Merge identical labels with tiny gaps on involved days
+                        mergeNearIdenticalsOnRow(next[fromDay as keyof Schedule]);
+                        mergeNearIdenticalsOnRow(next[day as keyof Schedule]);
                         setSchedule(next);
                         persist(next);
                         setMoveCandidate(null);
@@ -356,7 +441,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                     <div className="modal-card" onClick={(e) => e.stopPropagation()}>
                         <h3>Modify Block</h3>
                         <p>
-                            {selected.label} • {selected.length * 15} minutes
+                            {selected.label} • {formatMinutes(selected.length * 15)}
                         </p>
 
                         <div className="modal-form">
@@ -375,15 +460,27 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                             </label>
 
                             <label>
-                                Length: {newLength * 15} minutes
+                                Length: {formatMinutes(newLength * 15)}
                                 <input
                                     type="range"
                                     min={1}
-                                    max={selected.length * 2}
+                                    max={selected.length + freeExtendRight}
                                     step={1}
                                     value={newLength}
+                                    style={{
+                                        // feed CSS variables for dynamic fill track
+                                        // @ts-ignore - custom properties
+                                        '--min': 1,
+                                        // @ts-ignore
+                                        '--max': selected.length + freeExtendRight,
+                                        // @ts-ignore
+                                        '--value': newLength,
+                                    } as React.CSSProperties}
                                     onChange={(e) => setNewLength(Number(e.target.value))}
                                 />
+                                <span style={{ fontSize: ".8rem", color: "#9ca3af" }}>
+                                    Max available here: {formatMinutes((selected.length + freeExtendRight) * 15)}
+                                </span>
                             </label>
 
                             {blockEnd && (
