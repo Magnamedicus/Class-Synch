@@ -1,6 +1,5 @@
 // src/pages/Home.tsx
 import { useState, useEffect } from "react";
-import Scheduler from "../components/scheduler";
 import "../css/Home.css";
 import Navbar from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
@@ -171,8 +170,6 @@ export default function Home() {
             </header>
 
             <main className="main-content">
-                <Scheduler />
-
                 {/* Development-only reset button */}
                 <button
                     className="reset"

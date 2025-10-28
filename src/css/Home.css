@@ -85,9 +85,14 @@
     top: 9vh;
     left: 5vw;
     z-index: 20;
+    display: inline-block;   /* shrink to content */
+    width: auto;             /* prevent full-width bar */
 }
 
 .dropdown__trigger {
+    display: inline-flex;       /* shrink to its contents */
+    align-items: center;
+    gap: 0.5rem;
     font-size: clamp(1rem, 2.5vw, 1.2rem);
     font-weight: 600;
     cursor: pointer;
@@ -96,6 +101,7 @@
     border-radius: 0.5rem;
     transition: background 0.2s ease;
     color: #fff;
+    white-space: nowrap;        /* keep hamburger + text on one line */
 }
 
 .dropdown__trigger:hover {
@@ -103,15 +109,20 @@
 }
 
 .dropdown__content {
+    position: absolute;     /* overlay so it does not push layout */
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 30;
     display: none;
     flex-direction: column;
-    margin-top: 0.5rem;
     background: rgba(15, 23, 32, 0.95);
     border-radius: 0.75rem;
     padding: 0.75rem;
     box-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.4);
-    animation: dropdownSlide 0.4s ease forwards;
+    animation: dropdownSlide 0.2s ease forwards;
     gap: 1rem;
+    width: 360px;           /* constrain width */
+    max-width: 90vw;        /* responsive cap */
 }
 
 .dropdown:hover .dropdown__content,
@@ -338,10 +349,7 @@
 }
 
 /* Improve contrast on the dropdown menu container if needed */
-.home .dropdown__content {
-    background: #111;            /* dark panel so white text pops */
-    color: #fff;
-}
+.home .dropdown__content { background: #111; color: #fff; width: 360px; max-width: 90vw; }
 
 /* Optional: label the buttons for contrast consistency */
 .home .auth-form button {
@@ -429,13 +437,7 @@
 }
 
 /* Optional: center form overall in dropdown */
-.home .dropdown__content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding-top: 1rem;
-}
+.home .dropdown__content { align-items: stretch; justify-content: flex-start; padding-top: 1rem; }
 
 
 
