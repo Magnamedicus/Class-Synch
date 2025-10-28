@@ -61,9 +61,17 @@ interface Props {
         block: DayBlock,
         blockType: string
     ) => void;
+    onMoveBlock?: (
+        fromDay: string,
+        fromStartIdx: number,
+        length: number,
+        label: string,
+        toDay: string,
+        toStartIdx: number
+    ) => void;
 }
 
-export function ScheduleGrid({ schedule, onBlockClick }: Props) {
+export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock }: Props) {
     const dayBlocks = useMemo(() => {
         const result: Record<string, DayBlock[]> = {};
         for (const day of DAYS) {
@@ -137,6 +145,31 @@ export function ScheduleGrid({ schedule, onBlockClick }: Props) {
                             <div
                                 key={`${day}-cell-${idx}`}
                                 className="schedule__cell"
+                                onDragOver={(e) => {
+                                    // allow drop
+                                    e.preventDefault();
+                                }}
+                                onDrop={(e) => {
+                                    if (!onMoveBlock) return;
+                                    try {
+                                        const raw = e.dataTransfer.getData("text/plain");
+                                        const data = JSON.parse(raw) as {
+                                            fromDay: string;
+                                            startIdx: number;
+                                            length: number;
+                                            label: string;
+                                        };
+                                        if (!data || typeof data.startIdx !== "number") return;
+                                        onMoveBlock(
+                                            data.fromDay,
+                                            data.startIdx,
+                                            data.length,
+                                            data.label,
+                                            day,
+                                            idx
+                                        );
+                                    } catch {}
+                                }}
                             />
                         ))}
 
@@ -159,6 +192,20 @@ export function ScheduleGrid({ schedule, onBlockClick }: Props) {
                                         } as React.CSSProperties
                                     }
                                     title={`${b.label} • ${startLabel}–${endLabel}`}
+                                    draggable
+                                    onDragStart={(e) => {
+                                        const payload = {
+                                            fromDay: day,
+                                            startIdx: b.startIdx,
+                                            length: b.length,
+                                            label: b.label,
+                                        };
+                                        e.dataTransfer.setData(
+                                            "text/plain",
+                                            JSON.stringify(payload)
+                                        );
+                                        e.dataTransfer.effectAllowed = "move";
+                                    }}
                                     onClick={() =>
                                         onBlockClick?.(day, b, blockType)
                                     }

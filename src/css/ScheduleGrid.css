@@ -68,6 +68,9 @@
     height: var(--header-h);
     border-right:1px solid var(--border);
     background:var(--panel);
+    position: sticky;
+    left: 0;
+    z-index: 6;
 }
 .schedule__day-header{
     height: var(--header-h);
@@ -92,11 +95,14 @@
     grid-template-rows: repeat(96, 1fr);
     border-right:1px solid var(--border);
     background:var(--panel-2);
+    position: sticky;
+    left: 0;
+    z-index: 5;
 }
 .schedule__time-slot{
     position:relative;
     border-bottom:1px solid var(--grid);
-    font-size:.625rem; /* 10px-ish */
+    font-size:.675rem;
     color:var(--muted);
     display:grid; align-items:end;
     padding: 0 var(--space-2) var(--space-1);
@@ -105,6 +111,8 @@
 .schedule__time-slot:nth-child(4n)::after{
     content: attr(data-label);
     position:absolute; left: var(--space-2); bottom: .125rem;
+    color: var(--text);
+    font-weight: 600;
 }
 
 

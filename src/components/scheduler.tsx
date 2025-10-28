@@ -264,7 +264,40 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
             )}
 
             {schedule && (
-                <ScheduleGrid schedule={schedule} onBlockClick={handleBlockClick} />
+                <ScheduleGrid
+                    schedule={schedule}
+                    onBlockClick={handleBlockClick}
+                    onMoveBlock={(fromDay, fromStartIdx, length, label, toDay, toStartIdx) => {
+                        setSchedule((prev) => {
+                            if (!prev) return prev;
+                            // bounds
+                            if (toStartIdx < 0 || toStartIdx + length > prev[toDay].length) return prev;
+                            // check destination free
+                            for (let k = 0; k < length; k++) {
+                                if (prev[toDay][toStartIdx + k] !== null) return prev;
+                            }
+                            const next: Schedule = {
+                                monday: [...prev.monday],
+                                tuesday: [...prev.tuesday],
+                                wednesday: [...prev.wednesday],
+                                thursday: [...prev.thursday],
+                                friday: [...prev.friday],
+                                saturday: [...prev.saturday],
+                                sunday: [...prev.sunday],
+                            };
+                            // clear source
+                            for (let k = 0; k < length; k++) {
+                                next[fromDay as keyof Schedule][fromStartIdx + k] = null;
+                            }
+                            // place at destination
+                            for (let k = 0; k < length; k++) {
+                                next[toDay as keyof Schedule][toStartIdx + k] = label;
+                            }
+                            persist(next);
+                            return next;
+                        });
+                    }}
+                />
             )}
 
             {modalOpen && selected && (
