@@ -69,9 +69,11 @@ interface Props {
         toDay: string,
         toStartIdx: number
     ) => void;
+    onStartTapMove?: (payload: { fromDay: string; startIdx: number; length: number; label: string }) => void;
+    onCellClick?: (day: string, startIdx: number) => void;
 }
 
-export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock }: Props) {
+export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMove, onCellClick }: Props) {
     const dayBlocks = useMemo(() => {
         const result: Record<string, DayBlock[]> = {};
         for (const day of DAYS) {
@@ -148,11 +150,20 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock }: Props) {
                                 onDragOver={(e) => {
                                     // allow drop
                                     e.preventDefault();
+                                    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+                                }}
+                                onDragEnter={(e) => {
+                                    (e.currentTarget as HTMLDivElement).classList.add("droptarget");
+                                }}
+                                onDragLeave={(e) => {
+                                    (e.currentTarget as HTMLDivElement).classList.remove("droptarget");
                                 }}
                                 onDrop={(e) => {
                                     if (!onMoveBlock) return;
                                     try {
-                                        const raw = e.dataTransfer.getData("text/plain");
+                                        let raw = e.dataTransfer.getData("application/json");
+                                        if (!raw) raw = e.dataTransfer.getData("text/plain");
+                                        if (!raw) raw = e.dataTransfer.getData("text");
                                         const data = JSON.parse(raw) as {
                                             fromDay: string;
                                             startIdx: number;
@@ -169,7 +180,9 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock }: Props) {
                                             idx
                                         );
                                     } catch {}
+                                    (e.currentTarget as HTMLDivElement).classList.remove("droptarget");
                                 }}
+                                onClick={() => onCellClick?.(day, idx)}
                             />
                         ))}
 
@@ -200,11 +213,21 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock }: Props) {
                                             length: b.length,
                                             label: b.label,
                                         };
-                                        e.dataTransfer.setData(
-                                            "text/plain",
-                                            JSON.stringify(payload)
-                                        );
+                                        const json = JSON.stringify(payload);
+                                        e.dataTransfer.setData("application/json", json);
+                                        e.dataTransfer.setData("text/plain", json);
+                                        e.dataTransfer.setData("text", json);
                                         e.dataTransfer.effectAllowed = "move";
+                                    }}
+                                    onTouchStart={(e) => {
+                                        if (!onStartTapMove) return;
+                                        const target = e.currentTarget as HTMLDivElement;
+                                        const timer = window.setTimeout(() => {
+                                            onStartTapMove({ fromDay: day, startIdx: b.startIdx, length: b.length, label: b.label });
+                                        }, 500);
+                                        const clear = () => window.clearTimeout(timer);
+                                        target.addEventListener('touchend', clear, { once: true });
+                                        target.addEventListener('touchcancel', clear, { once: true });
                                     }}
                                     onClick={() =>
                                         onBlockClick?.(day, b, blockType)

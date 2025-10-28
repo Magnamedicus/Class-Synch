@@ -155,6 +155,13 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
 
     const [newLabel, setNewLabel] = useState<string>("");
     const [newLength, setNewLength] = useState<number>(1);
+    const [toast, setToast] = useState<string>("");
+    const [moveCandidate, setMoveCandidate] = useState<{
+        fromDay: string;
+        startIdx: number;
+        length: number;
+        label: string;
+    } | null>(null);
 
     const persist = (s: Schedule) => {
         try {
@@ -271,10 +278,16 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                         setSchedule((prev) => {
                             if (!prev) return prev;
                             // bounds
-                            if (toStartIdx < 0 || toStartIdx + length > prev[toDay].length) return prev;
+                            if (toStartIdx < 0 || toStartIdx + length > prev[toDay].length) {
+                                setToast("Cannot drop: destination out of bounds");
+                                return prev;
+                            }
                             // check destination free
                             for (let k = 0; k < length; k++) {
-                                if (prev[toDay][toStartIdx + k] !== null) return prev;
+                                if (prev[toDay][toStartIdx + k] !== null) {
+                                    setToast("Cannot drop: destination occupied");
+                                    return prev;
+                                }
                             }
                             const next: Schedule = {
                                 monday: [...prev.monday],
@@ -297,7 +310,45 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                             return next;
                         });
                     }}
+                    onStartTapMove={(payload) => {
+                        setMoveCandidate(payload);
+                        setToast("Select a target cell to move here");
+                    }}
+                    onCellClick={(day, idx) => {
+                        if (!moveCandidate || !schedule) return;
+                        const { fromDay, startIdx, length, label } = moveCandidate;
+                        // attempt move similar to onMoveBlock
+                        const destEnd = idx + length;
+                        if (idx < 0 || destEnd > schedule[day as keyof Schedule].length) {
+                            setToast("Cannot place: out of bounds");
+                            return;
+                        }
+                        for (let k = 0; k < length; k++) {
+                            if (schedule[day as keyof Schedule][idx + k] !== null) {
+                                setToast("Cannot place: destination occupied");
+                                return;
+                            }
+                        }
+                        const next: Schedule = {
+                            monday: [...schedule.monday],
+                            tuesday: [...schedule.tuesday],
+                            wednesday: [...schedule.wednesday],
+                            thursday: [...schedule.thursday],
+                            friday: [...schedule.friday],
+                            saturday: [...schedule.saturday],
+                            sunday: [...schedule.sunday],
+                        };
+                        for (let k = 0; k < length; k++) next[fromDay as keyof Schedule][startIdx + k] = null;
+                        for (let k = 0; k < length; k++) next[day as keyof Schedule][idx + k] = label;
+                        setSchedule(next);
+                        persist(next);
+                        setMoveCandidate(null);
+                        setToast("Moved");
+                    }}
                 />
+            )}
+            {toast && (
+                <div className="toast" role="status" aria-live="polite" onAnimationEnd={() => setToast("")}>{toast}</div>
             )}
 
             {modalOpen && selected && (
