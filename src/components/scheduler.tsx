@@ -196,6 +196,14 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         return null;
     };
 
+    // If user switches the label to Night Sleep in the dropdown, seed override inputs
+    useEffect(() => {
+        if (newLabel && newLabel.toLowerCase().includes("night sleep")) {
+            setBedTime("10:00 PM");
+            setWakeTime("07:00 AM");
+        }
+    }, [newLabel]);
+
     const persist = (s: Schedule) => {
         try {
             localStorage.setItem("lastSchedule", JSON.stringify(s));
@@ -540,7 +548,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                 </select>
                             </label>
 
-                            {selected.label.toLowerCase().includes("night sleep") && (
+                            {newLabel.toLowerCase().includes("night sleep") && (
                                 <div style={{ display: "grid", gap: "0.75rem", marginTop: "0.25rem" }}>
                                     {/* If Night Sleep block is in PM (>= 12:00), show Bedtime */}
                                     {selected.startIdx >= (12 * BLOCKS_PER_HOUR) && (
