@@ -435,6 +435,13 @@ function canPlaceFlexibleAt(block: number, t: Task): boolean {
             : (["afternoon", "evening"] as const);
         return prefs.some((b: any) => inBucket(block, b));
     }
+    // Socializing: disallow Morning unless explicitly preferred
+    const isSocial = /social/i.test(t.category) || /social/i.test(t.courseName) || /socializing/i.test(t.courseName);
+    if (isSocial) {
+        const inMorning = inBucket(block, 'morning');
+        if (inMorning) return !!(t.preferred && t.preferred.includes('morning'));
+        return withinFlexibleDayWindow(block);
+    }
     // For others, keep the flexible day window and allow soft preference scoring elsewhere
     return withinFlexibleDayWindow(block);
 }
@@ -557,11 +564,17 @@ function greedyFill(ctx: BuildCtx) {
                 if (remain <= 0) break;
                 if (!canPlaceFlexibleAt(i, t)) continue;
                 const free = freeRunLen(ctx.schedule, d, i);
-                if (free < 2) continue;
+                const isSocial = /social/i.test(t.category) || /social/i.test(t.courseName) || /socializing/i.test(t.courseName);
+                if (free < (isSocial ? 4 : 2)) continue;
 
-                const len = Math.min(chunkFor(t), remain, free);
+                let len = Math.min(chunkFor(t), remain, free);
                 // For naps, never place shorter than 45 minutes (3 blocks)
                 if (/\bnap\b/i.test(t.courseName) && len < 3) { continue; }
+                // Socializing 1h..4h
+                if (isSocial) {
+                    if (len < 4) { continue; }
+                    if (len > 16) { len = 16; }
+                }
                 // enforce per-day session cap if provided
                 if (t.timesPerDay != null) {
                     const label = t.labelFor("study");
@@ -681,7 +694,7 @@ function anneal(
 
                 // choose length up to task stretch (2..8 blocks)
                 const maxLen = clamp(t.maxStretchBlocks || 4, 2, 8);
-                const len = clamp(2 + ((Math.random() * maxLen) | 0), 2, maxLen);
+                let len = clamp(2 + ((Math.random() * maxLen) | 0), 2, maxLen);
 
                 const d = DAYS[(Math.random() * 7) | 0];
                 if (t.isSchool && t.noGoDays && t.noGoDays.includes(d)) continue;
@@ -695,6 +708,15 @@ function anneal(
                     const occ = countLabelOccurrences(cand, d, t.labelFor("study"));
                     // placing this chunk would add 1 session
                     if (occ >= t.timesPerDay) continue;
+                }
+
+                // Socializing: enforce 1h..4h and disallow morning unless preferred
+                const isSocial = /social/i.test(t.category) || /social/i.test(t.courseName) || /socializing/i.test(t.courseName);
+                if (isSocial) {
+                    if (len < 4) continue;
+                    if (len > 16) len = 16;
+                    const inMorning = inBucket(start, 'morning');
+                    if (inMorning && !(t.preferred && t.preferred.includes('morning'))) continue;
                 }
 
                 // For naps, never try shorter than 3 blocks and enforce fixed-event buffer
@@ -794,12 +816,18 @@ function fillDaytimeGapsByDeficit(ctx: BuildCtx) {
                     // cap by free run and remaining
                     const free = freeRunLen(s, d, i);
                     // exact length for fixed-duration items; otherwise bounded by stretch
-                    const len = t.durationBlocks && t.durationBlocks > 0
+                    let len = t.durationBlocks && t.durationBlocks > 0
                         ? Math.min(chunk, free, need)
                         : clamp(Math.min(chunk, free, need), 2, chunk);
 
                     // For naps, never place shorter than 45 minutes (3 blocks)
                     if (/\bnap\b/i.test(t.courseName) && len < 3) { continue; }
+                    // Socializing 1h..4h
+                    const isSocial = /social/i.test(t.category) || /social/i.test(t.courseName) || /socializing/i.test(t.courseName);
+                    if (isSocial) {
+                        if (len < 4) { continue; }
+                        if (len > 16) { len = 16; }
+                    }
 
                     if (len >= 1) {
                         if (t.timesPerDay != null) {
@@ -866,6 +894,35 @@ function enforceMinRunLengths(ctx: BuildCtx, minBlocks = 2) {
     }
 }
 
+// Remove too-short flexible Socializing runs (< minBlocks, default 4 blocks = 1h)
+function enforceSocialMinRunLengths(ctx: BuildCtx, minBlocks = 4) {
+  const s = ctx.schedule;
+  const socialFlexLabels = new Set<string>();
+  for (const t of ctx.tasks) {
+    const isSocial = /social/i.test(t.category) || /social/i.test(t.courseName) || /socializing/i.test(t.courseName);
+    if (!isSocial) continue;
+    if (t.meetings && t.meetings.length) continue; // skip fixed meeting labels
+    socialFlexLabels.add(t.labelFor("study"));
+  }
+  if (socialFlexLabels.size === 0) return;
+  for (const day of DAYS) {
+    const row = s[day];
+    let i = 0;
+    while (i < BLOCKS_PER_DAY) {
+      const lab = row[i];
+      if (!lab || !socialFlexLabels.has(String(lab))) { i++; continue; }
+      let j = i + 1;
+      while (j < BLOCKS_PER_DAY && row[j] === lab) j++;
+      const len = j - i;
+      if (len < minBlocks) {
+        for (let k = i; k < j; k++) row[k] = null;
+      }
+      i = j;
+    }
+  }
+}
+
+
 /* ===== Public entry ===== */
 export type { Category, ObligationChild, MeetingTime };
 
@@ -893,6 +950,7 @@ export function generateSchedule(categories: Category[]): Schedule {
     fillDaytimeGapsByDeficit(ctx);
     enforceStudyBreaks(ctx);
     enforceMinRunLengths(ctx, 2);
+    enforceSocialMinRunLengths(ctx, 4);
 
     // Mandatory hygiene after wake and after work shifts
     enforceHygieneAfterSleep(ctx);
