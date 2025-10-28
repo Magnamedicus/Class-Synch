@@ -435,14 +435,8 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                 return prev;
                             }
                             // check destination free
-                            const sameDay = fromDay === toDay;
-                            const srcStart = fromStartIdx;
-                            const srcEnd = fromStartIdx + length; // exclusive
                             for (let k = 0; k < length; k++) {
-                                const pos = toStartIdx + k;
-                                const occupied = prev[toDay][pos] !== null;
-                                const overlapsSource = sameDay && pos >= srcStart && pos < srcEnd;
-                                if (occupied && !overlapsSource) {
+                                if (prev[toDay][toStartIdx + k] !== null) {
                                     setToast("Cannot drop: destination occupied");
                                     return prev;
                                 }
@@ -485,14 +479,8 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                 setToast("Cannot place: out of bounds");
                                 return;
                             }
-                            const sameDay = fromDay === day;
-                            const srcStart = startIdx;
-                            const srcEnd = startIdx + length; // exclusive
                             for (let k = 0; k < length; k++) {
-                                const pos = idx + k;
-                                const occupied = schedule[day as keyof Schedule][pos] !== null;
-                                const overlapsSource = sameDay && pos >= srcStart && pos < srcEnd;
-                                if (occupied && !overlapsSource) {
+                                if (schedule[day as keyof Schedule][idx + k] !== null) {
                                     setToast("Cannot place: destination occupied");
                                     return;
                                 }
@@ -670,3 +658,5 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
 });
 
 export default Scheduler;
+
+

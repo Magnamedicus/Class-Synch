@@ -435,14 +435,8 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                 return prev;
                             }
                             // check destination free
-                            const sameDay = fromDay === toDay;
-                            const srcStart = fromStartIdx;
-                            const srcEnd = fromStartIdx + length; // exclusive
                             for (let k = 0; k < length; k++) {
-                                const pos = toStartIdx + k;
-                                const occupied = prev[toDay][pos] !== null;
-                                const overlapsSource = sameDay && pos >= srcStart && pos < srcEnd;
-                                if (occupied && !overlapsSource) {
+                                if (prev[toDay][toStartIdx + k] !== null) {
                                     setToast("Cannot drop: destination occupied");
                                     return prev;
                                 }
@@ -485,14 +479,8 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                 setToast("Cannot place: out of bounds");
                                 return;
                             }
-                            const sameDay = fromDay === day;
-                            const srcStart = startIdx;
-                            const srcEnd = startIdx + length; // exclusive
                             for (let k = 0; k < length; k++) {
-                                const pos = idx + k;
-                                const occupied = schedule[day as keyof Schedule][pos] !== null;
-                                const overlapsSource = sameDay && pos >= srcStart && pos < srcEnd;
-                                if (occupied && !overlapsSource) {
+                                if (schedule[day as keyof Schedule][idx + k] !== null) {
                                     setToast("Cannot place: destination occupied");
                                     return;
                                 }
@@ -510,163 +498,3 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                             for (let k = 0; k < length; k++) next[day as keyof Schedule][idx + k] = label;
                             mergeNearIdenticalsOnRow(next[fromDay as keyof Schedule]);
                             mergeNearIdenticalsOnRow(next[day as keyof Schedule]);
-                            setSchedule(next);
-                            persist(next);
-                            setMoveCandidate(null);
-                            setToast("Moved");
-                            return;
-                        }
-
-                        // Otherwise, if the clicked cell is empty, open create modal
-                        const row = schedule[day as keyof Schedule];
-                        if (row && row[idx] === null) {
-                            // Build options from current labels; if none, default to "Free"
-                            const options = new Set<string>();
-                            Object.values(schedule).forEach((r) => r.forEach((lab) => { if (lab) options.add(lab); }));
-                            const first = options.values().next().value || "Study";
-                            setSelected({ day, startIdx: idx, length: 1, label: first });
-                            setNewLabel(first);
-                            setNewLength(1);
-                            setCreateMode(true);
-                            setModalOpen(true);
-                        }
-                    }}
-                />
-            )}
-            {toast && (
-                <div className="toast" role="status" aria-live="polite" onAnimationEnd={() => setToast("")}>{toast}</div>
-            )}
-
-            {modalOpen && selected && (
-                <div className="modal-overlay" onClick={() => setModalOpen(false)}>
-                    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-                        <h3>Modify Block</h3>
-                        <p>
-                            {selected.label} • {formatMinutes(selected.length * 15)}
-                        </p>
-
-                        <div className="modal-form">
-                            <label>
-                                Change to:
-                                <select
-                                    value={newLabel}
-                                    onChange={(e) => setNewLabel(e.target.value)}
-                                >
-                                    {labelOptions.map((name) => (
-                                        <option key={name} value={name}>
-                                            {name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-
-                            {newLabel.toLowerCase().includes("night sleep") && (
-                                <div style={{ display: "grid", gap: "0.75rem", marginTop: "0.25rem" }}>
-                                    {/* If Night Sleep block is in PM (>= 12:00), show Bedtime */}
-                                    {selected.startIdx >= (12 * BLOCKS_PER_HOUR) && (
-                                        <label>
-                                            Set Bed Time
-                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
-                                                <TimeInput value={bedTime} onChange={setBedTime} />
-                                                <button type="button" onClick={() => {
-                                                    if (!schedule) return;
-                                                    const hhmm = parseTimeToHHMM(bedTime);
-                                                    if (hhmm == null) { setToast("Invalid time"); return; }
-                                                    const row = [...schedule[selected.day]];
-                                                    const blockStart = selected.startIdx;
-                                                    const blockEnd = selected.startIdx + selected.length;
-                                                    const desiredStart = Math.max(0, Math.min(hhmmToBlock(hhmm), row.length));
-                                                    if (desiredStart < blockStart) {
-                                                        // Earlier bedtime: extend sleep earlier, overwriting anything
-                                                        for (let i = desiredStart; i < blockStart; i++) row[i] = selected.label;
-                                                    } else if (desiredStart > blockStart) {
-                                                        // Later bedtime: shorten by clearing from current start up to desiredStart
-                                                        const clearEnd = Math.min(desiredStart, blockEnd);
-                                                        for (let i = blockStart; i < clearEnd; i++) row[i] = null;
-                                                    }
-                                                    const next = { ...schedule, [selected.day]: row } as Schedule;
-                                                    setSchedule(next);
-                                                    persist(next);
-                                                    setToast("Bedtime set");
-                                                    setModalOpen(false);
-                                                }}>Apply Bedtime (override)</button>
-                                            </div>
-                                        </label>
-                                    )}
-                                    {/* If Night Sleep block is in AM (< 12:00), show Wake-up */}
-                                    {selected.startIdx < (12 * BLOCKS_PER_HOUR) && (
-                                        <label>
-                                            Set Wake-up Time
-                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
-                                                <TimeInput value={wakeTime} onChange={setWakeTime} />
-                                                <button type="button" onClick={() => {
-                                                    if (!schedule) return;
-                                                    const hhmm = parseTimeToHHMM(wakeTime);
-                                                    if (hhmm == null) { setToast("Invalid time"); return; }
-                                                    const row = [...schedule[selected.day]];
-                                                    const blockStart = selected.startIdx;
-                                                    const blockEnd = selected.startIdx + selected.length;
-                                                    const desiredEnd = Math.max(0, Math.min(hhmmToBlock(hhmm), row.length));
-                                                    if (desiredEnd > blockEnd) {
-                                                        // Later wake: extend sleep later, overwriting anything
-                                                        for (let i = blockEnd; i < desiredEnd; i++) row[i] = selected.label;
-                                                    } else if (desiredEnd < blockEnd) {
-                                                        // Earlier wake: shorten by clearing trailing part
-                                                        for (let i = desiredEnd; i < blockEnd; i++) row[i] = null;
-                                                    }
-                                                    const next = { ...schedule, [selected.day]: row } as Schedule;
-                                                    setSchedule(next);
-                                                    persist(next);
-                                                    setToast("Wake-up set");
-                                                    setModalOpen(false);
-                                                }}>Apply Wake-up (override)</button>
-                                            </div>
-                                        </label>
-                                    )}
-                                </div>
-                            )}
-
-                            <label>
-                                Length: {formatMinutes(newLength * 15)}
-                                <input
-                                    type="range"
-                                    min={1}
-                                    max={createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight)}
-                                    step={1}
-                                    value={newLength}
-                                    style={{
-                                        // feed CSS variables for dynamic fill track
-                                        // @ts-ignore - custom properties
-                                        '--min': 1,
-                                        // @ts-ignore
-                                        '--max': createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight),
-                                        // @ts-ignore
-                                        '--value': newLength,
-                                    } as React.CSSProperties}
-                                    onChange={(e) => setNewLength(Number(e.target.value))}
-                                />
-                                <span style={{ fontSize: ".8rem", color: "#9ca3af" }}>
-                                    Max available here: {formatMinutes(((createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight)) * 15))}
-                                </span>
-                            </label>
-
-                            {blockEnd && (
-                                <p style={{ fontSize: "0.9rem", color: "#9ca3af" }}>
-                                    Adjusted block runs from index {selected.startIdx} to {blockEnd}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="modal-actions">
-                            <button onClick={updateBlock}>Save</button>
-                            <button onClick={clearBlock}>Clear</button>
-                            <button onClick={() => setModalOpen(false)}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-});
-
-export default Scheduler;
