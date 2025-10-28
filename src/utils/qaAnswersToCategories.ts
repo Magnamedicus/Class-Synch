@@ -257,15 +257,16 @@ function transformSleep(answers: QAAnswers): Category | null {
 
     // Optional daily nap if enabled
     if (answers["sleep_naps"]) {
-        const napLenMin = Number(answers["nap-length"]);
+        const napLenRaw = Number(answers["nap-length"]);
+        const napLenMin = Number.isFinite(napLenRaw) ? Math.max(45, napLenRaw) : 0; // enforce min 45 minutes
         const napPref = normalizePreferredTimes(answers["sleep_nap_windows"]) || ["afternoon"];
-        if (Number.isFinite(napLenMin) && napLenMin > 0) {
+        if (napLenMin > 0) {
             children.push({
                 id: "daily-nap",
                 name: "Nap",
                 relativePriority: 0.2,
                 weeklyHours: (napLenMin / 60) * 7,
-                maxStretch: Math.max(0.25, napLenMin / 60),
+                maxStretch: Math.max(0.75, napLenMin / 60), // allow up to nap length; min 45m
                 preferredTimeBlocks: napPref,
                 timesPerDay: 1,
                 durationMinutes: napLenMin,

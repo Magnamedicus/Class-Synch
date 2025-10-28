@@ -205,10 +205,10 @@ function apportionTargets(categories: Category[]): Task[] {
         });
 
         children.forEach((child, idx) => {
-            const isSleep =
-                /sleep/i.test(child.name) ||
-                child.preferredTimeBlocks?.includes("night") ||
-                /sleep/i.test(cat.name);
+            // Only treat the dedicated nightly sleep task as "isSleep".
+            // Naps and other daytime rest should be scheduled as flexible tasks, not seeded like night sleep.
+            const isSleep = /night\s*sleep/i.test(child.name) ||
+                (!!child.preferredTimeBlocks?.includes("night") && /sleep/i.test(child.name));
 
             const blocksRequired = Math.max(0, blocksPerChild[idx] || 0);
 
@@ -427,7 +427,15 @@ function taskPrefers(block: number, t: Task): boolean {
 
 function canPlaceFlexibleAt(block: number, t: Task): boolean {
     if (t.isSleep) return false;
-    // Soft preferences: do not gate by time-of-day preference here
+    // Special handling for naps: respect preferred buckets strictly; default forbid morning/night
+    const isNap = /\bnap\b/i.test(t.courseName);
+    if (isNap) {
+        const prefs = (t.preferred && t.preferred.length > 0)
+            ? t.preferred
+            : (["afternoon", "evening"] as const);
+        return prefs.some((b: any) => inBucket(block, b));
+    }
+    // For others, keep the flexible day window and allow soft preference scoring elsewhere
     return withinFlexibleDayWindow(block);
 }
 
@@ -552,6 +560,8 @@ function greedyFill(ctx: BuildCtx) {
                 if (free < 2) continue;
 
                 const len = Math.min(chunkFor(t), remain, free);
+                // For naps, never place shorter than 45 minutes (3 blocks)
+                if (/\bnap\b/i.test(t.courseName) && len < 3) { continue; }
                 // enforce per-day session cap if provided
                 if (t.timesPerDay != null) {
                     const label = t.labelFor("study");
@@ -677,14 +687,24 @@ function anneal(
                 if (t.isSchool && t.noGoDays && t.noGoDays.includes(d)) continue;
                 const start = (Math.random() * (BLOCKS_PER_DAY - len)) | 0;
 
-                // obey flexible window + moat + fixed mask
-                if (!withinFlexibleDayWindow(start)) continue;
+                // obey placement window + moat + fixed mask (respect nap preferences)
+                if (!canPlaceFlexibleAt(start, t)) continue;
                 if (!moatClear(cand, d, start, len, t.labelFor("study"))) continue;
                 // enforce per-day session cap
                 if (t.timesPerDay != null) {
                     const occ = countLabelOccurrences(cand, d, t.labelFor("study"));
                     // placing this chunk would add 1 session
                     if (occ >= t.timesPerDay) continue;
+                }
+
+                // For naps, never try shorter than 3 blocks and enforce fixed-event buffer
+                if (/\bnap\b/i.test(t.courseName)) {
+                    if (len < 3) continue;
+                    const before = start - 1;
+                    const after = start + len;
+                    if ((before >= 0 && ctx.fixedMask[d][before]) || (after < BLOCKS_PER_DAY && ctx.fixedMask[d][after])) {
+                        continue;
+                    }
                 }
 
                 let ok = true;
@@ -768,6 +788,8 @@ function fillDaytimeGapsByDeficit(ctx: BuildCtx) {
 
                     // skip busy
                     if (s[d][i] !== null) continue;
+                    // respect placement window rules (e.g., naps)
+                    if (!canPlaceFlexibleAt(i, t)) continue;
 
                     // cap by free run and remaining
                     const free = freeRunLen(s, d, i);
@@ -775,6 +797,9 @@ function fillDaytimeGapsByDeficit(ctx: BuildCtx) {
                     const len = t.durationBlocks && t.durationBlocks > 0
                         ? Math.min(chunk, free, need)
                         : clamp(Math.min(chunk, free, need), 2, chunk);
+
+                    // For naps, never place shorter than 45 minutes (3 blocks)
+                    if (/\bnap\b/i.test(t.courseName) && len < 3) { continue; }
 
                     if (len >= 1) {
                         if (t.timesPerDay != null) {

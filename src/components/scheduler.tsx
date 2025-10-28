@@ -14,6 +14,7 @@ import type {
     MeetingTime,
 } from "../utils/simulatedAnnealingScheduler";
 import { ScheduleGrid } from "./ScheduleGrid";
+import TimeInput from "./inputs/TimeInput";
 import "../css/Modal.css";
 import "../css/scheduler.css";
 
@@ -165,6 +166,35 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         length: number;
         label: string;
     } | null>(null);
+    const [bedTime, setBedTime] = useState<string>("10:00 PM");
+    const [wakeTime, setWakeTime] = useState<string>("07:00 AM");
+
+    const BLOCKS_PER_HOUR = 4;
+    const hhmmToBlock = (hhmm: number) => {
+        const h = Math.floor(hhmm / 100);
+        const m = hhmm % 100;
+        return h * BLOCKS_PER_HOUR + Math.floor(m / 15);
+    };
+    const parseTimeToHHMM = (t: string): number | null => {
+        if (!t) return null;
+        const s = t.trim();
+        const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (m12) {
+            let h = parseInt(m12[1], 10);
+            const mm = parseInt(m12[2], 10);
+            const ap = m12[3].toUpperCase();
+            if (h === 12) h = 0;
+            if (ap === "PM") h += 12;
+            return h * 100 + mm;
+        }
+        const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+        if (m24) {
+            const h = parseInt(m24[1], 10);
+            const mm = parseInt(m24[2], 10);
+            return h * 100 + mm;
+        }
+        return null;
+    };
 
     const persist = (s: Schedule) => {
         try {
@@ -232,6 +262,10 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         setNewLength(block.length);
         setModalOpen(true);
         setCreateMode(false);
+        if (block.label.toLowerCase().includes("night sleep")) {
+            setBedTime("10:00 PM");
+            setWakeTime("07:00 AM");
+        }
     };
 
     const clearBlock = () => {
@@ -505,6 +539,72 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                     ))}
                                 </select>
                             </label>
+
+                            {selected.label.toLowerCase().includes("night sleep") && (
+                                <div style={{ display: "grid", gap: "0.75rem", marginTop: "0.25rem" }}>
+                                    {/* If Night Sleep block is in PM (>= 12:00), show Bedtime */}
+                                    {selected.startIdx >= (12 * BLOCKS_PER_HOUR) && (
+                                        <label>
+                                            Set Bed Time
+                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
+                                                <TimeInput value={bedTime} onChange={setBedTime} />
+                                                <button type="button" onClick={() => {
+                                                    if (!schedule) return;
+                                                    const hhmm = parseTimeToHHMM(bedTime);
+                                                    if (hhmm == null) { setToast("Invalid time"); return; }
+                                                    const row = [...schedule[selected.day]];
+                                                    const blockStart = selected.startIdx;
+                                                    const blockEnd = selected.startIdx + selected.length;
+                                                    const desiredStart = Math.max(0, Math.min(hhmmToBlock(hhmm), row.length));
+                                                    if (desiredStart < blockStart) {
+                                                        // Earlier bedtime: extend sleep earlier, overwriting anything
+                                                        for (let i = desiredStart; i < blockStart; i++) row[i] = selected.label;
+                                                    } else if (desiredStart > blockStart) {
+                                                        // Later bedtime: shorten by clearing from current start up to desiredStart
+                                                        const clearEnd = Math.min(desiredStart, blockEnd);
+                                                        for (let i = blockStart; i < clearEnd; i++) row[i] = null;
+                                                    }
+                                                    const next = { ...schedule, [selected.day]: row } as Schedule;
+                                                    setSchedule(next);
+                                                    persist(next);
+                                                    setToast("Bedtime set");
+                                                    setModalOpen(false);
+                                                }}>Apply Bedtime (override)</button>
+                                            </div>
+                                        </label>
+                                    )}
+                                    {/* If Night Sleep block is in AM (< 12:00), show Wake-up */}
+                                    {selected.startIdx < (12 * BLOCKS_PER_HOUR) && (
+                                        <label>
+                                            Set Wake-up Time
+                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
+                                                <TimeInput value={wakeTime} onChange={setWakeTime} />
+                                                <button type="button" onClick={() => {
+                                                    if (!schedule) return;
+                                                    const hhmm = parseTimeToHHMM(wakeTime);
+                                                    if (hhmm == null) { setToast("Invalid time"); return; }
+                                                    const row = [...schedule[selected.day]];
+                                                    const blockStart = selected.startIdx;
+                                                    const blockEnd = selected.startIdx + selected.length;
+                                                    const desiredEnd = Math.max(0, Math.min(hhmmToBlock(hhmm), row.length));
+                                                    if (desiredEnd > blockEnd) {
+                                                        // Later wake: extend sleep later, overwriting anything
+                                                        for (let i = blockEnd; i < desiredEnd; i++) row[i] = selected.label;
+                                                    } else if (desiredEnd < blockEnd) {
+                                                        // Earlier wake: shorten by clearing trailing part
+                                                        for (let i = desiredEnd; i < blockEnd; i++) row[i] = null;
+                                                    }
+                                                    const next = { ...schedule, [selected.day]: row } as Schedule;
+                                                    setSchedule(next);
+                                                    persist(next);
+                                                    setToast("Wake-up set");
+                                                    setModalOpen(false);
+                                                }}>Apply Wake-up (override)</button>
+                                            </div>
+                                        </label>
+                                    )}
+                                </div>
+                            )}
 
                             <label>
                                 Length: {formatMinutes(newLength * 15)}
