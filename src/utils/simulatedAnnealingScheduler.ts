@@ -413,6 +413,38 @@ function seedSleep(ctx: BuildCtx, nightly?: { day: DayName; start: number; len: 
     }
 }
 
+function enforceWakeBuffers(ctx: BuildCtx) {
+  const s = ctx.schedule;
+  const sleepNames = new Set<string>(ctx.tasks.filter(t => t.isSleep).map(t => t.courseName));
+  for (const d of DAYS) {
+    const row = s[d];
+    // Find wake index (first non-sleep at day start)
+    let wake = 0;
+    while (wake < BLOCKS_PER_DAY && row[wake] && sleepNames.has(String(row[wake]))) wake++;
+    // Find earliest fixed meeting (non-sleep) on this day
+    let firstFixed = -1;
+    for (let i = 0; i < BLOCKS_PER_DAY; i++) {
+      if (ctx.fixedMask[d][i]) {
+        const lab = row[i];
+        if (!lab || !sleepNames.has(String(lab))) { firstFixed = i; break; }
+      }
+    }
+    if (firstFixed >= 0) {
+      const requiredWake = Math.max(0, firstFixed - 4); // 4 blocks = 1 hour
+      if (wake > requiredWake) {
+        // Shorten morning sleep tail to ensure at least 1h buffer
+        for (let i = requiredWake; i < wake; i++) {
+          if (row[i] && sleepNames.has(String(row[i]))) {
+            row[i] = null;
+            ctx.fixedMask[d][i] = false;
+          }
+        }
+      }
+    }
+  }
+}
+
+
 /* ===== Greedy flexible placement (moat + stretch) ===== */
 
 function taskPrefers(block: number, t: Task): boolean {
@@ -936,6 +968,8 @@ export function generateSchedule(categories: Category[]): Schedule {
     // 2) priority-aware nightly sleep (correct wrap)
     const { nightlyPlan } = planPriorityAwareSleep(tasks);
     seedSleep(ctx, nightlyPlan);
+    // Ensure at least 1h buffer between wake and first fixed meeting; hygiene is added later
+    enforceWakeBuffers(ctx);
 
     // 3) targeted: try placing class study adjacent to class meetings
     placeStudyAdjacentToMeetings(ctx);
