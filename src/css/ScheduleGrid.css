@@ -416,8 +416,11 @@
     .block__meta  { font-size: .6rem; }
 }
 
+/* ===============================
 
-
-
-
-
+/* Keep meta visible for 15-minute blocks since visual height clamps to 30m */
+ .block[data-len="1"] .block__meta,
+.block[style*="--len: 1"] .block__meta,
+.block[style*="--height: calc(var(--row-h) * 1)"] .block__meta {
+   display: block !important;
+}

@@ -286,6 +286,36 @@ const QuestionnairePage: React.FC = () => {
         return () => document.documentElement.classList.remove("modal-open");
     }, [isModalOpen]);
     const openModalForCurrent = () => {
+        const item = flat[linearIndex];
+        if (item) {
+            const prior = answers[item.id];
+            switch (item.inputType) {
+                case "number":
+                case "time":
+                case "text": {
+                    setTextOrNumber(prior != null ? String(prior) : "");
+                    break;
+                }
+                case "enter-classes": {
+                    setClasses(Array.isArray(prior) ? prior.slice() : []);
+                    break;
+                }
+                case "enter-social": {
+                    setSocialObligations(Array.isArray(prior) ? prior.slice() : []);
+                    break;
+                }
+                case "day-selection": {
+                    setSelectedDays(Array.isArray(prior) ? prior.slice() : []);
+                    break;
+                }
+                case "time-selection": {
+                    setSelectedTime(Array.isArray(prior) ? prior.slice() : []);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
         setModalOpen(true);
         setModalValid(true);
     };

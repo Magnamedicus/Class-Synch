@@ -189,7 +189,8 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMo
                         {dayBlocks[day].map((b, i) => {
                             const blockType = taskToType(b.label);
                             const topPx = b.startIdx * ROW_PX;
-                            const heightPx = b.length * ROW_PX;
+                            const visualLenBlocks = Math.max(b.length, 2); // min visual size = 30 minutes
+                            const heightPx = visualLenBlocks * ROW_PX;
 
                             const startLabel = idxToTimeLabel(b.startIdx);
                             const endLabel = idxToTimeLabel(b.startIdx + b.length);
@@ -198,6 +199,7 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMo
                                 <div
                                     key={`${day}-block-${i}-${b.label}-${b.startIdx}`}
                                     className={`block block--${blockType}`}
+                                    data-len={b.length}
                                     style={
                                         {
                                             "--top": `${topPx}px`,

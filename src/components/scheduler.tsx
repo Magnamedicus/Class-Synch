@@ -154,6 +154,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         length: number;
         label: string;
     } | null>(null);
+    const [createMode, setCreateMode] = useState<boolean>(false);
 
     const [newLabel, setNewLabel] = useState<string>("");
     const [newLength, setNewLength] = useState<number>(1);
@@ -230,6 +231,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         setNewLabel(block.label);
         setNewLength(block.length);
         setModalOpen(true);
+        setCreateMode(false);
     };
 
     const clearBlock = () => {
@@ -274,12 +276,27 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         if (!schedule || !selected) return;
         const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
 
-        for (let i = selected.startIdx; i < selected.startIdx + selected.length; i++) {
-            updated[selected.day][i] = null;
-        }
-        for (let i = selected.startIdx; i < selected.startIdx + newLength; i++) {
-            if (i < updated[selected.day].length) {
-                updated[selected.day][i] = newLabel;
+        if (createMode) {
+            // Place new block into contiguous free space starting at startIdx
+            const end = selected.startIdx + newLength;
+            for (let i = selected.startIdx; i < end; i++) {
+                if (updated[selected.day][i] !== null) {
+                    setToast("Space is no longer free here");
+                    return;
+                }
+            }
+            for (let i = selected.startIdx; i < end; i++) {
+                if (i < updated[selected.day].length) updated[selected.day][i] = newLabel;
+            }
+        } else {
+            // Edit existing block: clear then re-write at same start
+            for (let i = selected.startIdx; i < selected.startIdx + selected.length; i++) {
+                updated[selected.day][i] = null;
+            }
+            for (let i = selected.startIdx; i < selected.startIdx + newLength; i++) {
+                if (i < updated[selected.day].length) {
+                    updated[selected.day][i] = newLabel;
+                }
             }
         }
 
@@ -289,6 +306,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         setSchedule(updated);
         persist(updated);
         setModalOpen(false);
+        setCreateMode(false);
     };
 
     const currentCategories = getUserCategories();
@@ -330,6 +348,19 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         }
         return free;
     }, [schedule, selected?.day, selected?.startIdx, selected?.length]);
+
+    // When creating a new block, contiguous free space starting at the selected cell
+    const freeFromStart = useMemo(() => {
+        if (!schedule || !selected || !createMode) return 0;
+        const row = schedule[selected.day as keyof Schedule];
+        if (!row) return 0;
+        let free = 0;
+        for (let i = selected.startIdx; i < row.length; i++) {
+            if (row[i] === null) free++;
+            else break;
+        }
+        return free;
+    }, [schedule, selected?.day, selected?.startIdx, createMode]);
 
     return (
         <div style={{ padding: 16 }}>
@@ -397,38 +428,54 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                         setToast("Select a target cell to move here");
                     }}
                     onCellClick={(day, idx) => {
-                        if (!moveCandidate || !schedule) return;
-                        const { fromDay, startIdx, length, label } = moveCandidate;
-                        // attempt move similar to onMoveBlock
-                        const destEnd = idx + length;
-                        if (idx < 0 || destEnd > schedule[day as keyof Schedule].length) {
-                            setToast("Cannot place: out of bounds");
-                            return;
-                        }
-                        for (let k = 0; k < length; k++) {
-                            if (schedule[day as keyof Schedule][idx + k] !== null) {
-                                setToast("Cannot place: destination occupied");
+                        if (!schedule) return;
+                        // If we are in tap-to-move mode, place the move
+                        if (moveCandidate) {
+                            const { fromDay, startIdx, length, label } = moveCandidate;
+                            const destEnd = idx + length;
+                            if (idx < 0 || destEnd > schedule[day as keyof Schedule].length) {
+                                setToast("Cannot place: out of bounds");
                                 return;
                             }
+                            for (let k = 0; k < length; k++) {
+                                if (schedule[day as keyof Schedule][idx + k] !== null) {
+                                    setToast("Cannot place: destination occupied");
+                                    return;
+                                }
+                            }
+                            const next: Schedule = {
+                                monday: [...schedule.monday],
+                                tuesday: [...schedule.tuesday],
+                                wednesday: [...schedule.wednesday],
+                                thursday: [...schedule.thursday],
+                                friday: [...schedule.friday],
+                                saturday: [...schedule.saturday],
+                                sunday: [...schedule.sunday],
+                            };
+                            for (let k = 0; k < length; k++) next[fromDay as keyof Schedule][startIdx + k] = null;
+                            for (let k = 0; k < length; k++) next[day as keyof Schedule][idx + k] = label;
+                            mergeNearIdenticalsOnRow(next[fromDay as keyof Schedule]);
+                            mergeNearIdenticalsOnRow(next[day as keyof Schedule]);
+                            setSchedule(next);
+                            persist(next);
+                            setMoveCandidate(null);
+                            setToast("Moved");
+                            return;
                         }
-                        const next: Schedule = {
-                            monday: [...schedule.monday],
-                            tuesday: [...schedule.tuesday],
-                            wednesday: [...schedule.wednesday],
-                            thursday: [...schedule.thursday],
-                            friday: [...schedule.friday],
-                            saturday: [...schedule.saturday],
-                            sunday: [...schedule.sunday],
-                        };
-                        for (let k = 0; k < length; k++) next[fromDay as keyof Schedule][startIdx + k] = null;
-                        for (let k = 0; k < length; k++) next[day as keyof Schedule][idx + k] = label;
-                        // Merge identical labels with tiny gaps on involved days
-                        mergeNearIdenticalsOnRow(next[fromDay as keyof Schedule]);
-                        mergeNearIdenticalsOnRow(next[day as keyof Schedule]);
-                        setSchedule(next);
-                        persist(next);
-                        setMoveCandidate(null);
-                        setToast("Moved");
+
+                        // Otherwise, if the clicked cell is empty, open create modal
+                        const row = schedule[day as keyof Schedule];
+                        if (row && row[idx] === null) {
+                            // Build options from current labels; if none, default to "Free"
+                            const options = new Set<string>();
+                            Object.values(schedule).forEach((r) => r.forEach((lab) => { if (lab) options.add(lab); }));
+                            const first = options.values().next().value || "Study";
+                            setSelected({ day, startIdx: idx, length: 1, label: first });
+                            setNewLabel(first);
+                            setNewLength(1);
+                            setCreateMode(true);
+                            setModalOpen(true);
+                        }
                     }}
                 />
             )}
@@ -464,7 +511,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                 <input
                                     type="range"
                                     min={1}
-                                    max={selected.length + freeExtendRight}
+                                    max={createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight)}
                                     step={1}
                                     value={newLength}
                                     style={{
@@ -472,14 +519,14 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                         // @ts-ignore - custom properties
                                         '--min': 1,
                                         // @ts-ignore
-                                        '--max': selected.length + freeExtendRight,
+                                        '--max': createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight),
                                         // @ts-ignore
                                         '--value': newLength,
                                     } as React.CSSProperties}
                                     onChange={(e) => setNewLength(Number(e.target.value))}
                                 />
                                 <span style={{ fontSize: ".8rem", color: "#9ca3af" }}>
-                                    Max available here: {formatMinutes((selected.length + freeExtendRight) * 15)}
+                                    Max available here: {formatMinutes(((createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight)) * 15))}
                                 </span>
                             </label>
 

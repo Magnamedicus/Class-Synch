@@ -1,0 +1,162 @@
+/* ==============================================
+   Modern Schedule Grid (sleek + professional)
+   ============================================== */
+
+:root {
+  --row-h: 20px;                 /* 96 rows => 24h * 4 blocks */
+  --time-col-w: 64px;            /* left sticky time column */
+  --header-h: 46px;              /* sticky day header height */
+
+  --radius: 12px;                /* base radius */
+  --pad: 12px;                   /* internal padding */
+
+  /* Surface palette (dark theme with light fallback below) */
+  --bg: #0c1220;
+  --panel: #0f172a;
+  --panel-2: #0b1324;
+  --text: #e8eef9;
+  --muted: #9bb0c9;
+  --grid: #1a2740;
+  --grid-strong: #213150;
+  --border: #223253;
+
+  /* Block palettes */
+  --g-study:    linear-gradient(135deg,#5ba7ff,#346de8);
+  --g-class:    linear-gradient(135deg,#34d399,#10b981);
+  --g-sleep:    linear-gradient(135deg,#a78bfa,#7c3aed);
+  --g-social:   linear-gradient(135deg,#f472b6,#ec4899);
+  --g-work:     linear-gradient(135deg,#f59e0b,#d97706);
+  --g-selfcare: linear-gradient(135deg,#22c55e,#16a34a);
+  --g-exercise: linear-gradient(135deg,#ef4444,#dc2626);
+  --g-leisure:  linear-gradient(135deg,#06b6d4,#0891b2);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:#f6f9ff; --panel:#ffffff; --panel-2:#f1f5fb; --text:#111827;
+    --muted:#5b708c; --grid:#dfe8f3; --grid-strong:#cbd8ea; --border:#d6e3f3;
+  }
+}
+
+/* Container card */
+.schedule {
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 48px rgba(0,0,0,.32);
+  overflow: hidden;
+}
+
+/* Legend — compact chips */
+.schedule__legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px 8px;
+  background: linear-gradient(180deg, rgba(12,18,32,.92), rgba(12,18,32,.75));
+}
+.legend__item { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.legend__swatch { width: 12px; height: 12px; border-radius: 999px; box-shadow: 0 0 0 1px rgba(255,255,255,.2) inset; }
+.legend__swatch--study   { background: var(--g-study); }
+.legend__swatch--class   { background: var(--g-class); }
+.legend__swatch--sleep   { background: var(--g-sleep); }
+.legend__swatch--social  { background: var(--g-social); }
+.legend__swatch--work    { background: var(--g-work); }
+.legend__swatch--selfcare{ background: var(--g-selfcare); }
+.legend__swatch--exercise{ background: var(--g-exercise); }
+.legend__swatch--leisure { background: var(--g-leisure); }
+
+/* Sticky header with soft blur */
+.schedule__header {
+  display: grid;
+  grid-template-columns: var(--time-col-w) repeat(7, 1fr);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: linear-gradient(180deg, rgba(10,16,28,.96), rgba(10,16,28,.86));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+}
+.schedule__corner {
+  height: var(--header-h);
+  border-right: 1px solid var(--border);
+}
+.schedule__day-header {
+  height: var(--header-h);
+  display: grid; place-items: center;
+  font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: .78rem;
+  border-left: 1px solid var(--border);
+}
+
+/* Body: left time column + seven day columns */
+.schedule__body { display: grid; grid-template-columns: var(--time-col-w) repeat(7, 1fr); }
+
+/* Time column */
+.schedule__time {
+  position: sticky; left: 0; z-index: 4;
+  display: grid; grid-template-rows: repeat(96, 1fr);
+  border-right: 1px solid var(--border);
+  background: var(--panel-2);
+}
+.schedule__time-slot {
+  position: relative; border-bottom: 1px solid var(--grid);
+  font-size: 10px; color: var(--muted); display: grid; align-items: end; padding: 0 8px 4px;
+  min-height: var(--row-h);
+}
+.schedule__time-slot:nth-child(4n)::after {
+  content: attr(data-label);
+  position: absolute; left: 8px; bottom: 2px; color: var(--text); font-weight: 700;
+}
+
+/* Day grid */
+.schedule__day {
+  position: relative;
+  display: grid; grid-template-rows: repeat(96, var(--row-h));
+  border-left: 1px solid var(--border);
+  background:
+    linear-gradient(transparent 49%, var(--grid) 50%) 0 0/100% var(--row-h) repeat-y; /* horizontal lines */
+}
+.schedule__cell { border-bottom: 1px solid transparent; }
+.schedule__cell:hover { background: rgba(255,255,255,.035); }
+
+/* Blocks: absolutely positioned with depth */
+.block {
+  position: absolute; left: 8px; right: 8px;
+  top: var(--top, 0); height: var(--height, var(--row-h));
+  border-radius: 12px; background: var(--g-study);
+  box-shadow:
+    0 12px 28px rgba(0,0,0,.35),               /* outer */
+    inset 0 0 0 1px rgba(255,255,255,.08);     /* inner line */
+  display: grid; align-content: center; justify-items: start; padding: 6px 10px; gap: 2px;
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+.block:hover {
+  transform: translateY(-2px);
+  filter: saturate(1.06);
+  box-shadow: 0 16px 36px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255,255,255,.1);
+}
+.block:active { transform: translateY(0); }
+
+.block__title { font-weight: 800; font-size: clamp(.62rem, calc(var(--row-h) * .7), .82rem); line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+.block__meta  { font-size: clamp(.52rem, calc(var(--row-h) * .55), .72rem); opacity: .92; }
+
+/* Color variants */
+.block--study    { background: var(--g-study); }
+.block--class    { background: var(--g-class); }
+.block--sleep    { background: var(--g-sleep); }
+.block--social   { background: var(--g-social); }
+.block--work     { background: var(--g-work); }
+.block--selfcare { background: var(--g-selfcare); }
+.block--exercise { background: var(--g-exercise); }
+.block--leisure  { background: var(--g-leisure); }
+
+/* Tiny blocks: compress metadata */
+.block[style*="--height: calc(var(--row-h) * 1)"] .block__meta { display: none; }
+.block[style*="--height: calc(var(--row-h) * 1)"] .block__title { text-align: center; font-size: clamp(.54rem, calc(var(--row-h) * .6), .7rem); }
+
+/* Responsive tweaks */
+@media (max-width: 1024px) { :root { --time-col-w: 56px; } }
+@media (max-width: 768px)  { :root { --row-h: 18px; --time-col-w: 48px; } .block { border-radius: 10px; padding: 4px 8px; } }
+
