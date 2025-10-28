@@ -2,8 +2,11 @@ import {
     useState,
     forwardRef,
     useImperativeHandle,
+    useMemo,
 } from "react";
 import { generateSchedule } from "../utils/simulatedAnnealingScheduler";
+import { qaAnswersToCategories } from "../utils/qaAnswersToCategories";
+import { readAnswers } from "../utils/qaStorage";
 import type {
     Schedule,
     Category,
@@ -109,108 +112,19 @@ const FALLBACK_CATEGORIES: Category[] = [
 ];
 
 /* =========================
-   Utilities to adapt profile
+   Build categories from saved answers
 ========================= */
 
-// robust time parsing: "09:00", "9:30", "930", "12:30 PM", etc.
-function parseTimeToHHMM(input: unknown): number | undefined {
-    if (typeof input === "number" && Number.isFinite(input)) return input;
-    if (typeof input !== "string") return undefined;
-
-    const s = input.trim();
-    const ampm = s.match(/^(\d{1,2})(?::?(\d{2}))?\s*(AM|PM)$/i);
-    if (ampm) {
-        let h = parseInt(ampm[1], 10);
-        const m = parseInt(ampm[2] || "0", 10);
-        const p = ampm[3].toUpperCase();
-        if (h === 12) h = 0;
-        if (p === "PM") h += 12;
-        return h * 100 + m;
-    }
-    const colon = s.match(/^(\d{1,2}):(\d{2})$/);
-    if (colon) {
-        const h = parseInt(colon[1], 10);
-        const m = parseInt(colon[2], 10);
-        if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return h * 100 + m;
-    }
-    const compact = s.match(/^(\d{3,4})$/);
-    if (compact) {
-        const v = parseInt(compact[1], 10);
-        const h = Math.floor(v / 100);
-        const m = v % 100;
-        if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return h * 100 + m;
-    }
-    return undefined;
-}
-
-function coerceMeetingTimes(raw: any): MeetingTime[] {
-    if (!Array.isArray(raw)) return [];
-    return raw
-        .map((mt) => {
-            const day = typeof mt?.day === "string" ? mt.day.toLowerCase() : undefined;
-            const start = parseTimeToHHMM(mt?.start);
-            const end = parseTimeToHHMM(mt?.end);
-            if (!day || start == null || end == null) return null;
-            return { day, start, end } as MeetingTime;
-        })
-        .filter(Boolean) as MeetingTime[];
-}
-
-function profileToCategories(profile: any): Category[] {
-    const buckets = Array.isArray(profile?.buckets) ? profile.buckets : [];
-
-    return buckets.map((bucket: any, i: number) => {
-        const obligations = Array.isArray(bucket?.obligations) ? bucket.obligations : [];
-
-        const children = obligations.map((ob: any, j: number) => ({
-            id: ob?.id ?? `ob-${i}-${j}`,
-            name: ob?.name ?? `Obligation ${j + 1}`,
-            relativePriority:
-                typeof ob?.priority === "number"
-                    ? ob.priority / 100
-                    : 1 / Math.max(obligations.length, 1),
-            maxStretch: typeof ob?.maxStretch === "number" ? ob.maxStretch : 1.0,
-            preferredTimeBlocks: Array.isArray(ob?.preferredTimeBlocks)
-                ? ob.preferredTimeBlocks
-                : undefined,
-            dependencyIds: Array.isArray(ob?.dependencyIds) ? ob.dependencyIds : [],
-            meetingTimes: coerceMeetingTimes(ob?.meetingTimes),
-        }));
-
-        // normalize child weights to sum 1
-        const sum = children.reduce((s, c) => s + (c.relativePriority ?? 0), 0);
-        const normChildren =
-            sum > 0.0001
-                ? children.map((c) => ({
-                    ...c,
-                    relativePriority: (c.relativePriority ?? 0) / sum,
-                }))
-                : children.map((c) => ({
-                    ...c,
-                    relativePriority: 1 / Math.max(children.length, 1),
-                }));
-
-        return {
-            id: bucket?.id ?? `cat-${i}`,
-            name: bucket?.name ?? `Category ${i + 1}`,
-            priority:
-                typeof bucket?.priority === "number"
-                    ? bucket.priority / 100
-                    : 1 / Math.max(buckets.length, 1),
-            children: normChildren,
-        } as Category;
-    });
-}
-
-function getActiveCategories(): Category[] {
+function getUserCategories(): Category[] {
     try {
-        const raw = localStorage.getItem("activeProfile");
-        if (!raw) return FALLBACK_CATEGORIES;
-        const parsed = JSON.parse(raw);
-        const mapped = profileToCategories(parsed);
-        return mapped.length ? mapped : FALLBACK_CATEGORIES;
+        const curRaw = localStorage.getItem("currentUser");
+        const cur = curRaw ? JSON.parse(curRaw) as { email?: string } : null;
+        if (!cur?.email) return FALLBACK_CATEGORIES;
+        const answers = readAnswers(cur.email);
+        const cats = qaAnswersToCategories(answers);
+        return cats.length ? cats : FALLBACK_CATEGORIES;
     } catch (e) {
-        console.warn("Failed to read activeProfile; using fallback categories.", e);
+        console.warn("Failed to load questionnaire answers; using fallback categories.", e);
         return FALLBACK_CATEGORIES;
     }
 }
@@ -255,7 +169,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
             setLoading(true);
             await nextPaint(); // ensure overlay is visible
 
-            const categories = getActiveCategories();
+            const categories = getUserCategories();
             const t0 = performance.now();
             const result = generateSchedule(categories);
             const t1 = performance.now();
@@ -315,10 +229,20 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         setModalOpen(false);
     };
 
-    const currentCategories = getActiveCategories();
-    const allObligations = currentCategories.flatMap((cat) =>
-        cat.children.map((child) => child.name)
-    );
+    const currentCategories = getUserCategories();
+
+    // Build dropdown options from what's currently visible on the grid,
+    // so user can convert any block into any label that exists on the schedule.
+    const labelOptions: string[] = useMemo(() => {
+        const set = new Set<string>();
+        if (schedule) {
+            Object.values(schedule).forEach((row) => {
+                row.forEach((lab) => { if (lab) set.add(lab); });
+            });
+        }
+        if (selected?.label) set.add(selected.label);
+        return Array.from(set).sort((a, b) => a.localeCompare(b));
+    }, [schedule, selected?.label]);
     const blockEnd = selected ? selected.startIdx + newLength : null;
 
     return (
@@ -358,7 +282,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                     value={newLabel}
                                     onChange={(e) => setNewLabel(e.target.value)}
                                 >
-                                    {allObligations.map((name) => (
+                                    {labelOptions.map((name) => (
                                         <option key={name} value={name}>
                                             {name}
                                         </option>

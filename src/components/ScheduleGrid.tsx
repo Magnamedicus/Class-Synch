@@ -39,25 +39,18 @@ function buildBlocksForDay(daySlots: (string | null)[]): DayBlock[] {
     return blocks;
 }
 
-function taskToType(
-    label: string
-): "study" | "class" | "sleep" | "family" | "friends" | "study" {
+function taskToType(label: string): "study" | "class" | "sleep" | "social" | "work" | "selfcare" | "exercise" | "leisure" {
     const l = label.toLowerCase();
-    if (l.includes("sleep") || l === "nightsleep") return "sleep";
-    if (
-        l.includes("class") ||
-        l.includes("lecture") ||
-        l.includes("lab") ||
-        l.match(/\b(eng|bio|math|chem|cs)\b/)
-    )
-        return "class";
-    if (l.includes("family")) return "family";
-    if (l.includes("friend")) return "friends";
-    if (l.includes("study") || l.includes("read") || l.includes("homework"))
-        return "study";
-    if (l === "biology-101" || l === "english-204") return "class";
-    if (l === "friendhang") return "friends";
-    if (l === "familytime") return "family";
+    if (/(\(class meeting\))$/.test(l)) return "class";
+    if (/(\(studying\))$/.test(l)) return "study";
+    if (l.includes("sleep") || l === "night sleep" || l.includes("nap")) return "sleep";
+    if (/\(rest\)$/.test(l)) return "selfcare";
+    if (l.includes("work shift") || /^work\b/.test(l) || l.includes("shift")) return "work";
+    if (l.includes("social") || l.includes("club") || l.includes("d&d") || l.includes("friends") || l.includes("hang")) return "social";
+    // treat yoga as self-care by default (from questionnaire), not exercise
+    if (l.includes("yoga") || l.includes("hygiene") || l.includes("laundry") || l.includes("self")) return "selfcare";
+    if (l.includes("gym") || l.includes("exercise") || l.includes("run") || l.includes("lift") || l.includes("workout")) return "exercise";
+    if (l.includes("leisure") || l.includes("reading") || l.includes("read") || l.includes("nature") || l.includes("walk") || l.includes("movie") || l.includes("game")) return "leisure";
     return "study";
 }
 
@@ -86,24 +79,30 @@ export function ScheduleGrid({ schedule, onBlockClick }: Props) {
         <div className="schedule">
             {/* Legend */}
             <div className="schedule__legend">
-        <span className="legend__item">
-          <span className="legend__swatch legend__swatch--study" /> Study
-        </span>
                 <span className="legend__item">
-          <span className="legend__swatch legend__swatch--class" /> Class
-          Meeting
-        </span>
+                    <span className="legend__swatch legend__swatch--study" /> Study
+                </span>
                 <span className="legend__item">
-          <span className="legend__swatch legend__swatch--sleep" /> Sleep
-        </span>
+                    <span className="legend__swatch legend__swatch--class" /> Class Meeting
+                </span>
                 <span className="legend__item">
-          <span className="legend__swatch legend__swatch--family" /> Family
-          Time
-        </span>
+                    <span className="legend__swatch legend__swatch--sleep" /> Sleep
+                </span>
                 <span className="legend__item">
-          <span className="legend__swatch legend__swatch--friends" /> Friend
-          Hang
-        </span>
+                    <span className="legend__swatch legend__swatch--social" /> Social
+                </span>
+                <span className="legend__item">
+                    <span className="legend__swatch legend__swatch--work" /> Work Shift
+                </span>
+                <span className="legend__item">
+                    <span className="legend__swatch legend__swatch--selfcare" /> Self-Care
+                </span>
+                <span className="legend__item">
+                    <span className="legend__swatch legend__swatch--exercise" /> Exercise
+                </span>
+                <span className="legend__item">
+                    <span className="legend__swatch legend__swatch--leisure" /> Leisure
+                </span>
             </div>
 
             {/* Header */}

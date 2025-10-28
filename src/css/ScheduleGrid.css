@@ -61,7 +61,7 @@
     display:grid;
     grid-template-columns: var(--time-col-w) repeat(7,1fr);
     position:sticky; top:0; z-index:5;
-    background: linear-gradient(180deg, var(--panel), transparent 90%);
+    background: linear-gradient(180deg, #0f1720, rgba(15,23,32,.85) 90%);
     backdrop-filter: blur(.25rem);
 }
 .schedule__corner{
@@ -73,9 +73,11 @@
     height: var(--header-h);
     display:grid; place-items:center;
     font-weight:700; letter-spacing:.04em; text-transform:uppercase;
-    font-size:.75rem;
-    border-left:1px solid var(--border);
-    background:var(--panel);
+    font-size:.8rem;
+    border-left:1px solid #233347;
+    background:#0f1720; /* force dark header background for contrast */
+    color:#ffffff;       /* force high-contrast text */
+    border-bottom: 1px solid #233347;
 }
 
 
@@ -114,6 +116,7 @@
     background:
             linear-gradient(transparent 49%, var(--grid) 50%) 0 0/100% var(--row-h) repeat-y;
 }
+/* removed per-column day label in favor of sticky header */
 .schedule__day::before{
     content:"";
     position:absolute; inset:0;
@@ -178,13 +181,14 @@
 .block__title{
     font-weight:700;
 
-    font-size: clamp(.55rem, calc(var(--row-h) * .6), .9rem);
+    /* Slightly smaller so it fits on compact blocks */
+    font-size: clamp(.52rem, calc(var(--row-h) * .55), .85rem);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 .block__meta{
-    font-size: clamp(.5rem, calc(var(--row-h) * .45), .8rem);
+    font-size: clamp(.46rem, calc(var(--row-h) * .42), .72rem);
     opacity:.9;
     white-space: nowrap;
     overflow: hidden;
@@ -215,11 +219,14 @@
 }
 
 /* Type modifiers */
-.block--study   { --c: var(--c-study);   --g: var(--g-study); }
-.block--class   { --c: var(--c-class);   --g: var(--g-class); }
-.block--sleep   { --c: var(--c-sleep);   --g: var(--g-sleep); }
-.block--family  { --c: var(--c-family);  --g: var(--g-family); }
-.block--friends { --c: var(--c-friends); --g: var(--g-friends); }
+.block--study     { --c: var(--c-study);     --g: var(--g-study); }
+.block--class     { --c: var(--c-class);     --g: var(--g-class); }
+.block--sleep     { --c: var(--c-sleep);     --g: var(--g-sleep); }
+.block--social    { --c: var(--c-friends);   --g: var(--g-friends); }
+.block--work      { --c: #f59e0b;            --g: linear-gradient(135deg,#f59e0b,#d97706); }
+.block--selfcare  { --c: #22c55e;            --g: linear-gradient(135deg,#22c55e,#16a34a); }
+.block--exercise  { --c: #ef4444;            --g: linear-gradient(135deg,#ef4444,#dc2626); }
+.block--leisure   { --c: #06b6d4;            --g: linear-gradient(135deg,#06b6d4,#0891b2); }
 
 
 .schedule__legend{
@@ -239,11 +246,14 @@
     background: var(--g-study);
     box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset, 0 .125rem .3125rem rgba(0,0,0,.25);
 }
-.legend__swatch--study{   background: var(--g-study); }
-.legend__swatch--class{   background: var(--g-class); }
-.legend__swatch--sleep{   background: var(--g-sleep); }
-.legend__swatch--family{  background: var(--g-family); }
-.legend__swatch--friends{ background: var(--g-friends); }
+.legend__swatch--study{     background: var(--g-study); }
+.legend__swatch--class{     background: var(--g-class); }
+.legend__swatch--sleep{     background: var(--g-sleep); }
+.legend__swatch--social{    background: var(--g-friends); }
+.legend__swatch--work{      background: linear-gradient(135deg,#f59e0b,#d97706); }
+.legend__swatch--selfcare{  background: linear-gradient(135deg,#22c55e,#16a34a); }
+.legend__swatch--exercise{  background: linear-gradient(135deg,#ef4444,#dc2626); }
+.legend__swatch--leisure{   background: linear-gradient(135deg,#06b6d4,#0891b2); }
 
 
 @keyframes blockPop{
@@ -304,7 +314,7 @@
 
 .block[data-len="1"] .block__title,
 .block[style*="--len: 1"] .block__title{
-    font-size: clamp(.52rem, calc(var(--row-h) * .55), .72rem);
+    font-size: clamp(.48rem, calc(var(--row-h) * .5), .68rem);
     line-height: 1;
     white-space: nowrap;
     overflow: hidden;
@@ -328,13 +338,13 @@
 
 .block[data-len="2"] .block__title,
 .block[style*="--len: 2"] .block__title{
-    font-size: clamp(.58rem, calc(var(--row-h) * .6), .8rem);
+    font-size: clamp(.54rem, calc(var(--row-h) * .56), .76rem);
     line-height: 1.05;
 }
 
 .block[data-len="2"] .block__meta,
 .block[style*="--len: 2"] .block__meta{
-    font-size: clamp(.5rem, calc(var(--row-h) * .45), .7rem);
+    font-size: clamp(.46rem, calc(var(--row-h) * .4), .66rem);
     opacity: .9;
     white-space: nowrap;
     overflow: hidden;
@@ -359,17 +369,18 @@
 .schedule__day-header {
     position: sticky;
     top: 0;
-
     z-index: 6;
-    background: var(--panel);
     height: var(--header-h);
     display: grid;
     place-items: center;
     font-weight: 700;
     letter-spacing: .04em;
     text-transform: uppercase;
-    font-size: .75rem;
-    border-left: 1px solid var(--border);
+    font-size: .8rem;
+    border-left: 1px solid #233347;
+    background: #0f1720; /* dark background for contrast */
+    color: #ffffff;       /* high-contrast label text */
+    border-bottom: 1px solid #233347;
 }
 
 .schedule {
@@ -390,11 +401,11 @@
     }
 
     .schedule__day-header {
-        font-size: .8rem;
+        font-size: .85rem;
     }
 
-    .block__title { font-size: .7rem; }
-    .block__meta  { font-size: .65rem; }
+    .block__title { font-size: .65rem; }
+    .block__meta  { font-size: .6rem; }
 }
 
 

@@ -64,15 +64,22 @@
     padding: 0.6rem;
     border-radius: 10px;
     border: 1px solid #334155;
-    background: #1e293b;
-    color: #f8fafc;
+    /* Use light background with dark text for better contrast on native dropdowns */
+    background: #ffffff;
+    color: #111827; /* slate-900 */
     font-size: 1rem;
-    transition: border 0.2s, box-shadow 0.2s;
+    transition: border 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
+}
+
+/* Ensure dropdown options themselves are dark on light background */
+.modal-form select option {
+    background: #ffffff;
+    color: #111827;
 }
 
 .modal-form select:hover {
     border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
 .modal-form select:focus {

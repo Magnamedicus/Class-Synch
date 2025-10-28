@@ -38,6 +38,20 @@ export interface ObligationChild {
     preferredTimeBlocks?: Array<"morning" | "afternoon" | "evening" | "night">;
     dependencyIds?: string[];
     meetingTimes?: MeetingTime[];
+    // NEW: Explicit weekly hours (for study/activities) if provided by questionnaire
+    weeklyHours?: number;
+    // NEW: Sleep preferences
+    desiredNightlyHours?: number;        // hours per night
+    earliestBedtimeHHMM?: number;        // HHMM
+    latestWakeHHMM?: number;             // HHMM
+    // NEW: Session constraints
+    timesPerWeek?: number;               // target sessions per week (for fixed-duration activities)
+    timesPerDay?: number;                // max sessions per day
+    durationMinutes?: number;            // minutes per session
+    // Study no-go days for school tasks
+    noGoDays?: string[];
+    // Post-session rest (minutes) for exercise
+    restMinutes?: number;
 }
 
 export interface Category {
@@ -64,6 +78,22 @@ interface Task {
     anchors?: { day: DayName; idx: number; kind: "pre" | "post" }[];
     labelFor: (kind: "meeting" | "study" | "other") => string;
     isSleep: boolean;
+    // Sleep hints
+    desiredNightlyBlocks?: number;
+    earliestBedtimeBlock?: number;
+    latestWakeBlock?: number;
+    // Session constraints
+    timesPerWeek?: number;
+    timesPerDay?: number;
+    durationBlocks?: number;
+    // Study no-go days
+    noGoDays?: string[];
+    // Category discriminator: School tasks
+    isSchool?: boolean;
+    // Category discriminator: Exercise tasks
+    isExercise?: boolean;
+    // Rest blocks to place immediately after exercise session
+    restBlocks?: number;
 }
 
 /* ===== Helpers ===== */
@@ -121,16 +151,58 @@ function apportionTargets(categories: Category[]): Task[] {
         const children = cat.children;
         if (!children.length) continue;
 
-        const exacts = children.map(c => catBlocks * (c.relativePriority || 0));
+        // 1) Fixed-block children (explicit weekly hours)
+        const fixedBlocksPerChild = new Map<number, number>();
+        let fixedTotal = 0;
+        children.forEach((c, idx) => {
+            if (typeof c.weeklyHours === 'number' && isFinite(c.weeklyHours) && c.weeklyHours > 0) {
+                const blocks = hoursToBlocks(c.weeklyHours);
+                fixedBlocksPerChild.set(idx, blocks);
+                fixedTotal += blocks;
+            }
+        });
+
+        // 2) Remaining blocks distributed by relativePriority among slack children
+        const remaining = Math.max(0, catBlocks - fixedTotal);
+        const slackIndices = children
+            .map((c, i) => ({ c, i }))
+            .filter(({ c, i }) => {
+                if (fixedBlocksPerChild.has(i)) return false;
+                // Exclude non-academic, meeting-only obligations from slack apportioning
+                const meetingOnlyNonAcademic = !!(c.meetingTimes && c.meetingTimes.length) &&
+                    !/school/i.test(cat.name) && !(typeof c.weeklyHours === 'number' && isFinite(c.weeklyHours) && c.weeklyHours > 0);
+                return !meetingOnlyNonAcademic;
+            })
+            .map(({ i }) => i);
+
+        const sumRel = slackIndices
+            .map(i => Math.max(0, children[i].relativePriority || 0))
+            .reduce((a, b) => a + b, 0) || 1; // avoid div-by-zero
+
+        const exacts = slackIndices.map(i => remaining * (Math.max(0, children[i].relativePriority || 0) / sumRel));
         const floors = exacts.map(x => Math.floor(x));
         const used = floors.reduce((a, b) => a + b, 0);
-        let leftovers = catBlocks - used;
+        let leftovers = Math.max(0, remaining - used);
 
         const fractionalOrder = exacts
-            .map((x, i) => ({ i, frac: x - Math.floor(x) }))
+            .map((x, j) => ({ j, frac: x - Math.floor(x) }))
             .sort((a, b) => b.frac - a.frac);
 
-        for (let k = 0; k < leftovers; k++) floors[fractionalOrder[k].i]++;
+        for (let k = 0; k < leftovers && k < fractionalOrder.length; k++) {
+            const j = fractionalOrder[k].j;
+            floors[j]++;
+        }
+
+        // Build per-child required blocks
+        const blocksPerChild: number[] = children.map(() => 0);
+        // fixed
+        for (const [idx, blocks] of fixedBlocksPerChild.entries()) {
+            blocksPerChild[idx] = blocks;
+        }
+        // slack
+        slackIndices.forEach((i, j) => {
+            blocksPerChild[i] = (blocksPerChild[i] || 0) + floors[j];
+        });
 
         children.forEach((child, idx) => {
             const isSleep =
@@ -138,11 +210,13 @@ function apportionTargets(categories: Category[]): Task[] {
                 child.preferredTimeBlocks?.includes("night") ||
                 /sleep/i.test(cat.name);
 
+            const blocksRequired = Math.max(0, blocksPerChild[idx] || 0);
+
             tasks.push({
                 id: `${cat.id}:${child.id}`,
                 courseName: child.name,
                 category: cat.name,
-                blocksRequired: floors[idx],
+                blocksRequired,
                 maxStretchBlocks: Math.max(1, Math.round((child.maxStretch || 1) * BLOCKS_PER_HOUR)),
                 preferred: child.preferredTimeBlocks,
                 meetings: child.meetingTimes?.map(mt => {
@@ -151,13 +225,30 @@ function apportionTargets(categories: Category[]): Task[] {
                     return { day: d, startIdx: a, endIdx: b };
                 }),
                 anchors: [],
-                labelFor: (kind) =>
-                    kind === "meeting"
-                        ? meetingLabel(child.name)
-                        : child.meetingTimes && child.meetingTimes.length
-                            ? studyLabel(child.name)
-                            : child.name,
+                labelFor: (kind) => {
+                    const isSchoolCat = /school/i.test(cat.name);
+                    if (kind === "meeting") return isSchoolCat ? meetingLabel(child.name) : child.name;
+                    // Only academic (school) items get a Studying label for their flexible time
+                    if (isSchoolCat) return studyLabel(child.name);
+                    return child.name;
+                },
                 isSleep,
+                desiredNightlyBlocks: typeof child.desiredNightlyHours === 'number' && child.desiredNightlyHours > 0
+                    ? hoursToBlocks(child.desiredNightlyHours) : undefined,
+                earliestBedtimeBlock: typeof child.earliestBedtimeHHMM === 'number' ? hhmmToBlock(child.earliestBedtimeHHMM) : undefined,
+                latestWakeBlock: typeof child.latestWakeHHMM === 'number' ? hhmmToBlock(child.latestWakeHHMM) : undefined,
+                timesPerWeek: typeof child.timesPerWeek === 'number' && child.timesPerWeek > 0 ? Math.floor(child.timesPerWeek) : undefined,
+                timesPerDay: typeof child.timesPerDay === 'number' && child.timesPerDay > 0 ? Math.floor(child.timesPerDay) : undefined,
+                durationBlocks: typeof child.durationMinutes === 'number' && child.durationMinutes > 0 ? hoursToBlocks(child.durationMinutes / 60) : undefined,
+                noGoDays: Array.isArray(child.noGoDays) ? child.noGoDays : undefined,
+                isSchool: /school/i.test(cat.name),
+                isExercise: /exercise/i.test(cat.name),
+                restBlocks: (() => {
+                    if (typeof child.restMinutes !== 'number' || child.restMinutes <= 0) return undefined;
+                    const minMinutes = Math.max(30, child.restMinutes); // at least 30 minutes
+                    const blocks = Math.ceil(minMinutes / 15); // round up to next 15-min block
+                    return blocks;
+                })(),
             });
         });
     }
@@ -167,19 +258,24 @@ function apportionTargets(categories: Category[]): Task[] {
 
 /* ===== Sleep nightly plan (correct cross-midnight math) ===== */
 
-const SLEEP_START_MIN = hhmmToBlock(20 * 100); // 20:00
-const SLEEP_START_MAX = hhmmToBlock(22 * 100); // 22:00
-const WAKE_MIN       = hhmmToBlock( 6 * 100); // 06:00
-const WAKE_MAX       = hhmmToBlock( 9 * 100); // 09:00
+const DEFAULT_SLEEP_START_MIN = hhmmToBlock(20 * 100); // 20:00
+const DEFAULT_SLEEP_START_MAX = hhmmToBlock(22 * 100); // 22:00
+const DEFAULT_WAKE_MIN       = hhmmToBlock( 6 * 100); // 06:00
+const DEFAULT_WAKE_MAX       = hhmmToBlock( 9 * 100); // 09:00
 const MIN_NIGHTLY_SLEEP = hoursToBlocks(6);   // 6h
 const MAX_NIGHTLY_SLEEP = hoursToBlocks(9);   // 9h
 
-function planNightFor(start: number, desiredLen: number) {
-    // force a wake that yields ~desiredLen; then clamp to 06–09
-    let wake = desiredLen - (BLOCKS_PER_DAY - start); // blocks after midnight
-    wake = clamp(wake, WAKE_MIN, WAKE_MAX);
-    let len  = (BLOCKS_PER_DAY - start) + wake;
+function planNightFor(start: number, desiredLen: number, wakeMaxBlock: number) {
+    // Compute length so wake on next day <= wakeMaxBlock
+    // If desired length pushes wake beyond allowed, reduce length.
+    let len = desiredLen;
+    const wakeBlocksAfterMidnight = start + len - BLOCKS_PER_DAY; // may be <=0 if no wrap
+    if (wakeBlocksAfterMidnight > 0 && wakeBlocksAfterMidnight > wakeMaxBlock) {
+        const over = wakeBlocksAfterMidnight - wakeMaxBlock;
+        len = Math.max(MIN_NIGHTLY_SLEEP, len - over);
+    }
     len = clamp(len, MIN_NIGHTLY_SLEEP, MAX_NIGHTLY_SLEEP);
+    const wake = Math.max(0, start + len - BLOCKS_PER_DAY);
     return { wake, len };
 }
 
@@ -190,17 +286,32 @@ function planPriorityAwareSleep(tasks: Task[]): {
     const sleepTask = tasks.find(t => t.isSleep);
     if (!sleepTask) return {};
 
+    // Choose per-night target blocks either from explicit hint or from weekly requirement
     const total = sleepTask.blocksRequired;
-    const perNight = clamp(Math.round(total / 7), MIN_NIGHTLY_SLEEP, MAX_NIGHTLY_SLEEP);
+    const hintedPerNight = sleepTask.desiredNightlyBlocks;
+    const perNight = clamp(
+        hintedPerNight != null ? hintedPerNight : Math.round(total / 7),
+        MIN_NIGHTLY_SLEEP,
+        MAX_NIGHTLY_SLEEP
+    );
 
     const nightlyPlan: { day: DayName; start: number; len: number }[] = [];
-    // choose a consistent start point around 21:00 if available
-    const defaultStart = clamp(Math.round((SLEEP_START_MIN + SLEEP_START_MAX) / 2), SLEEP_START_MIN, SLEEP_START_MAX); // ~21:00
+    // Decide start/wake limits
+    const earliestStartDefault = DEFAULT_SLEEP_START_MIN; // 20:00
+    const wakeLatestDefault = DEFAULT_WAKE_MAX; // 09:00
+
+    const earliestStart = sleepTask.earliestBedtimeBlock ?? earliestStartDefault;
+    const wakeLatest = sleepTask.latestWakeBlock ?? wakeLatestDefault;
+
+    // Choose a start that wakes as close as possible to the latest acceptable wake,
+    // while not starting earlier than the earliest acceptable bedtime.
+    // Base candidate that would wake exactly at wakeLatest:
+    const alignToLatestWake = (wakeLatest - perNight + BLOCKS_PER_DAY) % BLOCKS_PER_DAY;
+    const startBlock = Math.max(earliestStart, alignToLatestWake);
 
     for (const day of DAYS) {
-        const start = defaultStart; // could add small jitter later
-        const { len } = planNightFor(start, perNight);
-        nightlyPlan.push({ day, start, len });
+        const { len } = planNightFor(startBlock, perNight, wakeLatest);
+        nightlyPlan.push({ day, start: startBlock, len });
     }
 
     // consume total (we'll seed sleep; no additional sleep scheduling)
@@ -250,25 +361,54 @@ function seedSleep(ctx: BuildCtx, nightly?: { day: DayName; start: number; len: 
     const sleeper = ctx.tasks.find(t => t.isSleep);
     if (!sleeper) return;
 
-    for (const n of nightly) {
-        const start = n.start;
-        const endAbs = start + n.len; // may exceed 96
-
-        // head (same day)
-        const headLen = Math.min(n.len, BLOCKS_PER_DAY - start);
-        if (headLen > 0 && isFree(ctx.schedule, n.day, start, headLen)) {
-            fillLabel(ctx.schedule, n.day, start, headLen, sleeper.courseName);
-            for (let i = 0; i < headLen; i++) ctx.fixedMask[n.day][start + i] = true;
-        }
-
-        // tail (next day)
-        const tail = endAbs - BLOCKS_PER_DAY;
+    const canPlaceAcrossMidnight = (day: DayName, start: number, len: number): boolean => {
+        const headLen = Math.min(len, BLOCKS_PER_DAY - start);
+        const tail = len - headLen;
+        if (headLen > 0 && !isFree(ctx.schedule, day, start, headLen)) return false;
         if (tail > 0) {
-            const d2 = DAYS[(DAYS.indexOf(n.day) + 1) % 7];
-            if (isFree(ctx.schedule, d2, 0, tail)) {
-                fillLabel(ctx.schedule, d2, 0, tail, sleeper.courseName);
-                for (let i = 0; i < tail; i++) ctx.fixedMask[d2][i] = true;
+            const d2 = DAYS[(DAYS.indexOf(day) + 1) % 7];
+            if (!isFree(ctx.schedule, d2, 0, tail)) return false;
+        }
+        return true;
+    };
+
+    const placeAcrossMidnight = (day: DayName, start: number, len: number, label: string) => {
+        const headLen = Math.min(len, BLOCKS_PER_DAY - start);
+        if (headLen > 0) {
+            fillLabel(ctx.schedule, day, start, headLen, label);
+            for (let i = 0; i < headLen; i++) ctx.fixedMask[day][start + i] = true;
+        }
+        const tail = len - headLen;
+        if (tail > 0) {
+            const d2 = DAYS[(DAYS.indexOf(day) + 1) % 7];
+            fillLabel(ctx.schedule, d2, 0, tail, label);
+            for (let i = 0; i < tail; i++) ctx.fixedMask[d2][i] = true;
+        }
+    };
+
+    for (const n of nightly) {
+        const baseStart = n.start;
+        const len = n.len;
+
+        // Respect latest wake: cap how far we can push start forward
+        const wakeMax = sleeper.latestWakeBlock ?? 0;
+        const maxStart = Math.min(BLOCKS_PER_DAY - 1, BLOCKS_PER_DAY + wakeMax - len);
+
+        // Slide start later to accommodate late-evening fixed meetings
+        let placed = false;
+        for (let s = baseStart; s <= maxStart; s++) {
+            if (canPlaceAcrossMidnight(n.day, s, len)) {
+                placeAcrossMidnight(n.day, s, len, sleeper.courseName);
+                placed = true;
+                break;
             }
+        }
+        if (!placed) {
+            // Fallback: try original (may partially fill head or tail next day)
+            if (canPlaceAcrossMidnight(n.day, baseStart, len)) {
+                placeAcrossMidnight(n.day, baseStart, len, sleeper.courseName);
+            }
+            // else leave as gap — better than overwriting meetings
         }
     }
 }
@@ -277,12 +417,18 @@ function seedSleep(ctx: BuildCtx, nightly?: { day: DayName; start: number; len: 
 
 function taskPrefers(block: number, t: Task): boolean {
     if (!t.preferred?.length) return true;
-    return t.preferred.some(b => inBucket(block, b));
+    const allowed: Array<"morning" | "afternoon" | "evening" | "night"> = [
+        "morning", "afternoon", "evening", "night",
+    ];
+    const prefs = t.preferred.filter((p: any) => allowed.includes(p as any));
+    if (prefs.length === 0) return true;
+    return prefs.some(b => inBucket(block, b));
 }
 
 function canPlaceFlexibleAt(block: number, t: Task): boolean {
     if (t.isSleep) return false;
-    return withinFlexibleDayWindow(block) && taskPrefers(block, t);
+    // Soft preferences: do not gate by time-of-day preference here
+    return withinFlexibleDayWindow(block);
 }
 
 function freeRunLen(s: Schedule, d: DayName, i: number): number {
@@ -307,8 +453,88 @@ function placeChunkWithMoat(s: Schedule, d: DayName, i: number, len: number, lab
     return true;
 }
 
+function restLabel(_name: string) {
+    return `Rest`;
+}
+
+function canEvict(ctx: BuildCtx, d: DayName, idx: number): boolean {
+    // We may evict any non-fixed flexible block (not in fixedMask)
+    return !ctx.fixedMask[d][idx];
+}
+
+function placeExerciseWithRest(
+    ctx: BuildCtx,
+    t: Task,
+    d: DayName,
+    start: number,
+    len: number
+): boolean {
+    const s = ctx.schedule;
+    if (t.restBlocks == null || t.restBlocks <= 0) return false;
+    if (!withinFlexibleDayWindow(start)) return false;
+    // exercise segment must be fully free and moat-clear
+    if (start < 0 || start + len > BLOCKS_PER_DAY) return false;
+    if (!moatClear(s, d, start, len, t.labelFor("study"))) return false;
+    for (let k = 0; k < len; k++) if (s[d][start + k] !== null) return false;
+
+    const restStart = start + len;
+    const restLen = t.restBlocks;
+    if (restStart + restLen > BLOCKS_PER_DAY) return false; // do not wrap rest across days
+
+    // rest region must either be free or evictable (non-fixed)
+    for (let k = 0; k < restLen; k++) {
+        const pos = restStart + k;
+        if (s[d][pos] !== null && !canEvict(ctx, d, pos)) return false;
+    }
+
+    // Evict flexible blocks in rest segment (if any)
+    for (let k = 0; k < restLen; k++) {
+        const pos = restStart + k;
+        if (s[d][pos] !== null && canEvict(ctx, d, pos)) s[d][pos] = null;
+    }
+
+    // Place exercise then rest
+    if (!placeChunkWithMoat(s, d, start, len, t.labelFor("study"))) return false;
+    fillLabel(s, d, restStart, restLen, restLabel(t.courseName));
+    // Immediately add mandatory hygiene (30 minutes) after rest, evicting non-fixed if needed
+    const hygBlocks = 2; // 30 minutes
+    const hygStart = restStart + restLen;
+    if (hygStart + hygBlocks <= BLOCKS_PER_DAY) {
+        let can = true;
+        for (let k = 0; k < hygBlocks; k++) {
+            const pos = hygStart + k;
+            if (s[d][pos] !== null && !canEvict(ctx, d, pos)) { can = false; break; }
+        }
+        if (can) {
+            for (let k = 0; k < hygBlocks; k++) {
+                const pos = hygStart + k;
+                if (s[d][pos] !== null && canEvict(ctx, d, pos)) s[d][pos] = null;
+            }
+            fillLabel(s, d, hygStart, hygBlocks, 'Hygiene');
+        }
+    }
+    return true;
+}
+
+function countLabelOccurrences(s: Schedule, d: DayName, label: string): number {
+    const row = s[d];
+    let count = 0;
+    let i = 0;
+    while (i < BLOCKS_PER_DAY) {
+        if (row[i] !== label) { i++; continue; }
+        let j = i + 1;
+        while (j < BLOCKS_PER_DAY && row[j] === label) j++;
+        count++;
+        i = j;
+    }
+    return count;
+}
+
 function greedyFill(ctx: BuildCtx) {
-    const chunkFor = (t: Task) => clamp(Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR), 2, 6);
+    const chunkFor = (t: Task) => {
+        if (t.durationBlocks && t.durationBlocks > 0) return clamp(t.durationBlocks, 1, Math.max(1, t.maxStretchBlocks || BLOCKS_PER_HOUR));
+        return clamp(Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR), 2, 6);
+    };
 
     for (const t of ctx.tasks) {
         if (t.isSleep) continue;
@@ -317,15 +543,27 @@ function greedyFill(ctx: BuildCtx) {
 
         for (const d of DAYS) {
             if (remain <= 0) break;
+            if (t.isSchool && t.noGoDays && t.noGoDays.includes(d)) continue;
 
-            for (let i = hhmmToBlock(8 * 100); i < hhmmToBlock(22 * 100); i++) {
+            for (let i = hhmmToBlock(6 * 100); i < hhmmToBlock(22 * 100); i++) {
                 if (remain <= 0) break;
                 if (!canPlaceFlexibleAt(i, t)) continue;
                 const free = freeRunLen(ctx.schedule, d, i);
                 if (free < 2) continue;
 
                 const len = Math.min(chunkFor(t), remain, free);
-                if (placeChunkWithMoat(ctx.schedule, d, i, len, t.labelFor("study"))) {
+                // enforce per-day session cap if provided
+                if (t.timesPerDay != null) {
+                    const label = t.labelFor("study");
+                    const occ = countLabelOccurrences(ctx.schedule, d, label);
+                    if (occ >= t.timesPerDay) { continue; }
+                }
+                if (t.isExercise && (t.restBlocks || 0) > 0) {
+                    if (placeExerciseWithRest(ctx, t, d, i, len)) {
+                        remain -= len;
+                        i += len; // skip past exercise segment
+                    }
+                } else if (placeChunkWithMoat(ctx.schedule, d, i, len, t.labelFor("study"))) {
                     remain -= len;
                     // skip past the chunk + moat
                     i += len;
@@ -426,8 +664,8 @@ function anneal(
             for (let it = 0; it < inner; it++) {
                 const cand = deepCopySchedule(current);
 
-                // pick a random non-sleep task
-                const pool = ctx.tasks.filter((t) => !t.isSleep);
+                // pick a random non-sleep, non-exercise task (exercise handled by greedy with paired rest)
+                const pool = ctx.tasks.filter((t) => !t.isSleep && !t.isExercise && (t.blocksRequired || 0) > 0);
                 if (!pool.length) break;
                 const t = pool[(Math.random() * pool.length) | 0];
 
@@ -436,11 +674,18 @@ function anneal(
                 const len = clamp(2 + ((Math.random() * maxLen) | 0), 2, maxLen);
 
                 const d = DAYS[(Math.random() * 7) | 0];
+                if (t.isSchool && t.noGoDays && t.noGoDays.includes(d)) continue;
                 const start = (Math.random() * (BLOCKS_PER_DAY - len)) | 0;
 
                 // obey flexible window + moat + fixed mask
                 if (!withinFlexibleDayWindow(start)) continue;
                 if (!moatClear(cand, d, start, len, t.labelFor("study"))) continue;
+                // enforce per-day session cap
+                if (t.timesPerDay != null) {
+                    const occ = countLabelOccurrences(cand, d, t.labelFor("study"));
+                    // placing this chunk would add 1 session
+                    if (occ >= t.timesPerDay) continue;
+                }
 
                 let ok = true;
                 for (let k = 0; k < len; k++) {
@@ -508,12 +753,15 @@ function fillDaytimeGapsByDeficit(ctx: BuildCtx) {
         let need = ctx.deficits[t.id] || 0;
         if (need <= 0) continue;
 
-        const chunk = Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR);
+        const chunk = t.durationBlocks && t.durationBlocks > 0
+            ? t.durationBlocks
+            : Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR);
 
         // Round-robin across days to avoid giant slabs
         outer: for (let round = 0; round < 3; round++) {
             for (const d of DAYS) {
                 if (need <= 0) break outer;
+                if (t.isSchool && t.noGoDays && t.noGoDays.includes(d)) continue;
 
                 for (let i = hhmmToBlock(8 * 100); i < hhmmToBlock(22 * 100); i++) {
                     if (need <= 0) break;
@@ -523,9 +771,19 @@ function fillDaytimeGapsByDeficit(ctx: BuildCtx) {
 
                     // cap by free run and remaining
                     const free = freeRunLen(s, d, i);
-                    const len = clamp(Math.min(chunk, free, need), 2, chunk);
+                    // exact length for fixed-duration items; otherwise bounded by stretch
+                    const len = t.durationBlocks && t.durationBlocks > 0
+                        ? Math.min(chunk, free, need)
+                        : clamp(Math.min(chunk, free, need), 2, chunk);
 
-                    if (len >= 2 && placeChunkWithMoat(s, d, i, len, t.labelFor("study"))) {
+                    if (len >= 1) {
+                        if (t.timesPerDay != null) {
+                            const occ = countLabelOccurrences(s, d, t.labelFor("study"));
+                            if (occ >= t.timesPerDay) { continue; }
+                        }
+                    }
+
+                    if (len >= 1 && placeChunkWithMoat(s, d, i, len, t.labelFor("study"))) {
                         need -= len;
                         i += len; // skip past
                     }
@@ -584,6 +842,7 @@ function enforceMinRunLengths(ctx: BuildCtx, minBlocks = 2) {
 }
 
 /* ===== Public entry ===== */
+export type { Category, ObligationChild, MeetingTime };
 
 export function generateSchedule(categories: Category[]): Schedule {
     const tasks = apportionTargets(categories);
@@ -596,16 +855,216 @@ export function generateSchedule(categories: Category[]): Schedule {
     const { nightlyPlan } = planPriorityAwareSleep(tasks);
     seedSleep(ctx, nightlyPlan);
 
-    // 3) greedy flexible placement with moat + maxStretch
+    // 3) targeted: try placing class study adjacent to class meetings
+    placeStudyAdjacentToMeetings(ctx);
+
+    // 4) greedy flexible placement with moat + maxStretch
     greedyFill(ctx);
 
-    // 4) anneal (anchor rewards/penalties already baked into scoring)
+    // 5) anneal (anchor rewards/penalties already baked into scoring)
     anneal(ctx);
 
-    // 5) deficits fill (chunked, round-robin) + safety passes
+    // 6) deficits fill (chunked, round-robin) + safety passes
     fillDaytimeGapsByDeficit(ctx);
     enforceStudyBreaks(ctx);
     enforceMinRunLengths(ctx, 2);
 
+    // Mandatory hygiene after wake and after work shifts
+    enforceHygieneAfterSleep(ctx);
+    enforceHygieneAfterWork(ctx);
+
+    // Enforce post-exercise rest periods immediately after exercise sessions
+    enforceRestPeriods(ctx);
+
+    // 7) smoothing: merge identical blocks with tiny gaps between them
+    mergeNearIdenticalBlocks(ctx, 1); // merge when gap <= 1 block (15m)
+
     return ctx.schedule;
 }
+
+function placeStudyAdjacentToMeetings(ctx: BuildCtx) {
+    for (const t of ctx.tasks) {
+        if (t.isSleep) continue;
+        if (!t.isSchool) continue;
+        if (!t.meetings || !t.meetings.length) continue;
+        let remain = t.blocksRequired;
+        if (remain <= 0) continue;
+
+        const label = t.labelFor("study");
+        const chunk = clamp(Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR), 2, Math.max(2, t.maxStretchBlocks || 2));
+
+        for (const m of t.meetings) {
+            if (remain <= 0) break;
+            const d = m.day;
+            if (t.noGoDays && t.noGoDays.includes(d)) continue;
+
+            // After meeting
+            if (remain > 0) {
+                const start = m.endIdx;
+                const free = freeRunLen(ctx.schedule, d, start);
+                const len = Math.min(chunk, remain, free);
+                if (len >= 2 && withinFlexibleDayWindow(start)) {
+                    if (placeChunkWithMoat(ctx.schedule, d, start, len, label)) {
+                        remain -= len;
+                    }
+                }
+            }
+            if (remain <= 0) break;
+
+            // Before meeting
+            if (remain > 0) {
+                const len = Math.min(chunk, remain);
+                const start = m.startIdx - len;
+                if (start >= 0 && withinFlexibleDayWindow(start)) {
+                    let ok = true;
+                    for (let k = 0; k < len; k++) if (ctx.schedule[d][start + k] !== null) { ok = false; break; }
+                    if (ok && moatClear(ctx.schedule, d, start, len, label)) {
+                        fillLabel(ctx.schedule, d, start, len, label);
+                        remain -= len;
+                    }
+                }
+            }
+        }
+
+        t.blocksRequired = remain;
+        ctx.deficits[t.id] = remain;
+    }
+}
+
+function enforceRestPeriods(ctx: BuildCtx) {
+    const s = ctx.schedule;
+    const exerciseTasks = ctx.tasks.filter(t => t.isExercise && (t.restBlocks || 0) > 0);
+    if (!exerciseTasks.length) return;
+    for (const t of exerciseTasks) {
+        const label = t.labelFor("study"); // for exercise, flexible label is the name
+        const rlen = t.restBlocks || 0;
+        if (rlen <= 0) continue;
+
+        for (const d of DAYS) {
+            const row = s[d];
+            let i = 0;
+            while (i < BLOCKS_PER_DAY) {
+                if (row[i] !== label) { i++; continue; }
+                let j = i + 1;
+                while (j < BLOCKS_PER_DAY && row[j] === label) j++;
+                // attempt to place rest starting at j
+                if (j < BLOCKS_PER_DAY) {
+                    let free = 0;
+                    while (j + free < BLOCKS_PER_DAY && row[j + free] === null) free++;
+                    const len = Math.min(rlen, free);
+                    if (len > 0) {
+                        fillLabel(s, d, j, len, restLabel(t.courseName));
+                        // hygiene right after rest
+                        const hygStart = j + len;
+                        const hygBlocks = 2;
+                        if (hygStart + hygBlocks <= BLOCKS_PER_DAY) {
+                            let can = true;
+                            for (let q = 0; q < hygBlocks; q++) {
+                                const pos = hygStart + q;
+                                if (s[d][pos] !== null && !canEvict(ctx, d, pos)) { can = false; break; }
+                            }
+                            if (can) {
+                                for (let q = 0; q < hygBlocks; q++) {
+                                    const pos = hygStart + q;
+                                    if (s[d][pos] !== null && canEvict(ctx, d, pos)) s[d][pos] = null;
+                                }
+                                fillLabel(s, d, hygStart, hygBlocks, 'Hygiene');
+                            }
+                        }
+                    }
+                }
+                i = j;
+            }
+        }
+    }
+}
+
+function enforceHygieneAfterSleep(ctx: BuildCtx) {
+    const s = ctx.schedule;
+    const sleepNames = new Set<string>(ctx.tasks.filter(t => t.isSleep).map(t => t.courseName));
+    const hygBlocks = 2; // 30 minutes
+    for (const d of DAYS) {
+        const row = s[d];
+        // find wake boundary at start of day: count leading sleep blocks
+        let i = 0;
+        while (i < BLOCKS_PER_DAY && row[i] && sleepNames.has(String(row[i]))) i++;
+        const wake = i;
+        if (wake < BLOCKS_PER_DAY && wake > 0) {
+            // place hygiene starting at wake if possible, evicting non-fixed
+            let can = true;
+            for (let k = 0; k < hygBlocks; k++) {
+                const pos = wake + k;
+                if (pos >= BLOCKS_PER_DAY) { can = false; break; }
+                if (row[pos] !== null && !canEvict(ctx, d, pos)) { can = false; break; }
+            }
+            if (can) {
+                for (let k = 0; k < hygBlocks; k++) {
+                    const pos = wake + k;
+                    if (row[pos] !== null && canEvict(ctx, d, pos)) row[pos] = null;
+                }
+                fillLabel(s, d, wake, hygBlocks, 'Hygiene');
+            }
+        }
+    }
+}
+
+function enforceHygieneAfterWork(ctx: BuildCtx) {
+    const s = ctx.schedule;
+    const hygBlocks = 2;
+    // Find tasks with work meetings
+    const workTasks = ctx.tasks.filter(t => /work/i.test(t.courseName) && t.meetings && t.meetings.length);
+    for (const t of workTasks) {
+        for (const m of t.meetings || []) {
+            const d = m.day;
+            const start = m.startIdx;
+            const end = m.endIdx;
+            // verify that meeting label is present there (optional)
+            const placeStart = end;
+            if (placeStart + hygBlocks > BLOCKS_PER_DAY) continue;
+            let can = true;
+            for (let k = 0; k < hygBlocks; k++) {
+                const pos = placeStart + k;
+                if (s[d][pos] !== null && !canEvict(ctx, d, pos)) { can = false; break; }
+            }
+            if (can) {
+                for (let k = 0; k < hygBlocks; k++) {
+                    const pos = placeStart + k;
+                    if (s[d][pos] !== null && canEvict(ctx, d, pos)) s[d][pos] = null;
+                }
+                fillLabel(s, d, placeStart, hygBlocks, 'Hygiene');
+            }
+        }
+    }
+}
+
+function mergeNearIdenticalBlocks(ctx: BuildCtx, maxGapBlocks = 1) {
+    const s = ctx.schedule;
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (const day of DAYS) {
+            const row = s[day];
+            let i = 0;
+            while (i < BLOCKS_PER_DAY) {
+                const lab = row[i];
+                if (!lab) { i++; continue; }
+                let j = i + 1;
+                while (j < BLOCKS_PER_DAY && row[j] === lab) j++;
+                let g = j;
+                while (g < BLOCKS_PER_DAY && row[g] === null) g++;
+                if (g < BLOCKS_PER_DAY && (g - j) > 0 && (g - j) <= maxGapBlocks) {
+                    let k = g;
+                    while (k < BLOCKS_PER_DAY && row[k] === lab) k++;
+                    if (k > g) {
+                        for (let p = j; p < g; p++) row[p] = lab;
+                        changed = true;
+                        j = k;
+                    }
+                }
+                i = j;
+            }
+        }
+    }
+}
+
+

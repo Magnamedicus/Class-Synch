@@ -42,7 +42,9 @@ export const WINDOW = {
 export type TimeBucket = "morning" | "afternoon" | "evening" | "night";
 
 export function inBucket(block: number, bucket: TimeBucket): boolean {
-    const [a, b] = WINDOW[bucket];
+    const win = (WINDOW as any)[bucket];
+    if (!win || !Array.isArray(win)) return false;
+    const [a, b] = win as [number, number];
     return block >= a && block < b;
 }
 
@@ -51,8 +53,8 @@ export function isNight(block: number): boolean {
 }
 
 export function withinFlexibleDayWindow(block: number): boolean {
-    // 08:00–22:00 for flexible items
-    const start = hhmmToBlock(HHMM(8, 0));
+    // 06:00–22:00 for flexible items to allow early-morning routines
+    const start = hhmmToBlock(HHMM(6, 0));
     const end   = hhmmToBlock(HHMM(22, 0));
     return block >= start && block < end;
 }
