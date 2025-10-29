@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Redirecting…</title>
+    <meta http-equiv="refresh" content="0; url=./" />
+    <script>
+      (function () {
+        var l = window.location;
+        var base = l.pathname.split('/');
+        var keep = 1; // project path depth on GitLab Pages
+        var prefix = base.slice(0, keep + 1).join('/') + '/';
+        var rest = base.slice(keep + 1).join('/');
+        var target = prefix + '#/' + rest + (l.search || '') + (l.hash || '');
+        l.replace(target);
+      })();
+    </script>
+  </head>
+  <body>Redirecting…</body>
+  </html>
+

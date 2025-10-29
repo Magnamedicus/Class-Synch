@@ -41,6 +41,8 @@ const router = createBrowserRouter([
             { path: "custom", element: <CustomTab />}
         ],
     },
-]);
+], {
+    basename: (import.meta as any).env?.BASE_URL || "/",
+});
 
 export default router;
