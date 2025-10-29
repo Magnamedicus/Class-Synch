@@ -42,7 +42,16 @@ const router = createBrowserRouter([
         ],
     },
 ], {
-    basename: (import.meta as any).env?.BASE_URL || "/",
+    // Compute a safe basename from Vite's BASE_URL (handles "./" and subpaths)
+    basename: (() => {
+        const raw = (import.meta as any).env?.BASE_URL || "/";
+        try {
+            const url = new URL(raw, window.location.origin);
+            return url.pathname || "/";
+        } catch {
+            return "/";
+        }
+    })(),
 });
 
 export default router;
