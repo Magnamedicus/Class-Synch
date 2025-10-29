@@ -369,7 +369,7 @@
     overflow: hidden;
 }
 
-\.block {`n    transition: top 220ms cubic-bezier(.2,.7,.2,1), height 220ms cubic-bezier(.2,.7,.2,1),`n                transform .18s ease, box-shadow .18s ease, filter .18s ease;
+.block {
     box-shadow: 0 .4rem 1rem color-mix(in oklab, var(--c), #000 60%);
 }
 
@@ -423,16 +423,5 @@
 .block[style*="--len: 1"] .block__meta,
 .block[style*="--height: calc(var(--row-h) * 1)"] .block__meta {
    display: block !important;
-}
-
-
-/* Arrival animation after move */
-.block--arrive{
-  animation: blockArrive .5s cubic-bezier(.2,.7,.2,1);
-}
-@keyframes blockArrive{
-  0%{ transform: translateY(-6px) scale(.98); box-shadow: 0 .2rem .6rem rgba(0,0,0,.35); }
-  40%{ transform: translateY(0) scale(1.02); }
-  100%{ transform: translateY(0) scale(1); }
 }
 

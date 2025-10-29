@@ -71,9 +71,10 @@ interface Props {
     ) => void;
     onStartTapMove?: (payload: { fromDay: string; startIdx: number; length: number; label: string }) => void;
     onCellClick?: (day: string, startIdx: number) => void;
+    moved?: { day: string; startIdx: number; label: string } | null;
 }
 
-export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMove, onCellClick }: Props) {
+export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMove, onCellClick, moved }: Props) {
     const dayBlocks = useMemo(() => {
         const result: Record<string, DayBlock[]> = {};
         for (const day of DAYS) {
@@ -198,7 +199,7 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMo
                             return (
                                 <div
                                     key={`${day}-block-${i}-${b.label}-${b.startIdx}`}
-                                    className={`block block--${blockType}`}
+                                    className={`block block--${blockType} ${moved && moved.day===day && moved.startIdx===b.startIdx && moved.label===b.label ? 'block--arrive' : ''}`}
                                     data-len={b.length}
                                     style={
                                         {

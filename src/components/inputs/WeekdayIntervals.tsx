@@ -52,6 +52,28 @@ const WeekdayIntervals: React.FC<WeekdayIntervalsProps> = ({
     const [pickerEnd, setPickerEnd] = React.useState("");
     const [pickerErr, setPickerErr] = React.useState<string>("");
 
+    // Parse a time string like "9:30 AM" or "14:15" into minutes since midnight
+    const parseTimeToMinutes = (t: string): number | null => {
+        const s = (t || "").trim();
+        if (!s) return null;
+        const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (m12) {
+            let h = parseInt(m12[1], 10);
+            const m = parseInt(m12[2], 10);
+            const ap = m12[3].toUpperCase();
+            if (h === 12) h = 0; // 12:xx AM -> 0h; 12:xx PM -> 12h after adding
+            if (ap === "PM") h += 12;
+            return h * 60 + m;
+        }
+        const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+        if (m24) {
+            const h = parseInt(m24[1], 10);
+            const m = parseInt(m24[2], 10);
+            return h * 60 + m;
+        }
+        return null;
+    };
+
     // open picker for add/edit
     const openPicker = (day: Weekday, idx: number | null) => {
         if (disabled) return;
@@ -95,7 +117,13 @@ const WeekdayIntervals: React.FC<WeekdayIntervalsProps> = ({
             setPickerErr("Please enter both a start and end time.");
             return;
         }
-        if (e <= s) {
+        const sm = parseTimeToMinutes(s);
+        const em = parseTimeToMinutes(e);
+        if (sm == null || em == null) {
+            setPickerErr("Please enter valid times (e.g., 9:00 AM, 1:15 PM).");
+            return;
+        }
+        if (em <= sm) {
             setPickerErr("End time must be later than start time.");
             return;
         }

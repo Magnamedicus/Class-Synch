@@ -1,0 +1,300 @@
+import {
+    useState,
+    forwardRef,
+    useImperativeHandle,
+    useMemo,
+    useEffect,
+} from "react";
+import { generateSchedule } from "../utils/simulatedAnnealingScheduler";
+import { qaAnswersToCategories } from "../utils/qaAnswersToCategories";
+import { readAnswers } from "../utils/qaStorage";
+import type {
+    Schedule,
+    Category,
+    MeetingTime,
+} from "../utils/simulatedAnnealingScheduler";
+import { ScheduleGrid } from "./ScheduleGrid";
+import TimeInput from "./inputs/TimeInput";
+import "../css/Modal.css";
+import "../css/scheduler.css";
+
+/* =========================
+   Types & handle exported
+========================= */
+export type SchedulerHandle = {
+    generate: () => Promise<Schedule | void>;
+    load: (s: Schedule) => void;
+};
+
+/* =========================
+   Fallback demo categories
+========================= */
+const FALLBACK_CATEGORIES: Category[] = [
+    {
+        id: "school",
+        name: "school-work",
+        priority: 0.7,
+        children: [
+            {
+                id: "bio101",
+                name: "Biology-101",
+                relativePriority: 0.4,
+                maxStretch: 1.0,
+                meetingTimes: [
+                    { day: "monday", start: 800, end: 900 },
+                    { day: "wednesday", start: 800, end: 900 },
+                    { day: "friday", start: 800, end: 900 },
+                ],
+                preferredTimeBlocks: ["morning", "afternoon"],
+                dependencyIds: [],
+            },
+            {
+                id: "eng204",
+                name: "English-204",
+                relativePriority: 0.2,
+                maxStretch: 2.0,
+                meetingTimes: [
+                    { day: "tuesday", start: 1330, end: 1530 },
+                    { day: "thursday", start: 1330, end: 1530 },
+                ],
+                preferredTimeBlocks: ["morning", "afternoon"],
+                dependencyIds: [],
+            },
+            {
+                id: "chem301",
+                name: "Chemistry-301",
+                relativePriority: 0.4,
+                maxStretch: 2.0,
+                meetingTimes: [
+                    { day: "tuesday", start: 900, end: 1100 },
+                    { day: "thursday", start: 900, end: 1100 },
+                ],
+                preferredTimeBlocks: ["morning", "afternoon"],
+                dependencyIds: [],
+            },
+        ],
+    },
+    {
+        id: "rest",
+        name: "Sleep",
+        priority: 0.2,
+        children: [
+            {
+                id: "night-sleep",
+                name: "Night Sleep",
+                relativePriority: 1.0,
+                maxStretch: 8.0,
+                preferredTimeBlocks: ["night"],
+                dependencyIds: [],
+            },
+        ],
+    },
+    {
+        id: "social",
+        name: "Socializing",
+        priority: 0.1,
+        children: [
+            {
+                id: "friends",
+                name: "Friend Hangout",
+                relativePriority: 0.7,
+                maxStretch: 3.0,
+                preferredTimeBlocks: ["evening"],
+                dependencyIds: [],
+            },
+            {
+                id: "family",
+                name: "Family Time",
+                relativePriority: 0.3,
+                maxStretch: 2.5,
+                preferredTimeBlocks: ["evening"],
+                dependencyIds: [],
+            },
+        ],
+    },
+];
+
+/* =========================
+   Build categories from saved answers
+========================= */
+
+function getUserCategories(): Category[] {
+    try {
+        const curRaw = localStorage.getItem("currentUser");
+        const cur = curRaw ? JSON.parse(curRaw) as { email?: string } : null;
+        if (!cur?.email) return FALLBACK_CATEGORIES;
+        const answers = readAnswers(cur.email);
+        const cats = qaAnswersToCategories(answers);
+        return cats.length ? cats : FALLBACK_CATEGORIES;
+    } catch (e) {
+        console.warn("Failed to load questionnaire answers; using fallback categories.", e);
+        return FALLBACK_CATEGORIES;
+    }
+}
+
+/* Yield to the browser so the overlay can paint */
+const nextPaint = () =>
+    new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    );
+
+/* =========================
+   Component
+========================= */
+
+const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
+    const [schedule, setSchedule] = useState<Schedule | null>(null);
+    const [ms, setMs] = useState<number | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    // modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selected, setSelected] = useState<{
+        day: string;
+        startIdx: number;
+        length: number;
+        label: string;
+    } | null>(null);
+    const [createMode, setCreateMode] = useState<boolean>(false);
+
+    const [newLabel, setNewLabel] = useState<string>("");
+    const [newLength, setNewLength] = useState<number>(1);
+    const [toast, setToast] = useState<string>("");
+    const [moveCandidate, setMoveCandidate] = useState<{
+        fromDay: string;
+        startIdx: number;
+        length: number;
+        label: string;
+    } | null>(null);
+    const [bedTime, setBedTime] = useState<string>("10:00 PM");
+    const [wakeTime, setWakeTime] = useState<string>("07:00 AM");
+
+    const BLOCKS_PER_HOUR = 4;
+    const hhmmToBlock = (hhmm: number) => {
+        const h = Math.floor(hhmm / 100);
+        const m = hhmm % 100;
+        return h * BLOCKS_PER_HOUR + Math.floor(m / 15);
+    };
+    const parseTimeToHHMM = (t: string): number | null => {
+        if (!t) return null;
+        const s = t.trim();
+        const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (m12) {
+            let h = parseInt(m12[1], 10);
+            const mm = parseInt(m12[2], 10);
+            const ap = m12[3].toUpperCase();
+            if (h === 12) h = 0;
+            if (ap === "PM") h += 12;
+            return h * 100 + mm;
+        }
+        const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+        if (m24) {
+            const h = parseInt(m24[1], 10);
+            const mm = parseInt(m24[2], 10);
+            return h * 100 + mm;
+        }
+        return null;
+    };
+
+    // If user switches the label to Night Sleep in the dropdown, seed override inputs
+    useEffect(() => {
+        if (newLabel && newLabel.toLowerCase().includes("night sleep")) {
+            setBedTime("10:00 PM");
+            setWakeTime("07:00 AM");
+        }
+    }, [newLabel]);
+
+    const persist = (s: Schedule) => {
+        try {
+            localStorage.setItem("lastSchedule", JSON.stringify(s));
+        } catch (e) {
+            console.warn("Unable to persist schedule to localStorage:", e);
+        }
+    };
+
+    // Restore last saved schedule on mount so it persists across navigation
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('lastSchedule');
+            if (stored) {
+                const parsed = JSON.parse(stored) as Schedule;
+                if (parsed && parsed.monday && parsed.sunday) {
+                    setSchedule(parsed);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to restore lastSchedule:', e);
+        }
+    }, []);
+
+    const handleGenerateSchedule = async (): Promise<Schedule | void> => {
+        try {
+            setLoading(true);
+            await nextPaint(); // ensure overlay is visible
+
+            const categories = getUserCategories();
+            const t0 = performance.now();
+            const result = generateSchedule(categories);
+            const t1 = performance.now();
+
+            setSchedule(result);
+            setMs(t1 - t0);
+            persist(result);
+            try { localStorage.setItem('scheduleClosed', 'false'); } catch {}
+            return result;
+        } catch (err) {
+            console.error("❌ Error generating schedule:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useImperativeHandle(ref, () => ({
+        generate: handleGenerateSchedule,
+        load: (s: Schedule) => {
+            setSchedule(s);
+            try {
+                localStorage.setItem('lastSchedule', JSON.stringify(s));
+                localStorage.setItem('scheduleClosed', 'false');
+            } catch {}
+        },
+    }));
+
+    const handleBlockClick = (
+        day: string,
+        block: { startIdx: number; length: number; label: string },
+        _blockType: string
+    ) => {
+        setSelected(block ? { ...block, day } : null);
+        setNewLabel(block.label);
+        setNewLength(block.length);
+        setModalOpen(true);
+        setCreateMode(false);
+        if (block.label.toLowerCase().includes("night sleep")) {
+            setBedTime("10:00 PM");
+            setWakeTime("07:00 AM");
+        }
+    };
+
+    const clearBlock = () => {
+        if (!schedule || !selected) return;
+        const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
+        for (let i = selected.startIdx; i < selected.startIdx + selected.length; i++) {
+            updated[selected.day][i] = null;
+        }
+        setSchedule(updated);
+        persist(updated);
+        setModalOpen(false);
+    };
+
+    // Merge identical labels separated by a small gap (<= 1 block) on a single row
+    const mergeNearIdenticalsOnRow = (row: (string | null)[], maxGap = 1) => {
+        let changed = true;
+        while (changed) {
+            changed = false;
+            let i = 0;
+            while (i < row.length) {
+                const lab = row[i];
+                if (!lab) { i++; continue; }
+                let j = i + 1;
+                while (j < row.length && row[j] === lab) j++;
