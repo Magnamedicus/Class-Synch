@@ -203,36 +203,42 @@
 }
 
 /* Toast / Inline success message */
-.toast {
+.ec-toast {
     position: fixed;
     top: 1rem;
     right: 1rem;
-    background: rgba(20, 60, 20, 0.95);
+    background: rgba(20, 60, 20, 0.97);
     color: #d8ffd8;
     border: 1px solid #36d27e;
-    border-radius: 10px;
-    padding: 0.5rem 0.75rem;
-    z-index: 3000;
+    border-radius: 8px;
+    padding: 0.35rem 0.6rem; /* compact */
+    z-index: 100000; /* above modals/overlays */
     box-shadow: 0 10px 20px rgba(0,0,0,0.35);
-    animation: toastPop 0.25s ease-out;
+    animation: ecFadeIn 0.15s ease-out; /* fade-in only; no movement */
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.95rem;
-    line-height: 1.2;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 1.2rem; /* bigger text */
+    font-weight: 700;
+    line-height: 1.05;
     pointer-events: none;
     box-sizing: border-box;
+    max-height: 48px;
+    min-height: 32px;
+    max-width: 360px;
+    white-space: nowrap;
 }
 
-.toast--success::before {
+.ec-toast--success::before {
     content: "✓ ";
     color: #36d27e;
     margin-right: 0.25rem;
 }
 
-@keyframes toastPop {
-    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes ecFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* -------------------- */

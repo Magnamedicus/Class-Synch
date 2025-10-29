@@ -40,7 +40,7 @@ const EnterClasses: React.FC<EnterClassesProps> = ({ value, onChange }) => {
                 setPreviewItems(parsed);
                 setShowPreview(true);
                 setToast("Upload Successful!");
-                setTimeout(() => setToast(null), 2500);
+                setTimeout(() => setToast(null), 2000);
                 const patch: Record<string, any> = {};
                 for (const c of parsed) {
                     const slug = c.code.toLowerCase();
@@ -184,7 +184,38 @@ const EnterClasses: React.FC<EnterClassesProps> = ({ value, onChange }) => {
                 <div className="import-status" role="status" aria-live="polite">{importStatus}</div>
             )}
             {toast && (
-                <div className="toast toast--success">{toast}</div>
+                <div
+                    className="ec-toast ec-toast--success"
+                    style={{
+                        position: "fixed",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 2147483647,
+                        background: "rgba(20, 60, 20, 0.97)",
+                        color: "#d8ffd8",
+                        border: "1px solid #36d27e",
+                        borderRadius: 10,
+                        padding: "0.5rem 0.9rem",
+                        boxShadow: "0 10px 20px rgba(0,0,0,0.35)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        textAlign: "center",
+                        gap: "0.4rem",
+                        fontSize: "1.3rem",
+                        fontWeight: 800,
+                        lineHeight: 1.1,
+                        whiteSpace: "nowrap",
+                        maxHeight: 56,
+                        minHeight: 36,
+                        minWidth: 220,
+                        maxWidth: 420,
+                        pointerEvents: "none",
+                    }}
+                >
+                    {toast}
+                </div>
             )}
             <div style={{ display: "flex", gap: "0.75rem" }}>
                 <button
