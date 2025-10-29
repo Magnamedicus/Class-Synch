@@ -145,6 +145,12 @@
     box-shadow: 0 0 2rem rgba(106, 90, 205, 0.8); /* 35px */
 }
 
+.file-upload-label.is-dragover {
+    background: rgba(70, 50, 130, 1);
+    border-color: #00ffcc;
+    box-shadow: 0 0 2rem rgba(0, 255, 204, 0.6);
+}
+
 .file-upload-label svg {
     fill: #6a5acd;
     margin-bottom: 0.5rem;

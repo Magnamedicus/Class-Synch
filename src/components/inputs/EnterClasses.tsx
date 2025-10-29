@@ -17,6 +17,47 @@ const EnterClasses: React.FC<EnterClassesProps> = ({ value, onChange }) => {
     const [showPreview, setShowPreview] = useState(false);
     const [previewItems, setPreviewItems] = useState<ParsedClass[]>([]);
     const [toast, setToast] = useState<string | null>(null);
+    const [isDragOver, setIsDragOver] = useState(false);
+
+    async function importFile(file: File) {
+        setImportStatus("Parsing…");
+        try {
+            const { imported, parsed, errors } = await importScheduleFromFile(file);
+            const currentUserRaw = localStorage.getItem("currentUser");
+            let classes: string[] = value;
+            if (currentUserRaw) {
+                const { email } = JSON.parse(currentUserRaw || "{}");
+                if (email) {
+                    const ans = readAnswers(email);
+                    if (Array.isArray(ans?.["school_classes"])) {
+                        classes = ans["school_classes"];
+                    }
+                }
+            }
+            onChange(classes);
+            if (imported > 0) {
+                setImportStatus(`Imported ${imported} class${imported === 1 ? "" : "es"}.`);
+                setPreviewItems(parsed);
+                setShowPreview(true);
+                setToast("Upload Successful!");
+                setTimeout(() => setToast(null), 2500);
+                const patch: Record<string, any> = {};
+                for (const c of parsed) {
+                    const slug = c.code.toLowerCase();
+                    const id = `class_${slug}`;
+                    patch[`${id}_meeting_days`] = c.days;
+                    patch[`${id}_meeting_time`] = { start: c.start, end: c.end };
+                }
+                window.dispatchEvent(new CustomEvent("qa:merge-answers", { detail: { patch } }));
+            } else {
+                setImportStatus(errors?.length ? `No classes imported. ${errors.join("; ")}` : "No classes found in file.");
+            }
+        } catch (err: any) {
+            setImportStatus(`Import failed: ${err?.message || String(err)}`);
+        } finally {
+            setTimeout(() => setImportStatus(null), 4000);
+        }
+    }
 
     const handleAdd = () => {
         if (input.trim() !== "") {
@@ -37,8 +78,14 @@ const EnterClasses: React.FC<EnterClassesProps> = ({ value, onChange }) => {
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
+        // Prevent browser from opening files when dropped outside the zone
+        const prevent = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); };
+        window.addEventListener("dragover", prevent as any);
+        window.addEventListener("drop", prevent as any);
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
+            window.removeEventListener("dragover", prevent as any);
+            window.removeEventListener("drop", prevent as any);
         };
     }, []);
 
@@ -86,7 +133,24 @@ const EnterClasses: React.FC<EnterClassesProps> = ({ value, onChange }) => {
 
             <h3 className="option-header">Option 2: Upload Your Schedule</h3>
             <form className="file-upload-form">
-                <label htmlFor="file" className="file-upload-label">
+                <label
+                    htmlFor="file"
+                    className={`file-upload-label ${isDragOver ? "is-dragover" : ""}`}
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }}
+                    onDrop={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDragOver(false);
+                        const dt = e.dataTransfer;
+                        if (!dt) return;
+                        const files = dt.files;
+                        if (files && files.length > 0) {
+                            await importFile(files[0]);
+                        }
+                    }}
+                >
                     <div className="file-upload-design">
                         <svg viewBox="0 0 640 512" height="2.5em">
                             <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2
@@ -110,45 +174,8 @@ const EnterClasses: React.FC<EnterClassesProps> = ({ value, onChange }) => {
                         onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            setImportStatus("Parsing…");
-                            try {
-                                const { imported, parsed, errors } = await importScheduleFromFile(file);
-                                const currentUserRaw = localStorage.getItem("currentUser");
-                                let classes: string[] = value;
-                                if (currentUserRaw) {
-                                    const { email } = JSON.parse(currentUserRaw || "{}");
-                                    if (email) {
-                                        const ans = readAnswers(email);
-                                        if (Array.isArray(ans?.["school_classes"])) {
-                                            classes = ans["school_classes"];
-                                        }
-                                    }
-                                }
-                                onChange(classes);
-                                if (imported > 0) {
-                                    setImportStatus(`Imported ${imported} class${imported === 1 ? "" : "es"}.`);
-                                    setPreviewItems(parsed);
-                                    setShowPreview(true);
-                                    setToast("Upload Successful!");
-                                    setTimeout(() => setToast(null), 2500);
-                                    // Emit a custom event so the questionnaire page can merge meeting fields
-                                    const patch: Record<string, any> = {};
-                                    for (const c of parsed) {
-                                        const slug = c.code.toLowerCase();
-                                        const id = `class_${slug}`;
-                                        patch[`${id}_meeting_days`] = c.days;
-                                        patch[`${id}_meeting_time`] = { start: c.start, end: c.end };
-                                    }
-                                    window.dispatchEvent(new CustomEvent("qa:merge-answers", { detail: { patch } }));
-                                } else {
-                                    setImportStatus(errors?.length ? `No classes imported. ${errors.join("; ")}` : "No classes found in file.");
-                                }
-                            } catch (err: any) {
-                                setImportStatus(`Import failed: ${err?.message || String(err)}`);
-                            } finally {
-                                (e.currentTarget as HTMLInputElement).value = "";
-                                setTimeout(() => setImportStatus(null), 4000);
-                            }
+                            await importFile(file);
+                            (e.currentTarget as HTMLInputElement).value = "";
                         }}
                     />
                 </label>
