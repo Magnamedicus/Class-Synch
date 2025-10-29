@@ -59,17 +59,26 @@ function toAmPm(h24: number, m: number) {
 }
 
 // Heuristic: what looks like a real course code?
-// Examples: BIO101, CHE-302, ENG204A
-const COURSE_RE = /^[A-Za-z]{3,6}[- ]?\d{2,4}[A-Za-z]?$/;
+// Examples: BIO101, CHE-302, ENG204A, BIO101-LAB, CHE302-LEC
+const COURSE_RE = /^[A-Za-z]{2,8}[- ]?\d{2,4}[A-Za-z]?(?:-[A-Z]{2,5})?$/;
 function isLikelyCourse(code: string) {
   return COURSE_RE.test(code);
 }
 function normalizeTimeToken(token: string): string | null {
   const s = token.trim().toUpperCase().replace(/\./g, ":");
-  const m = s.match(/^(\d{1,2})(?::?(\d{2}))?\s*(AM|PM)?$/i);
+  // Support HMM/HHMM without colon (e.g., 900, 1330)
+  const m4 = s.match(/^(\d{3,4})\s*(AM|PM)?$/i);
+  if (m4) {
+    const digits = m4[1];
+    const ap2 = m4[2] ? m4[2].toUpperCase() : "";
+    const hh = digits.length === 3 ? parseInt(digits.slice(0, 1), 10) : parseInt(digits.slice(0, 2), 10);
+    const mm = digits.length === 3 ? parseInt(digits.slice(1), 10) : parseInt(digits.slice(2), 10);
+    return normalizeTimeToken(`${hh}:${String(mm).padStart(2, "0")} ${ap2}`.trim());
+  }
+  const m = s.match(/^(\d{1,2})(?::?(\d{1,2}))?\s*(AM|PM)?$/i);
   if (!m) return null;
   let hh = parseInt(m[1], 10);
-  let mm = m[2] ? parseInt(m[2], 10) : 0;
+  let mm = m[2] ? parseInt(m[2].padStart(2, "0"), 10) : 0;
   const ap = m[3];
   if (ap) {
     const isPM = ap.toUpperCase() === "PM";
@@ -182,7 +191,7 @@ function normalizeDayTokens(text: string): DayName[] {
   const t = text.toLowerCase().trim();
   const days: DayName[] = [];
   // Try words first
-  const wordMatches = t.match(/mon|monday|tue|tues|tuesday|wed|wednesday|thu|thur|thurs|thursday|fri|friday|sat|saturday|sun|sunday|\b[mwrfstu]\b/gi);
+  const wordMatches = t.match(/mon|monday|tue|tues|tuesday|wed|wednesday|thu|thur|thurs|thursday|\bth\b|fri|friday|sat|saturday|sun|sunday|\b[mwrfstu]\b/gi);
   if (wordMatches) {
     for (const w of wordMatches) {
       const d = DAY_WORD_TO_DAY[w.toLowerCase()];
@@ -192,7 +201,8 @@ function normalizeDayTokens(text: string): DayName[] {
   }
   // Shorthand like MWF, TuTh
   let s = t.replace(/\s+/g, "");
-  s = s.replace(/thu|thurs|thur/gi, "R");
+  // Map various Thursday tokens to R, including a bare 'th'
+  s = s.replace(/thu|thurs|thur|\bth\b/gi, "R");
   s = s.replace(/tue|tues/gi, "T");
   const map: Record<string, DayName> = { M: "monday", T: "tuesday", W: "wednesday", R: "thursday", F: "friday", S: "saturday", U: "sunday" };
   const out: DayName[] = [];
@@ -228,6 +238,11 @@ function parseCSV(text: string): ParsedClass[] {
     }
     const m = code.match(/[A-Za-z]{3,6}-?\d{2,4}[A-Za-z]?/);
     if (m) code = m[0].replace(/[^A-Za-z0-9]/g, "");
+    // Detect components and suffix, e.g., LAB/LEC/DISC/REC
+    const fullName = (idxName >= 0 ? cols[idxName] : name).toUpperCase();
+    if (/\bLAB\b/.test(fullName)) code = `${code}-LAB`;
+    else if (/\bLEC(TURE)?\b|\bLECT\b/.test(fullName)) code = `${code}-LEC`;
+    else if (/\bDISC(USSION)?\b|\bRECIT(ATION)?\b|\bREC\b/.test(fullName)) code = `${code}-DISC`;
     if (!isLikelyCourse(code)) continue;
 
     let days: DayName[] = [];
@@ -241,7 +256,7 @@ function parseCSV(text: string): ParsedClass[] {
       start = normalizeTimeToken(cols[idxStart]) || start;
       end = normalizeTimeToken(cols[idxEnd]) || end;
     } else if (idxTime >= 0 && cols[idxTime]) {
-      const pieces = cols[idxTime].split(/[^0-9A-Za-z: ]+/).map(t => t.trim()).filter(Boolean);
+      const pieces = cols[idxTime].split(/\s*-\s*|[^0-9A-Za-z: ]+/).map(t => t.trim()).filter(Boolean);
       if (pieces.length >= 2) {
         const a = normalizeTimeToken(pieces[0]);
         const b = normalizeTimeToken(pieces[1]);
