@@ -65,6 +65,18 @@ const SchoolTab: React.FC = () => {
         writeJSON(aKey, answers);
     }, [aKey, answers]);
 
+    // Merge patches from EnterClasses import (meeting days/times) so UI updates immediately
+    React.useEffect(() => {
+        function onMerge(e: Event) {
+            const ce = e as CustomEvent<{ patch: Record<string, any> }>;
+            const patch = (ce.detail && (ce.detail as any).patch) || {};
+            if (!patch || typeof patch !== "object") return;
+            setAnswers((prev) => ({ ...prev, ...patch }));
+        }
+        window.addEventListener("qa:merge-answers", onMerge as EventListener);
+        return () => window.removeEventListener("qa:merge-answers", onMerge as EventListener);
+    }, []);
+
     const setAnswer = (id: string, value: any) => {
         setAnswers((prev) => ({ ...prev, [id]: value }));
     };

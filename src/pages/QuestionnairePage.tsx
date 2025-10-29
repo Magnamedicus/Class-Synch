@@ -261,6 +261,18 @@ const QuestionnairePage: React.FC = () => {
         writeJSON(qaAnswersKey(identity.email), answers);
     }, [identity?.email, answers]);
 
+    // Merge patches from schedule import (meeting days/times) without losing existing state
+    React.useEffect(() => {
+        function onMerge(e: Event) {
+            const ce = e as CustomEvent<{ patch: Record<string, any> }>;
+            const patch = (ce.detail && (ce.detail as any).patch) || {};
+            if (!patch || typeof patch !== "object") return;
+            setAnswers((p) => ({ ...p, ...patch }));
+        }
+        window.addEventListener("qa:merge-answers", onMerge as EventListener);
+        return () => window.removeEventListener("qa:merge-answers", onMerge as EventListener);
+    }, []);
+
     /* ---------- Persist progress whenever it changes ---------- */
     React.useEffect(() => {
         if (!identity?.email) return;
@@ -659,22 +671,34 @@ const QuestionnairePage: React.FC = () => {
         return () => document.documentElement.classList.remove("modal-open");
     }, [classFollowupsOpen]);
 
+    function preloadFollowupInputsForClass(cls: string) {
+        const base = `class_${slugify(cls)}`;
+        const a: any = answers || {};
+        setCfPriority(typeof a?.[`${base}_priority`] === "number" ? a?.[`${base}_priority`] : 70);
+        const meetDays = Array.isArray(a?.[`${base}_meeting_days`]) ? (a?.[`${base}_meeting_days`] as string[]) : [];
+        const meetTime = a?.[`${base}_meeting_time`];
+        setCfMeetDays(meetDays);
+        setCfMeetStart(typeof meetTime?.start === "string" ? meetTime.start : "");
+        setCfMeetEnd(typeof meetTime?.end === "string" ? meetTime.end : "");
+        setCfStudyHours(typeof a?.[`${base}_study_hours`] === "string" ? a?.[`${base}_study_hours`] : "");
+        setCfPrefTimes(Array.isArray(a?.[`${base}_pref_times`]) ? (a?.[`${base}_pref_times`] as string[]) : []);
+    }
+
     function startClassFollowUps(classNames: SimpleClass[]) {
         if (!classNames.length) return;
         setClassListForFollowups(classNames);
         setClassIdx(0);
         setClassStep(0);
-
-        setCfPriority(70);
-        setCfMeetDays([]);
-        setCfMeetStart("");
-        setCfMeetEnd("");
-        setCfStudyHours("");
-        setCfPrefTimes([]);
+        // Preload the first class from existing answers (e.g., imported schedule)
+        preloadFollowupInputsForClass(classNames[0]);
 
         setClassFollowupsOpen(true);
     }
-    function resetFollowupInputsForNextClass() {
+    function resetFollowupInputsForNextClass(nextName?: string) {
+        if (nextName) {
+            preloadFollowupInputsForClass(nextName);
+            return;
+        }
         setCfPriority(70);
         setCfMeetDays([]);
         setCfMeetStart("");
@@ -691,6 +715,23 @@ const QuestionnairePage: React.FC = () => {
             return i;
         });
     }
+    // If answers gain imported meeting data after the modal opens, prefill the current class
+    React.useEffect(() => {
+        if (!classFollowupsOpen) return;
+        const name = classListForFollowups[classIdx];
+        if (!name) return;
+        if (cfMeetDays.length === 0 && !cfMeetStart && !cfMeetEnd) {
+            const base = `class_${slugify(name)}`;
+            const a: any = answers || {};
+            const meetDays = Array.isArray(a?.[`${base}_meeting_days`]) ? (a?.[`${base}_meeting_days`] as string[]) : [];
+            const meetTime = a?.[`${base}_meeting_time`];
+            if (meetDays.length || (meetTime?.start && meetTime?.end)) {
+                setCfMeetDays(meetDays);
+                if (typeof meetTime?.start === "string") setCfMeetStart(meetTime.start);
+                if (typeof meetTime?.end === "string") setCfMeetEnd(meetTime.end);
+            }
+        }
+    }, [answers, classIdx, classFollowupsOpen]);
     function submitClassFollowupStep() {
         const currentClass = classListForFollowups[classIdx];
         if (!currentClass) return;
@@ -726,9 +767,10 @@ const QuestionnairePage: React.FC = () => {
 
         const nextClass = classIdx + 1;
         if (nextClass < classListForFollowups.length) {
+            const nextName = classListForFollowups[nextClass];
             setClassIdx(nextClass);
             setClassStep(0);
-            resetFollowupInputsForNextClass();
+            resetFollowupInputsForNextClass(nextName);
         } else {
             closeClassFollowUps();
         }

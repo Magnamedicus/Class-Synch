@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import "../../css/EnterClasses.css";
+import { importScheduleFromFile, type ParsedClass } from "../../utils/scheduleImport";
+import { readAnswers, writeAnswers } from "../../utils/qaStorage";
+import Modal from "../Modal";
 
 interface EnterClassesProps {
     value: string[];
@@ -10,6 +13,10 @@ const EnterClasses: React.FC<EnterClassesProps> = ({ value, onChange }) => {
     const [input, setInput] = useState("");
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [importStatus, setImportStatus] = useState<string | null>(null);
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewItems, setPreviewItems] = useState<ParsedClass[]>([]);
+    const [toast, setToast] = useState<string | null>(null);
 
     const handleAdd = () => {
         if (input.trim() !== "") {
@@ -96,9 +103,125 @@ const EnterClasses: React.FC<EnterClassesProps> = ({ value, onChange }) => {
                         <p>Drag & Drop</p>
                         <span className="browse-button">Browse File</span>
                     </div>
-                    <input id="file" type="file" />
+                    <input
+                        id="file"
+                        type="file"
+                        accept=".ics,.csv,text/csv,text/calendar"
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setImportStatus("Parsing…");
+                            try {
+                                const { imported, parsed, errors } = await importScheduleFromFile(file);
+                                const currentUserRaw = localStorage.getItem("currentUser");
+                                let classes: string[] = value;
+                                if (currentUserRaw) {
+                                    const { email } = JSON.parse(currentUserRaw || "{}");
+                                    if (email) {
+                                        const ans = readAnswers(email);
+                                        if (Array.isArray(ans?.["school_classes"])) {
+                                            classes = ans["school_classes"];
+                                        }
+                                    }
+                                }
+                                onChange(classes);
+                                if (imported > 0) {
+                                    setImportStatus(`Imported ${imported} class${imported === 1 ? "" : "es"}.`);
+                                    setPreviewItems(parsed);
+                                    setShowPreview(true);
+                                    setToast("Upload Successful!");
+                                    setTimeout(() => setToast(null), 2500);
+                                    // Emit a custom event so the questionnaire page can merge meeting fields
+                                    const patch: Record<string, any> = {};
+                                    for (const c of parsed) {
+                                        const slug = c.code.toLowerCase();
+                                        const id = `class_${slug}`;
+                                        patch[`${id}_meeting_days`] = c.days;
+                                        patch[`${id}_meeting_time`] = { start: c.start, end: c.end };
+                                    }
+                                    window.dispatchEvent(new CustomEvent("qa:merge-answers", { detail: { patch } }));
+                                } else {
+                                    setImportStatus(errors?.length ? `No classes imported. ${errors.join("; ")}` : "No classes found in file.");
+                                }
+                            } catch (err: any) {
+                                setImportStatus(`Import failed: ${err?.message || String(err)}`);
+                            } finally {
+                                (e.currentTarget as HTMLInputElement).value = "";
+                                setTimeout(() => setImportStatus(null), 4000);
+                            }
+                        }}
+                    />
                 </label>
             </form>
+            {importStatus && (
+                <div className="import-status" role="status" aria-live="polite">{importStatus}</div>
+            )}
+            {toast && (
+                <div className="toast toast--success">{toast}</div>
+            )}
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+                <button
+                    type="button"
+                    className="danger-btn"
+                    onClick={() => {
+                        if (!window.confirm("Remove all classes and related settings? This cannot be undone.")) return;
+                        try {
+                            const currentUserRaw = localStorage.getItem("currentUser");
+                            const { email } = currentUserRaw ? JSON.parse(currentUserRaw) : {};
+                            if (email) {
+                                const ans = readAnswers(email);
+                                const list = Array.isArray(ans?.["school_classes"]) ? (ans["school_classes"] as string[]) : value;
+                                const patch: Record<string, any> = { school_classes: [] };
+                                // Remove known per-class fields
+                                const keys = new Set<string>();
+                                for (const cls of list) {
+                                    const slug = cls.toLowerCase();
+                                    const base = `class_${slug}`;
+                                    ["meeting_days","meeting_time","priority","study_hours","pref_times"].forEach((suf) => {
+                                        keys.add(`${base}_${suf}`);
+                                    });
+                                }
+                                // Also sweep any stray class_* keys
+                                Object.keys(ans || {}).forEach((k) => {
+                                    if (/^class_[a-z0-9-]+_(meeting_days|meeting_time|priority|study_hours|pref_times)$/.test(k)) {
+                                        keys.add(k);
+                                    }
+                                });
+                                keys.forEach((k) => (patch[k] = undefined));
+                                // Persist and notify
+                                writeAnswers(email, { ...ans, ...patch });
+                                window.dispatchEvent(new CustomEvent("qa:merge-answers", { detail: { patch } }));
+                            }
+                        } catch {}
+                        onChange([]);
+                        setOpen(false);
+                    }}
+                >
+                    Clear All Classes
+                </button>
+            </div>
+            <Modal isOpen={showPreview} onClose={() => setShowPreview(false)}>
+                <div style={{ minWidth: 360 }}>
+                    <h3 style={{ marginTop: 0 }}>Imported Classes</h3>
+                    {previewItems.length === 0 ? (
+                        <p>No classes parsed.</p>
+                    ) : (
+                        <ul style={{ listStyle: "none", padding: 0, margin: 0, maxHeight: 300, overflowY: "auto" }}>
+                            {previewItems.map((c, idx) => (
+                                <li key={idx} style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                                    <div style={{ fontWeight: 600 }}>{c.code}</div>
+                                    <div style={{ opacity: 0.85 }}>
+                                        {c.days.join(", ")} • {c.start} – {c.end}
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <div style={{ marginTop: 16, textAlign: "right" }}>
+                        <button type="button" onClick={() => setShowPreview(false)} className="add-btn">Close</button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };
