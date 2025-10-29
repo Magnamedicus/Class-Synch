@@ -3,20 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Redirecting…</title>
-    <meta http-equiv="refresh" content="0; url=./" />
-    <script>
-      (function () {
-        var l = window.location;
-        var base = l.pathname.split('/');
-        var keep = 1; // project path depth on GitLab Pages
-        var prefix = base.slice(0, keep + 1).join('/') + '/';
-        var rest = base.slice(keep + 1).join('/');
-        var target = prefix + '#/' + rest + (l.search || '') + (l.hash || '');
-        l.replace(target);
-      })();
-    </script>
+    <title>Not found</title>
   </head>
-  <body>Redirecting…</body>
+  <body style="font-family: system-ui, sans-serif; padding: 2rem;">
+    <h1>Page not found</h1>
+    <p>
+      This is a static host. Please use the in‑app links (they look like
+      <code>#/route</code>) or go back to the <a href="./">home page</a>.
+    </p>
+  </body>
   </html>
-

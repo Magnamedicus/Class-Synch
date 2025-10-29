@@ -1,5 +1,5 @@
 // src/router.tsx
-import { createBrowserRouter } from "react-router-dom";
+import { createHashRouter } from "react-router-dom";
 
 // === Core Pages ===
 import Home from "./pages/home";
@@ -20,7 +20,7 @@ import ExerciseTab from "./pages/Profile/ExerciseTab";
 import CustomTab from "./pages/Profile/CustomTab";
 
 // === Router Definition ===
-const router = createBrowserRouter([
+const router = createHashRouter([
     { path: "/", element: <Home /> },
     { path: "/about", element: <About /> },
     { path: "/questionnaire", element: <QuestionnairePage /> },
@@ -41,17 +41,6 @@ const router = createBrowserRouter([
             { path: "custom", element: <CustomTab />}
         ],
     },
-], {
-    // Compute a safe basename from Vite's BASE_URL (handles "./" and subpaths)
-    basename: (() => {
-        const raw = (import.meta as any).env?.BASE_URL || "/";
-        try {
-            const url = new URL(raw, window.location.origin);
-            return url.pathname || "/";
-        } catch {
-            return "/";
-        }
-    })(),
-});
+]);
 
 export default router;
