@@ -4,6 +4,7 @@ import {
     useImperativeHandle,
     useMemo,
     useEffect,
+    useCallback,
 } from "react";
 import { generateSchedule } from "../utils/simulatedAnnealingScheduler";
 import { qaAnswersToCategories } from "../utils/qaAnswersToCategories";
@@ -170,6 +171,186 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         from: { day: keyof Schedule; startIdx: number; length: number; label: string };
         to: { day: keyof Schedule; startIdx: number; length: number; label: string };
     } | null>(null);
+
+    // Resolve display alias for labels and optional original code for hover tooltips
+    const labelToDisplay = useCallback((label: string): string => {
+        try {
+            const cur = localStorage.getItem("currentUser");
+            const { email } = cur ? JSON.parse(cur) : {};
+            if (!email) return label;
+            const ans = readAnswers(email);
+            const suffixMatch = label.match(/ \((Class Meeting|Studying)\)$/i);
+            const suffix = suffixMatch ? suffixMatch[0] : "";
+            const base = label.replace(/ \((Class Meeting|Studying)\)$/i, "");
+            const classes: string[] = Array.isArray(ans?.school_classes) ? (ans.school_classes as string[]) : [];
+            const findSlug = (name: string): string => {
+                const hit = classes.find((c) => c.toLowerCase() === name.toLowerCase());
+                if (hit) return hit.toLowerCase();
+                for (const code of classes) {
+                    const a = (ans[`class_${code.toLowerCase()}_alias`] || "").toString().trim();
+                    if (a && a.toLowerCase() === name.toLowerCase()) return code.toLowerCase();
+                }
+                return name.toLowerCase();
+            };
+            const slug = findSlug(base);
+            const alias = (ans[`class_${slug}_alias`] || "").toString().trim();
+            const newBase = alias || base;
+            return newBase + suffix;
+        } catch {
+            return label;
+        }
+    }, []);
+
+    const labelToOriginal = useCallback((label: string): string | undefined => {
+        try {
+            const cur = localStorage.getItem("currentUser");
+            const { email } = cur ? JSON.parse(cur) : {};
+            if (!email) return undefined;
+            const ans = readAnswers(email);
+            const base = label.replace(/ \((Class Meeting|Studying)\)$/i, "");
+            const classes: string[] = Array.isArray(ans?.school_classes) ? (ans.school_classes as string[]) : [];
+            const findSlug = (name: string): string => {
+                const hit = classes.find((c) => c.toLowerCase() === name.toLowerCase());
+                if (hit) return hit.toLowerCase();
+                for (const code of classes) {
+                    const a = (ans[`class_${code.toLowerCase()}_alias`] || "").toString().trim();
+                    if (a && a.toLowerCase() === name.toLowerCase()) return code.toLowerCase();
+                }
+                return name.toLowerCase();
+            };
+            const slug = findSlug(base);
+            const orig = (ans[`class_${slug}_original`] || "").toString().trim();
+            return orig || undefined;
+        } catch {
+            return undefined;
+        }
+    }, []);
+
+    // Live alias-to-label update when Profile saves a rename
+    useEffect(() => {
+        function onMerge(e: any) {
+            if (!schedule) return;
+            const patch = e?.detail?.patch || {};
+            const aliasKeys = Object.keys(patch).filter((k) => /(^|_)class_[a-z0-9-]+_alias$/.test(k));
+            if (!aliasKeys.length) return;
+            // Read classes to map slug->code
+            let classes: string[] = [];
+            try {
+                const currentUserRaw = localStorage.getItem('currentUser');
+                const { email } = currentUserRaw ? JSON.parse(currentUserRaw) : {};
+                if (email) {
+                    const ans = readAnswers(email);
+                    if (Array.isArray(ans?.school_classes)) classes = ans.school_classes as string[];
+                }
+            } catch {}
+            const next: Schedule = {
+                monday: [...schedule.monday],
+                tuesday: [...schedule.tuesday],
+                wednesday: [...schedule.wednesday],
+                thursday: [...schedule.thursday],
+                friday: [...schedule.friday],
+                saturday: [...schedule.saturday],
+                sunday: [...schedule.sunday],
+            };
+            for (const key of aliasKeys) {
+                const alias = (patch[key] || '').trim();
+                const slug = key.replace(/^.*class_/, '').replace(/_alias$/, '');
+                const code = classes.find((c) => c.toLowerCase() === slug) || '';
+                if (!alias && !code) continue;
+                const replaceBase = (row: (string | null)[]) => {
+                    for (let i = 0; i < row.length; i++) {
+                        const lab = row[i];
+                        if (!lab) continue;
+                        const m = lab.match(/^(.*) \((Class Meeting|Studying)\)$/i);
+                        const suffix = m ? ` (${m[2]})` : '';
+                        const base = m ? m[1] : lab;
+                        if (base === code || base === alias) {
+                            const newBase = alias || code;
+                            const newLabel = suffix ? newBase + suffix : newBase;
+                            row[i] = newLabel;
+                        }
+                    }
+                };
+                replaceBase(next.monday);
+                replaceBase(next.tuesday);
+                replaceBase(next.wednesday);
+                replaceBase(next.thursday);
+                replaceBase(next.friday);
+                replaceBase(next.saturday);
+                replaceBase(next.sunday);
+            }
+                        setSchedule(next);
+            persist(next);
+
+            // Also update persisted schedules (lastSchedule + savedSchedules)
+            try {
+                const last = localStorage.getItem("lastSchedule");
+                if (last) {
+                    const obj = JSON.parse(last);
+                    const rows: Array<keyof Schedule> = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"] as any;
+                    const doReplace = (row: (string|null)[]) => {
+                        for (const key of aliasKeys) {
+                            const a = (patch[key] || '').trim();
+                            const slug = key.replace(/^.*class_/, '').replace(/_alias$/, '');
+                            const code = classes.find((c) => c.toLowerCase() === slug) || '';
+                            for (let i = 0; i < row.length; i++) {
+                                const lab = row[i];
+                                if (!lab) continue;
+                                const m = lab.match(/^(.*) \((Class Meeting|Studying)\)$/i);
+                                const suffix = m ? ` (${m[2]})` : '';
+                                const base = m ? m[1] : lab;
+                                if (base === code || base === a) {
+                                    const newBase = a || code;
+                                    const newLabel = suffix ? newBase + suffix : newBase;
+                                    row[i] = newLabel;
+                                }
+                            }
+                        }
+                    };
+                    for (const k of rows) doReplace(obj[k]);
+                    localStorage.setItem("lastSchedule", JSON.stringify(obj));
+                }
+            } catch {}
+            try {
+                const rawList = localStorage.getItem("savedSchedules");
+                if (rawList) {
+                    const list = JSON.parse(rawList);
+                    if (Array.isArray(list)) {
+                        for (const entry of list) {
+                            if (entry && entry.schedule) {
+                                const rows: Array<keyof Schedule> = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"] as any;
+                                const sch = entry.schedule;
+                                const doReplace = (row: (string|null)[]) => {
+                                    for (const key of aliasKeys) {
+                                        const a = (patch[key] || '').trim();
+                                        const slug = key.replace(/^.*class_/, '').replace(/_alias$/, '');
+                                        const code = classes.find((c) => c.toLowerCase() === slug) || '';
+                                        for (let i = 0; i < row.length; i++) {
+                                            const lab = row[i];
+                                            if (!lab) continue;
+                                            const m = lab.match(/^(.*) \((Class Meeting|Studying)\)$/i);
+                                            const suffix = m ? ` (${m[2]})` : '';
+                                            const base = m ? m[1] : lab;
+                                            if (base === code || base === a) {
+                                                const newBase = a || code;
+                                                const newLabel = suffix ? newBase + suffix : newBase;
+                                                row[i] = newLabel;
+                                            }
+                                        }
+                                    }
+                                };
+                                for (const k of rows) doReplace(sch[k]);
+                            }
+                        }
+                        localStorage.setItem("savedSchedules", JSON.stringify(list));
+                    }
+                }
+            } catch {}setSchedule(next);
+            persist(next);
+        }
+        window.addEventListener('qa:merge-answers', onMerge as any);
+        return () => window.removeEventListener('qa:merge-answers', onMerge as any);
+    }, [schedule]);
     const [bedTime, setBedTime] = useState<string>("10:00 PM");
     const [wakeTime, setWakeTime] = useState<string>("07:00 AM");
 
@@ -447,6 +628,7 @@ const handleBlockClick = (
 
             {schedule && (
                 <ScheduleGrid
+                    
                     schedule={schedule}
                     onBlockClick={handleBlockClick}
                     onRequestSwap={(from, to) => {
@@ -753,3 +935,6 @@ const handleBlockClick = (
 });
 
 export default Scheduler;
+
+
+

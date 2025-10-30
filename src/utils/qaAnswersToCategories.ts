@@ -62,7 +62,8 @@ function transformClasses(answers: QAAnswers): Category | null {
 
     const children: ObligationChild[] = classIds.map((classCode: string) => {
         const id = `class_${classCode.toLowerCase()}`;
-        const name = classCode;
+        const alias = (answers[`${id}_alias`] || "").toString().trim();
+        const name = alias || classCode;
         const relativePriority = normalizePriority(answers[`${id}_priority`]);
         const studyHours = parseFloat(answers[`${id}_study_hours`] || "0");
         const preferredTimeBlocks = normalizePreferredTimes(answers[`${id}_pref_times`]);

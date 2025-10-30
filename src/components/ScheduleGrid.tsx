@@ -72,10 +72,12 @@ interface Props {
     onStartTapMove?: (payload: { fromDay: string; startIdx: number; length: number; label: string }) => void;
     onCellClick?: (day: string, startIdx: number) => void;
     moved?: { day: string; startIdx: number; label: string } | null;
+    labelTransform?: (label: string) => string;
+    hoverOriginal?: (label: string) => string | undefined;
     onRequestSwap?: (from: { fromDay: string; startIdx: number; length: number; label: string }, to: { day: string; startIdx: number; length: number; label: string }) => void;
 }
 
-export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMove, onCellClick, moved, onRequestSwap }: Props) {
+export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMove, onCellClick, moved, onRequestSwap, labelTransform, hoverOriginal }: Props) {
     const dayBlocks = useMemo(() => {
         const result: Record<string, DayBlock[]> = {};
         for (const day of DAYS) {
@@ -208,7 +210,7 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMo
                                             "--height": `${heightPx}px`,
                                         } as React.CSSProperties
                                     }
-                                    title={`${b.label} â€¢ ${startLabel}â€“${endLabel}`}
+                                    title={`${b.label} – ${startLabel}–${endLabel}`}
                                     draggable
                                     onDragStart={(e) => {
                                         const payload = {

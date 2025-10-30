@@ -210,8 +210,8 @@ function apportionTargets(categories: Category[]): Task[] {
             const isSleep = /night\s*sleep/i.test(child.name) ||
                 (!!child.preferredTimeBlocks?.includes("night") && /sleep/i.test(child.name));
 
-            const blocksRequired = Math.max(0, blocksPerChild[idx] || 0);
-
+            const isHygieneName = /hygiene/i.test(child.name);
+            const blocksRequired = isHygieneName ? 0 : Math.max(0, blocksPerChild[idx] || 0);
             tasks.push({
                 id: `${cat.id}:${child.id}`,
                 courseName: child.name,
@@ -485,10 +485,26 @@ function freeRunLen(s: Schedule, d: DayName, i: number): number {
     return k - i;
 }
 
+function isStudyLabel(x: any): boolean {
+    const s = String(x || "");
+    return /\(Studying\)$/i.test(s);
+}
+
 function moatClear(s: Schedule, d: DayName, start: number, len: number, label: string): boolean {
-    // 1 slot moat before & after if in bounds
-    if (start > 0 && s[d][start - 1] === label) return false;
-    if (start + len < BLOCKS_PER_DAY && s[d][start + len] === label) return false;
+    // Enforce a moat before/after placements. For study labels, require 1 hour (4 blocks)
+    const moat = isStudyLabel(label) ? 4 : 1;
+    for (let m = 1; m <= moat; m++) {
+        const before = start - m;
+        const after = start + len + (m - 1);
+        if (before >= 0) {
+            const v = s[d][before];
+            if (isStudyLabel(label) ? isStudyLabel(v) : v === label) return false;
+        }
+        if (after < BLOCKS_PER_DAY) {
+            const v = s[d][after];
+            if (isStudyLabel(label) ? isStudyLabel(v) : v === label) return false;
+        }
+    }
     return true;
 }
 
@@ -502,6 +518,37 @@ function placeChunkWithMoat(s: Schedule, d: DayName, i: number, len: number, lab
 
 function restLabel(_name: string) {
     return `Rest`;
+}
+function isHygiene(x: any): boolean {
+    return /hygiene/i.test(String(x || ""));
+}
+
+function bucketOf(block: number): "morning" | "afternoon" | "evening" | "night" {
+    if (inBucket(block, "morning")) return "morning";
+    if (inBucket(block, "afternoon")) return "afternoon";
+    if (inBucket(block, "evening")) return "evening";
+    return "night";
+}
+
+function hasHygieneInBucket(s: Schedule, d: DayName, bucket: "morning" | "afternoon" | "evening" | "night"): boolean {
+    const row = s[d];
+    for (let i = 0; i < BLOCKS_PER_DAY; i++) {
+        if (row[i] === 'Hygiene' && inBucket(i, bucket)) return true;
+    }
+    return false;
+}
+
+function countHygieneRuns(s: Schedule, d: DayName): number {
+    const row = s[d];
+    let i = 0, runs = 0;
+    while (i < BLOCKS_PER_DAY) {
+        if (row[i] !== 'Hygiene') { i++; continue; }
+        runs++;
+        let j = i + 1;
+        while (j < BLOCKS_PER_DAY && row[j] === 'Hygiene') j++;
+        i = j;
+    }
+    return runs;
 }
 
 function canEvict(ctx: BuildCtx, d: DayName, idx: number): boolean {
@@ -557,7 +604,7 @@ function placeExerciseWithRest(
                 const pos = hygStart + k;
                 if (s[d][pos] !== null && canEvict(ctx, d, pos)) s[d][pos] = null;
             }
-            fillLabel(s, d, hygStart, hygBlocks, 'Hygiene');
+            if (!hasHygieneInBucket(s, d, bucketOf(hygStart))) { fillLabel(s, d, hygStart, hygBlocks, 'Hygiene'); }
         }
     }
     return true;
@@ -579,8 +626,8 @@ function countLabelOccurrences(s: Schedule, d: DayName, label: string): number {
 
 function greedyFill(ctx: BuildCtx) {
     const chunkFor = (t: Task) => {
-        if (t.durationBlocks && t.durationBlocks > 0) return clamp(t.durationBlocks, 1, Math.max(1, t.maxStretchBlocks || BLOCKS_PER_HOUR));
-        return clamp(Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR), 2, 6);
+        if (t.durationBlocks && t.durationBlocks > 0) return clamp(t.durationBlocks, 3, Math.max(3, t.maxStretchBlocks || BLOCKS_PER_HOUR));
+        return clamp(Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR), 3, 6);
     };
 
     for (const t of ctx.tasks) {
@@ -726,7 +773,7 @@ function anneal(
 
                 // choose length up to task stretch (2..8 blocks)
                 const maxLen = clamp(t.maxStretchBlocks || 4, 2, 8);
-                let len = clamp(2 + ((Math.random() * maxLen) | 0), 2, maxLen);
+                let len = clamp(3 + ((Math.random() * Math.max(1, maxLen - 2)) | 0), 3, maxLen);
 
                 const d = DAYS[(Math.random() * 7) | 0];
                 if (t.isSchool && t.noGoDays && t.noGoDays.includes(d)) continue;
@@ -850,7 +897,7 @@ function fillDaytimeGapsByDeficit(ctx: BuildCtx) {
                     // exact length for fixed-duration items; otherwise bounded by stretch
                     let len = t.durationBlocks && t.durationBlocks > 0
                         ? Math.min(chunk, free, need)
-                        : clamp(Math.min(chunk, free, need), 2, chunk);
+                        : clamp(Math.min(chunk, free, need), 3, chunk);
 
                     // For naps, never place shorter than 45 minutes (3 blocks)
                     if (/\bnap\b/i.test(t.courseName) && len < 3) { continue; }
@@ -867,8 +914,7 @@ function fillDaytimeGapsByDeficit(ctx: BuildCtx) {
                             if (occ >= t.timesPerDay) { continue; }
                         }
                     }
-
-                    if (len >= 1 && placeChunkWithMoat(s, d, i, len, t.labelFor("study"))) {
+                    if (len >= 3 && placeChunkWithMoat(s, d, i, len, t.labelFor("study"))) {
                         need -= len;
                         i += len; // skip past
                     }
@@ -895,16 +941,46 @@ function enforceStudyBreaks(ctx: BuildCtx) {
         while (i < BLOCKS_PER_DAY) {
             const lab = row[i];
             if (!lab) { i++; continue; }
-            let j = i + 1;
-            while (j < BLOCKS_PER_DAY && row[j] === lab) j++;
-            const len = j - i;
-
-            if (stretchByLabel.has(lab) && len > stretchByLabel.get(lab)! ) {
-                // insert a 1-block break roughly in the middle
-                const cut = i + Math.floor(len / 2);
-                row[cut] = null;
+            // Handle study runs (per-label) for max stretch
+            if (stretchByLabel.has(lab) && isStudyLabel(lab)) {
+                const maxLen = stretchByLabel.get(lab)!;
+                let j = i;
+                // same-label run end
+                while (j < BLOCKS_PER_DAY && row[j] === lab) j++;
+                let remaining = j - i;
+                let pos = i;
+                while (remaining > maxLen) {
+                    const cut = pos + maxLen;
+                    // insert 1-hour moat (4 blocks) if space/evictable
+                    for (let m = 0; m < 4 && cut + m < BLOCKS_PER_DAY; m++) {
+                        const at = cut + m;
+                        if (row[at] !== null && !canEvict(ctx, d, at)) break;
+                        if (row[at] !== null && canEvict(ctx, d, at)) row[at] = null;
+                        if (row[at] === null) row[at] = null;
+                    }
+                    pos = cut + 4;
+                    remaining = Math.max(0, (j - pos));
+                }
+                // also ensure at least 1-hour moat before the next study block of any course
+                let k = j;
+                while (k < BLOCKS_PER_DAY && row[k] === null) k++;
+                if (k < BLOCKS_PER_DAY && isStudyLabel(row[k])) {
+                    const gap = k - j;
+                    if (gap < 4) {
+                        const need = 4 - gap;
+                        for (let m = 0; m < need && j + m < BLOCKS_PER_DAY; m++) {
+                            const at = j + m;
+                            if (row[at] !== null && canEvict(ctx, d, at)) row[at] = null;
+                        }
+                    }
+                }
+                i = j; // continue from end of same-label run
+            } else {
+                // non-study or labels without stretch cap
+                let j = i + 1;
+                while (j < BLOCKS_PER_DAY && row[j] === lab) j++;
+                i = j;
             }
-            i = j;
         }
     }
 }
@@ -982,8 +1058,8 @@ export function generateSchedule(categories: Category[]): Schedule {
 
     // 6) deficits fill (chunked, round-robin) + safety passes
     fillDaytimeGapsByDeficit(ctx);
-    enforceStudyBreaks(ctx);
-    enforceMinRunLengths(ctx, 2);
+    balanceStudyLoad(ctx);
+    enforceMinRunLengths(ctx, 3);
     enforceSocialMinRunLengths(ctx, 4);
 
     // Mandatory hygiene after wake and after work shifts
@@ -992,8 +1068,10 @@ export function generateSchedule(categories: Category[]): Schedule {
 
     // Enforce post-exercise rest periods immediately after exercise sessions
     enforceRestPeriods(ctx);
+    enforceHygieneCaps(ctx);
 
-    // 7) smoothing: merge identical blocks with tiny gaps between them
+    enforceRestPeriods(ctx);
+    enforceHygieneCaps(ctx);
     mergeNearIdenticalBlocks(ctx, 1); // merge when gap <= 1 block (15m)
 
     return ctx.schedule;
@@ -1008,7 +1086,7 @@ function placeStudyAdjacentToMeetings(ctx: BuildCtx) {
         if (remain <= 0) continue;
 
         const label = t.labelFor("study");
-        const chunk = clamp(Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR), 2, Math.max(2, t.maxStretchBlocks || 2));
+        const chunk = clamp(Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR), 3, Math.max(3, t.maxStretchBlocks || 3));
 
         for (const m of t.meetings) {
             if (remain <= 0) break;
@@ -1020,7 +1098,7 @@ function placeStudyAdjacentToMeetings(ctx: BuildCtx) {
                 const start = m.endIdx;
                 const free = freeRunLen(ctx.schedule, d, start);
                 const len = Math.min(chunk, remain, free);
-                if (len >= 2 && withinFlexibleDayWindow(start)) {
+                if (len >= 3 && withinFlexibleDayWindow(start)) {
                     if (placeChunkWithMoat(ctx.schedule, d, start, len, label)) {
                         remain -= len;
                     }
@@ -1085,7 +1163,7 @@ function enforceRestPeriods(ctx: BuildCtx) {
                                     const pos = hygStart + q;
                                     if (s[d][pos] !== null && canEvict(ctx, d, pos)) s[d][pos] = null;
                                 }
-                                fillLabel(s, d, hygStart, hygBlocks, 'Hygiene');
+                                if (!hasHygieneInBucket(s, d, bucketOf(hygStart))) { fillLabel(s, d, hygStart, hygBlocks, 'Hygiene'); }
                             }
                         }
                     }
@@ -1119,7 +1197,7 @@ function enforceHygieneAfterSleep(ctx: BuildCtx) {
                     const pos = wake + k;
                     if (row[pos] !== null && canEvict(ctx, d, pos)) row[pos] = null;
                 }
-                fillLabel(s, d, wake, hygBlocks, 'Hygiene');
+                if (!hasHygieneInBucket(s, d, bucketOf(wake))) { fillLabel(s, d, wake, hygBlocks, 'Hygiene'); }
             }
         }
     }
@@ -1148,7 +1226,7 @@ function enforceHygieneAfterWork(ctx: BuildCtx) {
                     const pos = placeStart + k;
                     if (s[d][pos] !== null && canEvict(ctx, d, pos)) s[d][pos] = null;
                 }
-                fillLabel(s, d, placeStart, hygBlocks, 'Hygiene');
+                if (!hasHygieneInBucket(s, d, bucketOf(placeStart))) { fillLabel(s, d, placeStart, hygBlocks, 'Hygiene'); }
             }
         }
     }
@@ -1181,6 +1259,226 @@ function mergeNearIdenticalBlocks(ctx: BuildCtx, maxGapBlocks = 1) {
                 i = j;
             }
         }
+    }
+}
+
+
+
+
+
+// Try to spread study sessions across at least 3 distinct days (when possible)
+function spreadStudyAcrossDays(ctx: BuildCtx) {
+    const s = ctx.schedule;
+    const tasks = ctx.tasks.filter(t => t.isSchool);
+    const sessionsFor = (day: DayName, label: string) => {
+        const out: Array<{ start: number; len: number }> = [];
+        const row = s[day];
+        let i = 0;
+        while (i < BLOCKS_PER_DAY) {
+            if (row[i] !== label) { i++; continue; }
+            let j = i + 1;
+            while (j < BLOCKS_PER_DAY && row[j] === label) j++;
+            out.push({ start: i, len: j - i });
+            i = j;
+        }
+        return out;
+    };
+
+    for (const t of tasks) {
+        const label = t.labelFor("study");
+        // Count sessions per day and total
+        const daySessions: Record<DayName, Array<{ start: number; len: number }>> = {} as any;
+        let total = 0;
+        for (const d of DAYS) {
+            const arr = sessionsFor(d, label);
+            daySessions[d] = arr as any;
+            total += arr.length;
+        }
+        if (total < 3) continue; // cannot spread to 3 days
+
+        const usedDays = DAYS.filter(d => (daySessions[d] || []).length > 0);
+        let attempts = 0;
+        while (usedDays.length < 3 && attempts++ < 20) {
+            // find donor day with multiple sessions
+            const donor = DAYS.find(d => (daySessions[d] || []).length > 1);
+            const target = DAYS.find(d => (daySessions[d] || []).length === 0 && (!t.noGoDays || !t.noGoDays.includes(d)));
+            if (!donor || !target) break;
+
+            // take the shortest session from donor to improve fit chances
+            const list = daySessions[donor].slice().sort((a,b)=>a.len-b.len);
+            const seg = list[0];
+            if (!seg) break;
+
+            // search for a free slot on target between 8:00 and 22:00 respecting moat
+            let placed = false;
+            const startBlock = hhmmToBlock(8*100);
+            const endBlock = hhmmToBlock(22*100);
+            for (let i = startBlock; i + seg.len <= endBlock; i++) {
+                if (!withinFlexibleDayWindow(i)) continue;
+                if (!moatClear(s, target, i, seg.len, label)) continue;
+                // free run check
+                let free = true;
+                for (let k = 0; k < seg.len; k++) { if (s[target][i+k] !== null) { free = false; break; } }
+                if (!free) continue;
+                // place
+                fillLabel(s, target, i, seg.len, label);
+                // clear donor segment
+                for (let k = 0; k < seg.len; k++) s[donor][seg.start+k] = null;
+                placed = true;
+                break;
+            }
+            if (!placed) break;
+
+            // recompute session counts
+            usedDays.length = 0;
+            for (const d of DAYS) {
+                daySessions[d] = sessionsFor(d, label) as any;
+                if (daySessions[d].length > 0 && !usedDays.includes(d)) usedDays.push(d);
+            }
+        }
+    }
+}
+
+
+
+
+// Balance study load across days toward a steady cadence
+function balanceStudyLoad(ctx: BuildCtx) {
+    const s = ctx.schedule;
+    const studyLabels = new Set(ctx.tasks.filter(t => t.isSchool).map(t => t.labelFor("study")));
+
+    const dayTotals = new Map<DayName, number>();
+    const labelToTask = new Map<string, Task>();
+    for (const t of ctx.tasks) labelToTask.set(t.labelFor("study"), t);
+
+    const countDay = (d: DayName): number => {
+        let c = 0;
+        const row = s[d];
+        for (let i = 0; i < BLOCKS_PER_DAY; i++) if (row[i] && /(Studying)$/i.test(String(row[i]))) c++;
+        return c;
+    };
+    const sessionsFor = (d: DayName, label: string) => {
+        const row = s[d];
+        const out: Array<{ start: number; len: number }> = [];
+        let i = 0;
+        while (i < BLOCKS_PER_DAY) {
+            if (row[i] !== label) { i++; continue; }
+            let j = i + 1;
+            while (j < BLOCKS_PER_DAY && row[j] === label) j++;
+            out.push({ start: i, len: j - i });
+            i = j;
+        }
+        return out;
+    };
+
+    const recompute = () => { for (const d of DAYS) dayTotals.set(d, countDay(d)); };
+    recompute();
+
+    const total = Array.from(dayTotals.values()).reduce((a,b)=>a+b,0);
+    if (total === 0) return;
+    const avg = total / 7;
+
+    let guard = 0;
+    while (guard++ < 40) {
+        let hi: DayName = DAYS[0], lo: DayName = DAYS[0];
+        for (const d of DAYS) {
+            if (dayTotals.get(d)! > dayTotals.get(hi)!) hi = d;
+            if (dayTotals.get(d)! < dayTotals.get(lo)!) lo = d;
+        }
+        if (dayTotals.get(hi)! <= avg + 2 || dayTotals.get(lo)! >= avg - 2) break;
+
+        // Find a small study segment on hi to move to lo
+        let moved = false;
+        outer: for (const label of studyLabels) {
+            const segs = sessionsFor(hi, label).sort((a,b)=>a.len-b.len);
+            for (const seg of segs) {
+                if (seg.len < 3) continue; // honor minimum 45 minutes
+                // Try to place on lo between 8:00 and 22:00
+                const t = labelToTask.get(label);
+                const startBlock = hhmmToBlock(8*100);
+                const endBlock = hhmmToBlock(22*100);
+                for (let i = startBlock; i + seg.len <= endBlock; i++) {
+                    if (!withinFlexibleDayWindow(i)) continue;
+                    if (!moatClear(s, lo, i, seg.len, label)) continue;
+                    // Check free space
+                    let free = true;
+                    for (let k = 0; k < seg.len; k++) { if (s[lo][i+k] !== null) { free = false; break; } }
+                    if (!free) continue;
+                    // Check per-day session cap if any
+                    if (t?.timesPerDay != null && countLabelOccurrences(s, lo, label) >= (t.timesPerDay as number)) continue;
+                    // Place
+                    fillLabel(s, lo, i, seg.len, label);
+                    for (let k = 0; k < seg.len; k++) s[hi][seg.start+k] = null;
+                    moved = true;
+                    break outer;
+                }
+            }
+        }
+        if (!moved) break;
+        recompute();
+    }
+}
+
+
+
+
+
+
+
+
+// Consolidate flexible Hygiene: respect per-day limits and avoid duplicate buckets
+function enforceHygieneCaps(ctx: BuildCtx) {
+    const s = ctx.schedule;
+    const sleepNames = new Set<string>(ctx.tasks.filter(t => t.isSleep).map(t => t.courseName));
+    // Find hygiene task to read per-day cap (timesPerDay). If multiple, take the max.
+    const hygTasks = ctx.tasks.filter(t => /hygiene/i.test(t.courseName));
+    const capPerDay = Math.max(0, ...hygTasks.map(t => Number(t.timesPerDay || 0)));
+
+    for (const d of DAYS) {
+        const row = s[d];
+        // Collect runs
+        const runs: Array<{ start: number; end: number; bucket: "morning"|"afternoon"|"evening"|"night"; auto: boolean }>=[];
+        let i = 0;
+        while (i < BLOCKS_PER_DAY) {
+            if (row[i] !== 'Hygiene') { i++; continue; }
+            let j = i + 1;
+            while (j < BLOCKS_PER_DAY && row[j] === 'Hygiene') j++;
+            const b = bucketOf(i);
+            const prev = i > 0 ? row[i-1] : null;
+            const auto = (prev && (prev === 'Rest' || /work/i.test(String(prev)) || sleepNames.has(String(prev)))) ? true : (i === 0 && sleepNames.has(String(prev))) ;
+            runs.push({ start: i, end: j, bucket: b, auto: !!auto });
+            i = j;
+        }
+        if (!runs.length) continue;
+        // Keep at most 1 per bucket: prefer auto if present, otherwise earliest
+        const keep = new Set<number>();
+        const byBucket: Record<string, number[]> = { morning: [], afternoon: [], evening: [], night: [] } as any;
+        runs.forEach((r, idx) => { (byBucket as any)[r.bucket].push(idx); });
+        for (const b of ['morning','afternoon','evening','night'] as const) {
+            const ids = (byBucket as any)[b] as number[];
+            if (!ids || !ids.length) continue;
+            let chosen = ids.find(k => runs[k].auto);
+            if (chosen == null) chosen = ids[0];
+            keep.add(chosen);
+        }
+        // Compute how many auto were kept
+        const autosKept = Array.from(keep).filter(k => runs[k].auto).length;
+        const flexibleAllowed = 0; // keep only automatic hygiene (after sleep/rest/work)
+        // Add up to flexibleAllowed more non-auto runs (earliest by start time) that aren't already kept and don't duplicate bucket
+        const flexCands = runs.map((r, idx) => ({...r, idx})).filter(r => !r.auto && !keep.has(r.idx)).sort((a,b)=>a.start-b.start);
+        const usedBuckets = new Set(Array.from(keep).map(k => runs[k].bucket));
+        let usedFlex = 0;
+        for (const r of flexCands) {
+            if (usedFlex >= flexibleAllowed) break;
+            if (usedBuckets.has(r.bucket)) continue;
+            keep.add(r.idx); usedBuckets.add(r.bucket); usedFlex++;
+        }
+        // Clear everything not in keep
+        runs.forEach((r, idx) => {
+            if (!keep.has(idx)) {
+                for (let k = r.start; k < r.end; k++) row[k] = null;
+            }
+        });
     }
 }
 

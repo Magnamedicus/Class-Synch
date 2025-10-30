@@ -77,7 +77,11 @@ const SchoolTab: React.FC = () => {
         return () => window.removeEventListener("qa:merge-answers", onMerge as EventListener);
     }, []);
 
-    const setAnswer = (id: string, value: any) => {
+    
+
+    // Rename alias modal state
+    const [renameTarget, setRenameTarget] = React.useState<{ cls: string; input: string } | null>(null);
+const setAnswer = (id: string, value: any) => {
         setAnswers((prev) => ({ ...prev, [id]: value }));
     };
 
@@ -187,6 +191,8 @@ const SchoolTab: React.FC = () => {
     /* ----------------------- CLASS CARDS (collapsible, styled) ---------------------- */
     const renderClassCard = (cls: string) => {
         const base = `class_${slugify(cls || "")}`;
+        const alias = (answers[`${base}_alias`] || "").toString().trim();
+        const displayName = alias || cls;
 
         const priority: number =
             typeof answers[`${base}_priority`] === "number" ? answers[`${base}_priority`] : 70;
@@ -218,7 +224,16 @@ const SchoolTab: React.FC = () => {
             </svg>
           </span>
 
-                    <span className="class-summary-title">{cls?.trim() ? cls : "Unnamed class"}</span>
+                    <span className="class-summary-title">{displayName?.trim() ? displayName : "Unnamed class"}</span>
+                    <button
+                        type="button"
+                        className="remove-btn-small"
+                        style={{ marginLeft: 12 }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRenameTarget({ cls, input: alias }); }}
+                        title="Rename how this class appears"
+                    >
+                        Rename
+                    </button>
 
                     <span className="class-summary-meta" aria-label="Class overview">
             <span className="badge" title="Meeting days"><span className="dot" />{daysLabel}</span>
@@ -310,6 +325,42 @@ const SchoolTab: React.FC = () => {
                     <div className="profile-accordion">
                         {classes.map((cls) => renderClassCard(cls))}
                     </div>
+
+                    {renameTarget && (
+                        <div className="modal-overlay" onClick={() => setRenameTarget(null)}>
+                            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                                <h3>Rename Class Display</h3>
+                                <p>Set how this class will appear in the app. This is an alias; it won’t change the original code.</p>
+                                <input
+                                    type="text"
+                                    placeholder="e.g., Intro to Psychology"
+                                    value={renameTarget.input}
+                                    onChange={(e) => setRenameTarget({ ...renameTarget, input: e.target.value })}
+                                    style={{ width: '100%', padding: '8px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)' }}
+                                />
+                                <div className="modal-actions">
+                                    <button onClick={() => {
+                                        const cls = renameTarget.cls;
+                                        const base = `class_${slugify(cls)}`;
+                                        const alias = (renameTarget.input || '').trim();
+                                        const patch: Record<string, any> = { [`${base}_alias`]: alias || undefined };
+                                        setAnswers((prev) => ({ ...prev, ...patch }));
+                                        window.dispatchEvent(new CustomEvent('qa:merge-answers', { detail: { patch } }));
+                                        setRenameTarget(null);
+                                    }}>Save</button>
+                                    <button onClick={() => {
+                                        const cls = renameTarget.cls;
+                                        const base = `class_${slugify(cls)}`;
+                                        const patch: Record<string, any> = { [`${base}_alias`]: undefined };
+                                        setAnswers((prev) => ({ ...prev, ...patch }));
+                                        window.dispatchEvent(new CustomEvent('qa:merge-answers', { detail: { patch } }));
+                                        setRenameTarget(null);
+                                    }}>Clear</button>
+                                    <button onClick={() => setRenameTarget(null)}>Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
         </div>
@@ -317,3 +368,4 @@ const SchoolTab: React.FC = () => {
 };
 
 export default SchoolTab;
+

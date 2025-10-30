@@ -235,13 +235,13 @@ const EnterClasses: React.FC<EnterClassesProps> = ({ value, onChange }) => {
                                 for (const cls of list) {
                                     const slug = cls.toLowerCase();
                                     const base = `class_${slug}`;
-                                    ["meeting_days","meeting_time","priority","study_hours","pref_times"].forEach((suf) => {
+                                    ["meeting_days","meeting_time","priority","study_hours","pref_times","alias","original"].forEach((suf) => {
                                         keys.add(`${base}_${suf}`);
                                     });
                                 }
                                 // Also sweep any stray class_* keys
                                 Object.keys(ans || {}).forEach((k) => {
-                                    if (/^class_[a-z0-9-]+_(meeting_days|meeting_time|priority|study_hours|pref_times)$/.test(k)) {
+                                    if (/^class_[a-z0-9-]+_(meeting_days|meeting_time|priority|study_hours|pref_times|alias|original)$/.test(k)) {
                                         keys.add(k);
                                     }
                                 });

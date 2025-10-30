@@ -1,0 +1,8 @@
+                                            "--height": `${heightPx}px`,
+                                        } as React.CSSProperties
+                                    }
+                                    title={`${b.label} • ${startLabel}–${endLabel}`}
+                                    draggable
+                                    onDragStart={(e) => {
+                                        const payload = {
+                                            fromDay: day,
