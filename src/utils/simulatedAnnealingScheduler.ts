@@ -874,8 +874,12 @@ function fillDaytimeGapsByDeficit(ctx: BuildCtx) {
         let need = ctx.deficits[t.id] || 0;
         if (need <= 0) continue;
 
-        const chunk = t.durationBlocks && t.durationBlocks > 0
-            ? t.durationBlocks
+        // For school tasks, treat durationBlocks as a max per-session length, not an exact chunk.
+        // For non-school tasks with explicit duration (e.g., exercise), honor it as exact.
+        const chunk = (t.durationBlocks && t.durationBlocks > 0)
+            ? (t.isSchool
+                ? Math.min(t.durationBlocks, t.maxStretchBlocks || BLOCKS_PER_HOUR)
+                : t.durationBlocks)
             : Math.min(t.maxStretchBlocks || BLOCKS_PER_HOUR, BLOCKS_PER_HOUR);
 
         // Round-robin across days to avoid giant slabs
@@ -896,7 +900,12 @@ function fillDaytimeGapsByDeficit(ctx: BuildCtx) {
                     const free = freeRunLen(s, d, i);
                     // exact length for fixed-duration items; otherwise bounded by stretch
                     let len = t.durationBlocks && t.durationBlocks > 0
-                        ? Math.min(chunk, free, need)
+                        ? (t.isSchool
+                            // study: duration acts as a cap; enforce >= 3 blocks
+                            ? clamp(Math.min(chunk, free, need), 3, chunk)
+                            // non-school with explicit durations: exact (may be <3)
+                            : Math.min(chunk, free, need))
+                        // no explicit duration: bounded by stretch, enforce >= 3
                         : clamp(Math.min(chunk, free, need), 3, chunk);
 
                     // For naps, never place shorter than 45 minutes (3 blocks)
@@ -1072,6 +1081,8 @@ export function generateSchedule(categories: Category[]): Schedule {
 
     enforceRestPeriods(ctx);
     enforceHygieneCaps(ctx);
+    // Hard rule: ensure no study run shorter than 45 minutes remains
+    enforceStudyMinLengthHard(ctx, 3);
     mergeNearIdenticalBlocks(ctx, 1); // merge when gap <= 1 block (15m)
 
     return ctx.schedule;
@@ -1479,6 +1490,46 @@ function enforceHygieneCaps(ctx: BuildCtx) {
                 for (let k = r.start; k < r.end; k++) row[k] = null;
             }
         });
+    }
+}
+
+// Final hard enforcement: ensure all study runs are at least minBlocks long.
+// Try to grow by evicting adjacent non-fixed cells; if impossible, remove the short run.
+function enforceStudyMinLengthHard(ctx: BuildCtx, minBlocks = 3) {
+    const s = ctx.schedule;
+    for (const d of DAYS) {
+        const row = s[d];
+        let i = 0;
+        while (i < BLOCKS_PER_DAY) {
+            const lab = row[i];
+            if (!lab || !isStudyLabel(lab)) { i++; continue; }
+            let j = i + 1;
+            while (j < BLOCKS_PER_DAY && row[j] === lab) j++;
+            let len = j - i;
+            if (len < minBlocks) {
+                let need = minBlocks - len;
+                // Try extend to the right
+                while (need > 0 && j < BLOCKS_PER_DAY) {
+                    const can = (row[j] === null) || (canEvict(ctx, d, j));
+                    if (!can) break;
+                    row[j] = lab; j++; len++; need--;
+                }
+                // Try extend to the left
+                while (need > 0 && i > 0) {
+                    const at = i - 1;
+                    const can = (row[at] === null) || (canEvict(ctx, d, at));
+                    if (!can) break;
+                    row[at] = lab; i--; len++; need--;
+                }
+                // If still too short, clear it entirely
+                if (len < minBlocks) {
+                    for (let k = i; k < j; k++) row[k] = null;
+                }
+            }
+            // Advance to end of this (possibly grown) run
+            while (j < BLOCKS_PER_DAY && row[j] === lab) j++;
+            i = j;
+        }
     }
 }
 
