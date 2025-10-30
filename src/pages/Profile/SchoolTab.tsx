@@ -11,6 +11,7 @@ import DaySelection, { type DayName } from "../../components/inputs/DaySelection
 import TimeOfDaySelection, { type TimeName } from "../../components/inputs/TimeOfDaySelection";
 
 import "../../css/Profile.css";
+import Modal from "../../components/Modal";
 import "../../css/SchoolTab.css";
 
 /* ---------------- Storage helpers (exactly like QuestionnairePage) ---------------- */
@@ -326,9 +327,9 @@ const setAnswer = (id: string, value: any) => {
                         {classes.map((cls) => renderClassCard(cls))}
                     </div>
 
-                    {renameTarget && (
-                        <div className="modal-overlay" onClick={() => setRenameTarget(null)}>
-                            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                    <Modal isOpen={!!renameTarget} onClose={() => setRenameTarget(null)}>
+                        {renameTarget && (
+                            <>
                                 <h3>Rename Class Display</h3>
                                 <p>Set how this class will appear in the app. This is an alias; it won’t change the original code.</p>
                                 <input
@@ -358,9 +359,9 @@ const setAnswer = (id: string, value: any) => {
                                     }}>Clear</button>
                                     <button onClick={() => setRenameTarget(null)}>Cancel</button>
                                 </div>
-                            </div>
-                        </div>
-                    )}
+                            </>
+                        )}
+                    </Modal>
                 </>
             )}
         </div>
