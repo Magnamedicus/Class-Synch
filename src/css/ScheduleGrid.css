@@ -31,6 +31,7 @@
     --c-sleep:#a78bfa;   --g-sleep:linear-gradient(135deg,#a78bfa,#8b5cf6);
     --c-family:#f59e0b;  --g-family:linear-gradient(135deg,#f59e0b,#f97316);
     --c-friends:#f472b6; --g-friends:linear-gradient(135deg,#f472b6,#ec4899);
+    --c-custom:#d946ef;  --g-custom:linear-gradient(135deg,#d946ef,#a21caf);
 }
 
 @media (prefers-color-scheme: light){
@@ -235,6 +236,10 @@
 .block--selfcare  { --c: #22c55e;            --g: linear-gradient(135deg,#22c55e,#16a34a); }
 .block--exercise  { --c: #ef4444;            --g: linear-gradient(135deg,#ef4444,#dc2626); }
 .block--leisure   { --c: #06b6d4;            --g: linear-gradient(135deg,#06b6d4,#0891b2); }
+.block--custom    { --c: var(--c-custom);    --g: var(--g-custom); }
+
+/* Title starts with Custom: — style as custom as well */
+.block[title^="Custom:"] { --c: var(--c-custom); --g: var(--g-custom); }
 
 
 .schedule__legend{
@@ -262,6 +267,7 @@
 .legend__swatch--selfcare{  background: linear-gradient(135deg,#22c55e,#16a34a); }
 .legend__swatch--exercise{  background: linear-gradient(135deg,#ef4444,#dc2626); }
 .legend__swatch--leisure{   background: linear-gradient(135deg,#06b6d4,#0891b2); }
+.legend__swatch--custom{    background: linear-gradient(135deg,#d946ef,#a21caf); }
 
 
 @keyframes blockPop{

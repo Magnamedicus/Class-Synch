@@ -15,7 +15,7 @@ import type {
     Category,
     MeetingTime,
 } from "../utils/simulatedAnnealingScheduler";
-import { ScheduleGrid } from "./ScheduleGrid";
+import { ScheduleGrid } from "./ScheduleGrid2";
 import TimeInput from "./inputs/TimeInput";
 import "../css/Modal.css";
 import "../css/scheduler.css";
@@ -154,6 +154,15 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
 
     // modal state
     const [modalOpen, setModalOpen] = useState(false);
+    const CUSTOM_OPTION = "__CUSTOM__";
+    const [customName, setCustomName] = useState("");
+    const [customLabels, setCustomLabels] = useState<string[]>(() => {
+        try {
+            const raw = localStorage.getItem('customLabels');
+            const arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch { return []; }
+    });
     const [selected, setSelected] = useState<{
         day: string;
         startIdx: number;
@@ -526,7 +535,8 @@ const handleBlockClick = (
             return;
         }
         setSelected(block ? { ...block, day } : null);
-        setNewLabel(block.label);
+        if (customLabels.includes(block.label)) { setNewLabel(CUSTOM_OPTION); setCustomName(block.label); }
+        else { setNewLabel(block.label); setCustomName(""); }
         setNewLength(block.length);
         setModalOpen(true);
         setCreateMode(false);
@@ -600,8 +610,9 @@ const handleBlockClick = (
     };
 
     // Map label to type for color styling, same rules as ScheduleGrid
-    const blockTypeFromLabel = (label: string): "study" | "class" | "sleep" | "social" | "work" | "selfcare" | "exercise" | "leisure" => {
+    const blockTypeFromLabel = (label: string): "study" | "class" | "sleep" | "social" | "work" | "selfcare" | "exercise" | "leisure" | "custom" => {
         const l = label.toLowerCase();
+        if (customLabels.includes(label)) return "custom";
         if (/(\(class meeting\))$/.test(l)) return "class";
         if (/(\(studying\))$/.test(l)) return "study";
         if (l.includes("sleep") || l === "night sleep" || l.includes("nap")) return "sleep";
@@ -616,12 +627,23 @@ const handleBlockClick = (
 
     const updateBlock = () => {
         if (!schedule || !selected) return;
+        const finalLabel = (newLabel === CUSTOM_OPTION)
+            ? (customName.trim() || "Custom")
+            : newLabel;
         // If editing a Backpack item, update Backpack instead of the grid
         if (selected.day === ('__backpack__' as any)) {
             const lenBlocks = Math.min(48, Math.max(1, newLength));
-            setBackpackItems(list => list.map(it => it.id === selectedBackpackId ? { ...it, label: newLabel, length: lenBlocks } : it));
+            setBackpackItems(list => list.map(it => it.id === selectedBackpackId ? { ...it, label: finalLabel, length: lenBlocks } : it));
             setModalOpen(false);
             setCreateMode(false);
+            if (newLabel === CUSTOM_OPTION) {
+                setCustomLabels(prev => {
+                    if (prev.includes(finalLabel)) return prev;
+                    const next = [...prev, finalLabel];
+                    try { localStorage.setItem('customLabels', JSON.stringify(next)); } catch {}
+                    return next;
+                });
+            }
             return;
         }
         const updated = { ...schedule, [selected.day]: [...(schedule as any)[selected.day]] } as Schedule;
@@ -636,7 +658,7 @@ const handleBlockClick = (
                 }
             }
             for (let i = selected.startIdx; i < end; i++) {
-                if (i < updated[selected.day].length) updated[selected.day][i] = newLabel;
+                if (i < updated[selected.day].length) updated[selected.day][i] = finalLabel;
             }
         } else {
             // Edit existing block: clear then re-write at same start
@@ -645,7 +667,7 @@ const handleBlockClick = (
             }
             for (let i = selected.startIdx; i < selected.startIdx + newLength; i++) {
                 if (i < updated[selected.day].length) {
-                    updated[selected.day][i] = newLabel;
+                    updated[selected.day][i] = finalLabel;
                 }
             }
         }
@@ -657,6 +679,14 @@ const handleBlockClick = (
         persist(updated);
         setModalOpen(false);
         setCreateMode(false);
+        if (newLabel === CUSTOM_OPTION) {
+            setCustomLabels(prev => {
+                if (prev.includes(finalLabel)) return prev;
+                const next = [...prev, finalLabel];
+                try { localStorage.setItem('customLabels', JSON.stringify(next)); } catch {}
+                return next;
+            });
+        }
     };
 
     const currentCategories = getUserCategories();
@@ -682,7 +712,8 @@ const handleBlockClick = (
             });
         }
         if (selected?.label) set.add(selected.label);
-        return Array.from(set).sort((a, b) => a.localeCompare(b));
+        const arr = Array.from(set).sort((a, b) => a.localeCompare(b));
+        return arr;
     }, [schedule, selected?.label]);
     const blockEnd = selected ? selected.startIdx + newLength : null;
 
@@ -732,6 +763,7 @@ const handleBlockClick = (
 
             {schedule && (
                 <ScheduleGrid
+                    customLabels={customLabels}
                     
                     schedule={schedule}
                     onBlockClick={handleBlockClick}
@@ -872,6 +904,7 @@ const handleBlockClick = (
                             const first = options.values().next().value || "Study";
                             setSelected({ day, startIdx: idx, length: 1, label: first });
                             setNewLabel(first);
+                            setCustomName("");
                             setNewLength(1);
                             setCreateMode(true);
                             setModalOpen(true);
@@ -898,6 +931,7 @@ const handleBlockClick = (
                                     value={newLabel}
                                     onChange={(e) => setNewLabel(e.target.value)}
                                 >
+                                    <option value={CUSTOM_OPTION}>Custom</option>
                                     {labelOptions.map((name) => (
                                         <option key={name} value={name}>
                                             {name}
@@ -905,6 +939,25 @@ const handleBlockClick = (
                                     ))}
                                 </select>
                             </label>
+
+                            {newLabel === CUSTOM_OPTION && (
+                                <label>
+                                    Custom name
+                                    <input
+                                        type="text"
+                                        value={customName}
+                                        onChange={(e) => setCustomName(e.target.value)}
+                                        placeholder="e.g., Volunteer Work, Errands, Project"
+                                        style={{
+                                            padding: '10px',
+                                            borderRadius: 8,
+                                            border: '1px solid #334155',
+                                            background: '#ffffff',
+                                            color: '#111827'
+                                        }}
+                                    />
+                                </label>
+                            )}
 
                             {newLabel.toLowerCase().includes("night sleep") && (
                                 <div style={{ display: "grid", gap: "0.75rem", marginTop: "0.25rem" }}>
@@ -1212,7 +1265,8 @@ const handleBlockClick = (
                                         // Open the same modify modal, targeting Backpack item
                                         setSelected({ day: "__backpack__" as any, startIdx: 0, length: it.length, label: it.label });
                                         setSelectedBackpackId(it.id);
-                                        setNewLabel(it.label);
+                                        if (customLabels.includes(String(it.label))) { setNewLabel(CUSTOM_OPTION); setCustomName(String(it.label)); }
+                                        else { setNewLabel(it.label); setCustomName(""); }
                                         setNewLength(it.length);
                                         setCreateMode(false);
                                         setModalOpen(true);
