@@ -166,6 +166,10 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         length: number;
         label: string;
     } | null>(null);
+    const [swapPrompt, setSwapPrompt] = useState<{
+        from: { day: keyof Schedule; startIdx: number; length: number; label: string };
+        to: { day: keyof Schedule; startIdx: number; length: number; label: string };
+    } | null>(null);
     const [bedTime, setBedTime] = useState<string>("10:00 PM");
     const [wakeTime, setWakeTime] = useState<string>("07:00 AM");
 
@@ -260,11 +264,19 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         },
     }));
 
-    const handleBlockClick = (
+const handleBlockClick = (
         day: string,
         block: { startIdx: number; length: number; label: string },
         _blockType: string
     ) => {
+        if (moveCandidate) {
+            setSwapPrompt({
+                from: { day: moveCandidate.fromDay as keyof Schedule, startIdx: moveCandidate.startIdx, length: moveCandidate.length, label: moveCandidate.label },
+                to: { day: day as keyof Schedule, startIdx: block.startIdx, length: block.length, label: block.label },
+            });
+            setMoveCandidate(null);
+            return;
+        }
         setSelected(block ? { ...block, day } : null);
         setNewLabel(block.label);
         setNewLength(block.length);
@@ -312,6 +324,17 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                 i = j;
             }
         }
+    };
+
+    const getContiguousBlock = (row: (string | null)[], at: number): { startIdx: number; length: number; label: string } | null => {
+        if (at < 0 || at >= row.length) return null;
+        const lab = row[at];
+        if (!lab) return null;
+        let i = at;
+        while (i > 0 && row[i - 1] === lab) i--;
+        let j = at + 1;
+        while (j < row.length && row[j] === lab) j++;
+        return { startIdx: i, length: j - i, label: lab };
     };
 
     const updateBlock = () => {
@@ -426,6 +449,12 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                 <ScheduleGrid
                     schedule={schedule}
                     onBlockClick={handleBlockClick}
+                    onRequestSwap={(from, to) => {
+                        setSwapPrompt({
+                            from: { day: from.fromDay as keyof Schedule, startIdx: from.startIdx, length: from.length, label: from.label },
+                            to: { day: to.day as keyof Schedule, startIdx: to.startIdx, length: to.length, label: to.label },
+                        });
+                    }}
                     onMoveBlock={(fromDay, fromStartIdx, length, label, toDay, toStartIdx) => {
                         setSchedule((prev) => {
                             if (!prev) return prev;
@@ -443,6 +472,14 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                 const occupied = prev[toDay][pos] !== null;
                                 const overlapsSource = sameDay && pos >= srcStart && pos < srcEnd;
                                 if (occupied && !overlapsSource) {
+                                    const target = getContiguousBlock(prev[toDay], toStartIdx);
+                                    if (target) {
+                                        setSwapPrompt({
+                                            from: { day: fromDay as keyof Schedule, startIdx: fromStartIdx, length, label },
+                                            to: { day: toDay as keyof Schedule, startIdx: target.startIdx, length: target.length, label: target.label },
+                                        });
+                                        return prev;
+                                    }
                                     setToast("Cannot drop: destination occupied");
                                     return prev;
                                 }
@@ -493,6 +530,15 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                                 const occupied = schedule[day as keyof Schedule][pos] !== null;
                                 const overlapsSource = sameDay && pos >= srcStart && pos < srcEnd;
                                 if (occupied && !overlapsSource) {
+                                    const target = getContiguousBlock(schedule[day as keyof Schedule], idx);
+                                    if (target) {
+                                        setSwapPrompt({
+                                            from: { day: fromDay as keyof Schedule, startIdx, length, label },
+                                            to: { day: day as keyof Schedule, startIdx: target.startIdx, length: target.length, label: target.label },
+                                        });
+                                        setMoveCandidate(null);
+                                        return;
+                                    }
                                     setToast("Cannot place: destination occupied");
                                     return;
                                 }
@@ -661,6 +707,43 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                             <button onClick={updateBlock}>Save</button>
                             <button onClick={clearBlock}>Clear</button>
                             <button onClick={() => setModalOpen(false)}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {swapPrompt && (
+                <div className="modal-overlay" onClick={() => setSwapPrompt(null)}>
+                    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                        <h3>Swap These Blocks?</h3>
+                        <p>Do you want to swap the positions of these blocks?</p>
+                        <ul style={{ listStyle: 'none', padding: 0 }}>
+                            <li><strong>From:</strong> {swapPrompt.from.label}</li>
+                            <li><strong>To:</strong> {swapPrompt.to.label}</li>
+                        </ul>
+                        <div className="modal-actions">
+                            <button onClick={() => {
+                                if (!schedule) { setSwapPrompt(null); return; }
+                                const next: Schedule = {
+                                    monday: [...schedule.monday],
+                                    tuesday: [...schedule.tuesday],
+                                    wednesday: [...schedule.wednesday],
+                                    thursday: [...schedule.thursday],
+                                    friday: [...schedule.friday],
+                                    saturday: [...schedule.saturday],
+                                    sunday: [...schedule.sunday],
+                                };
+                                const a = swapPrompt.from; const b = swapPrompt.to;
+                                for (let i = 0; i < a.length; i++) next[a.day][a.startIdx + i] = b.label;
+                                for (let i = 0; i < b.length; i++) next[b.day][b.startIdx + i] = a.label;
+                                mergeNearIdenticalsOnRow(next[a.day]);
+                                mergeNearIdenticalsOnRow(next[b.day]);
+                                setSchedule(next);
+                                persist(next);
+                                setSwapPrompt(null);
+                                setToast('Blocks swapped');
+                            }}>Swap</button>
+                            <button onClick={() => setSwapPrompt(null)}>Cancel</button>
                         </div>
                     </div>
                 </div>

@@ -72,9 +72,10 @@ interface Props {
     onStartTapMove?: (payload: { fromDay: string; startIdx: number; length: number; label: string }) => void;
     onCellClick?: (day: string, startIdx: number) => void;
     moved?: { day: string; startIdx: number; label: string } | null;
+    onRequestSwap?: (from: { fromDay: string; startIdx: number; length: number; label: string }, to: { day: string; startIdx: number; length: number; label: string }) => void;
 }
 
-export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMove, onCellClick, moved }: Props) {
+export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMove, onCellClick, moved, onRequestSwap }: Props) {
     const dayBlocks = useMemo(() => {
         const result: Record<string, DayBlock[]> = {};
         for (const day of DAYS) {
@@ -221,6 +222,22 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMo
                                         e.dataTransfer.setData("text/plain", json);
                                         e.dataTransfer.setData("text", json);
                                         e.dataTransfer.effectAllowed = "move";
+                                    }}
+                                    onDragOver={(e) => {
+                                        if (onRequestSwap) e.preventDefault();
+                                    }}
+                                    onDrop={(e) => {
+                                        try {
+                                            if (!onRequestSwap) return;
+                                            let raw = e.dataTransfer.getData("application/json");
+                                            if (!raw) raw = e.dataTransfer.getData("text/plain") || e.dataTransfer.getData("text");
+                                            const data = JSON.parse(raw || "null");
+                                            if (!data || typeof data.startIdx !== "number") return;
+                                            onRequestSwap(
+                                                { fromDay: data.fromDay, startIdx: data.startIdx, length: data.length, label: data.label },
+                                                { day, startIdx: b.startIdx, length: b.length, label: b.label }
+                                            );
+                                        } catch {}
                                     }}
                                     onTouchStart={(e) => {
                                         if (!onStartTapMove) return;
