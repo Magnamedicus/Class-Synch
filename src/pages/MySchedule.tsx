@@ -200,8 +200,12 @@ const MySchedule: React.FC = () => {
                     <Scheduler ref={schedulerRef} />
                 </section>
                 {hasSchedule && (
-                    <div className="center" style={{ marginTop: 12 }}>
+                    <div className="center" style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'center' }}>
                         <button className="btn primary btn-lg" onClick={openSaveModal}>Save this schedule</button>
+                        <button className="btn btn-lg" onClick={() => schedulerRef.current?.toggleBackpack()}>
+                            { /* label toggles based on internal state is okay to keep generic here */ }
+                            Open Backpack
+                        </button>
                     </div>
                 )}
 

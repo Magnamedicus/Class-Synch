@@ -1,10 +1,11 @@
-import {
+import React, {
     useState,
     forwardRef,
     useImperativeHandle,
     useMemo,
     useEffect,
     useCallback,
+    useRef,
 } from "react";
 import { generateSchedule } from "../utils/simulatedAnnealingScheduler";
 import { qaAnswersToCategories } from "../utils/qaAnswersToCategories";
@@ -18,6 +19,8 @@ import { ScheduleGrid } from "./ScheduleGrid";
 import TimeInput from "./inputs/TimeInput";
 import "../css/Modal.css";
 import "../css/scheduler.css";
+import "../css/Backpack.css";
+import "../css/ScheduleGrid.css";
 
 /* =========================
    Types & handle exported
@@ -25,6 +28,7 @@ import "../css/scheduler.css";
 export type SchedulerHandle = {
     generate: () => Promise<Schedule | void>;
     load: (s: Schedule) => void;
+    toggleBackpack: (open?: boolean) => void;
 };
 
 /* =========================
@@ -171,6 +175,62 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
         from: { day: keyof Schedule; startIdx: number; length: number; label: string };
         to: { day: keyof Schedule; startIdx: number; length: number; label: string };
     } | null>(null);
+
+    // Backpack state
+    type BackpackItem = { id: string; label: string; length: number; x: number; y: number };
+    const [backpackOpen, setBackpackOpen] = useState<boolean>(false);
+    const [backpackItems, setBackpackItems] = useState<BackpackItem[]>([]);
+    const [bpPos, setBpPos] = useState<{ x: number; y: number; w: number; h: number }>({ x: 32, y: 520, w: 360, h: 200 });
+    const [selectedBackpackId, setSelectedBackpackId] = useState<string | null>(null);
+    const backpackRef = useRef<HTMLDivElement | null>(null);
+    const backpackWinRef = useRef<HTMLDivElement | null>(null);
+
+    // Create a simple content hash for per-schedule persistence
+    const scheduleHash = useCallback((s: Schedule | null) => {
+        if (!s) return "";
+        try {
+            const str = JSON.stringify(s);
+            let h = 0;
+            for (let i = 0; i < str.length; i++) h = ((h << 5) - h) + str.charCodeAt(i) | 0;
+            return String(h >>> 0);
+        } catch { return ""; }
+    }, []);
+
+    // Persist backpack when its state changes
+    useEffect(() => { persistBackpack(schedule); }, [backpackItems, backpackOpen, bpPos]);
+
+    // Expose handle methods
+    useImperativeHandle(ref, () => ({
+        generate: async () => await handleGenerateSchedule(),
+        load: (s: Schedule) => { setSchedule(s); persist(s); restoreBackpack(s); },
+        toggleBackpack: (open?: boolean) => setBackpackOpen(prev => open == null ? !prev : open),
+    }));
+
+    const persistBackpack = useCallback((s: Schedule | null, items = backpackItems, open = backpackOpen, pos = bpPos) => {
+        try {
+            const key = "backpack::" + scheduleHash(s);
+            const payload = { open, items, pos };
+            localStorage.setItem(key, JSON.stringify(payload));
+        } catch {}
+    }, [backpackItems, backpackOpen, bpPos, scheduleHash]);
+
+    const restoreBackpack = useCallback((s: Schedule | null) => {
+        try {
+            const key = "backpack::" + scheduleHash(s);
+            const raw = localStorage.getItem(key);
+            if (!raw) { setBackpackItems([]); setBackpackOpen(false); return; }
+            const { open, items, pos } = JSON.parse(raw);
+            if (Array.isArray(items)) setBackpackItems(items.map((it: any, idx: number) => ({
+                id: String(it.id),
+                label: String(it.label),
+                length: Math.max(1, Number(it.length) || 1),
+                x: typeof it.x === 'number' ? it.x : 10 + (idx % 3) * 20,
+                y: typeof it.y === 'number' ? it.y : 10 + (idx * 12),
+            })));
+            if (pos && typeof pos.x === 'number') setBpPos(pos);
+            setBackpackOpen(!!open);
+        } catch { setBackpackItems([]); setBackpackOpen(false); }
+    }, [scheduleHash]);
 
     // Resolve display alias for labels and optional original code for hover tooltips
     const labelToDisplay = useCallback((label: string): string => {
@@ -405,6 +465,7 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                 const parsed = JSON.parse(stored) as Schedule;
                 if (parsed && parsed.monday && parsed.sunday) {
                     setSchedule(parsed);
+                    restoreBackpack(parsed);
                 }
             }
         } catch (e) {
@@ -425,6 +486,10 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
             setSchedule(result);
             setMs(t1 - t0);
             persist(result);
+            // Reset Backpack for this new schedule
+            setBackpackItems([]);
+            setBackpackOpen(false);
+            persistBackpack(result, [], false, bpPos);
             try { localStorage.setItem('scheduleClosed', 'false'); } catch {}
             return result;
         } catch (err) {
@@ -442,7 +507,9 @@ const Scheduler = forwardRef<SchedulerHandle>((_props, ref) => {
                 localStorage.setItem('lastSchedule', JSON.stringify(s));
                 localStorage.setItem('scheduleClosed', 'false');
             } catch {}
+            restoreBackpack(s);
         },
+        toggleBackpack: (open?: boolean) => setBackpackOpen(prev => open == null ? !prev : open),
     }));
 
 const handleBlockClick = (
@@ -470,10 +537,24 @@ const handleBlockClick = (
     };
 
     const clearBlock = () => {
-        if (!schedule || !selected) return;
-        const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
+        if (!selected) return;
+        // Delete directly from Backpack
+        if (selected.day === ('__backpack__' as any)) {
+            setBackpackItems(items => {
+                if (selectedBackpackId) return items.filter(it => it.id !== selectedBackpackId);
+                const idx = items.findIndex(it => it.label === selected.label && it.length === selected.length);
+                if (idx >= 0) { const cp = items.slice(); cp.splice(idx,1); return cp; }
+                return items;
+            });
+            setModalOpen(false);
+            setCreateMode(false);
+            setSelectedBackpackId(null);
+            return;
+        }
+        if (!schedule) return;
+        const updated = { ...schedule, [selected.day]: [...(schedule as any)[selected.day]] } as Schedule;
         for (let i = selected.startIdx; i < selected.startIdx + selected.length; i++) {
-            updated[selected.day][i] = null;
+            (updated as any)[selected.day][i] = null;
         }
         setSchedule(updated);
         persist(updated);
@@ -518,9 +599,32 @@ const handleBlockClick = (
         return { startIdx: i, length: j - i, label: lab };
     };
 
+    // Map label to type for color styling, same rules as ScheduleGrid
+    const blockTypeFromLabel = (label: string): "study" | "class" | "sleep" | "social" | "work" | "selfcare" | "exercise" | "leisure" => {
+        const l = label.toLowerCase();
+        if (/(\(class meeting\))$/.test(l)) return "class";
+        if (/(\(studying\))$/.test(l)) return "study";
+        if (l.includes("sleep") || l === "night sleep" || l.includes("nap")) return "sleep";
+        if (/\brest\b/.test(l)) return "selfcare";
+        if (l.includes("work shift") || /^work\b/.test(l) || l.includes("shift")) return "work";
+        if (l.includes("social") || l.includes("club") || l.includes("d&d") || l.includes("friends") || l.includes("hang")) return "social";
+        if (l.includes("yoga") || l.includes("hygiene") || l.includes("laundry") || l.includes("self")) return "selfcare";
+        if (l.includes("gym") || l.includes("exercise") || l.includes("run") || l.includes("lift") || l.includes("workout")) return "exercise";
+        if (l.includes("leisure") || l.includes("reading") || l.includes("read") || l.includes("nature") || l.includes("walk") || l.includes("movie") || l.includes("game")) return "leisure";
+        return "study";
+    };
+
     const updateBlock = () => {
         if (!schedule || !selected) return;
-        const updated = { ...schedule, [selected.day]: [...schedule[selected.day]] };
+        // If editing a Backpack item, update Backpack instead of the grid
+        if (selected.day === ('__backpack__' as any)) {
+            const lenBlocks = Math.min(48, Math.max(1, newLength));
+            setBackpackItems(list => list.map(it => it.id === selectedBackpackId ? { ...it, label: newLabel, length: lenBlocks } : it));
+            setModalOpen(false);
+            setCreateMode(false);
+            return;
+        }
+        const updated = { ...schedule, [selected.day]: [...(schedule as any)[selected.day]] } as Schedule;
 
         if (createMode) {
             // Place new block into contiguous free space starting at startIdx
@@ -675,17 +779,31 @@ const handleBlockClick = (
                                 saturday: [...prev.saturday],
                                 sunday: [...prev.sunday],
                             };
-                            // clear source
-                            for (let k = 0; k < length; k++) {
-                                next[fromDay as keyof Schedule][fromStartIdx + k] = null;
+                            // clear source unless from Backpack
+                            if (fromDay !== "__backpack__") {
+                                for (let k = 0; k < length; k++) {
+                                    next[fromDay as keyof Schedule][fromStartIdx + k] = null;
+                                }
                             }
                             // place at destination
                             for (let k = 0; k < length; k++) {
                                 next[toDay as keyof Schedule][toStartIdx + k] = label;
                             }
                             // Merge identical labels with tiny gaps on involved days
-                            mergeNearIdenticalsOnRow(next[fromDay as keyof Schedule]);
+                            if (fromDay !== "__backpack__") mergeNearIdenticalsOnRow(next[fromDay as keyof Schedule]);
                             mergeNearIdenticalsOnRow(next[toDay as keyof Schedule]);
+                            // If source was Backpack, remove one matching item (label+length)
+                            if (fromDay === "__backpack__") {
+                                setBackpackItems(items => {
+                                    const idx = items.findIndex(it => it.label === label && it.length === length);
+                                    if (idx >= 0) {
+                                        const cp = items.slice();
+                                        cp.splice(idx, 1);
+                                        return cp;
+                                    }
+                                    return items;
+                                });
+                            }
                             persist(next);
                             return next;
                         });
@@ -859,7 +977,7 @@ const handleBlockClick = (
                                 <input
                                     type="range"
                                     min={1}
-                                    max={createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight)}
+                                    max={(selected?.day === ('__backpack__' as any)) ? 48 : (createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight))}
                                     step={1}
                                     value={newLength}
                                     style={{
@@ -867,14 +985,16 @@ const handleBlockClick = (
                                         // @ts-ignore - custom properties
                                         '--min': 1,
                                         // @ts-ignore
-                                        '--max': createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight),
+                                        '--max': (selected?.day === ('__backpack__' as any)) ? 48 : (createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight)),
                                         // @ts-ignore
                                         '--value': newLength,
                                     } as React.CSSProperties}
                                     onChange={(e) => setNewLength(Number(e.target.value))}
                                 />
                                 <span style={{ fontSize: ".8rem", color: "#9ca3af" }}>
-                                    Max available here: {formatMinutes(((createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight)) * 15))}
+                                    Max available here: {(selected?.day === ('__backpack__' as any))
+                                        ? formatMinutes(48 * 15)
+                                        : formatMinutes(((createMode ? Math.max(1, freeFromStart) : (selected.length + freeExtendRight)) * 15))}
                                 </span>
                             </label>
 
@@ -928,6 +1048,199 @@ const handleBlockClick = (
                             <button onClick={() => setSwapPrompt(null)}>Cancel</button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Backpack floating tray */}
+            {backpackOpen && (
+                <div
+                    className="backpack"
+                    style={{ left: bpPos.x, top: bpPos.y, width: bpPos.w, height: bpPos.h }}
+                    ref={backpackWinRef}
+                    onDragOver={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = "move"; }}
+                    onDrop={(e) => {
+                        try {
+                            let raw = e.dataTransfer.getData("application/json");
+                            if (!raw) raw = e.dataTransfer.getData("text/plain") || e.dataTransfer.getData("text");
+                            const data = JSON.parse(raw || "null");
+                            if (!data) return;
+                            const rect = backpackRef.current?.getBoundingClientRect();
+                            if (!rect) return;
+                            const desiredX = e.clientX - rect.left - 8;
+                            const desiredY = e.clientY - rect.top - 8;
+                            const BASE_W = 140; const ROW_PX = 20; const SCALE = 0.5;
+                            const w = BASE_W * SCALE;
+                            const h = Math.max(2, (Number(data.length) || 1)) * ROW_PX * SCALE;
+
+                            // Find first non-overlapping spot scanning downward
+                            const fitsAt = (x: number, y: number) => {
+                                for (const it of backpackItems) {
+                                    const iw = BASE_W * SCALE;
+                                    const ih = Math.max(2, it.length) * ROW_PX * SCALE;
+                                    if (Math.max(x, it.x) < Math.min(x + w, it.x + iw) && Math.max(y, it.y) < Math.min(y + h, it.y + ih)) {
+                                        return false;
+                                    }
+                                }
+                                return true;
+                            };
+                            let px = Math.max(6, desiredX), py = Math.max(6, desiredY);
+                            const boundsW = (bpPos.w - 20), boundsH = (bpPos.h - 46);
+                            let guard = 0;
+                            while (!fitsAt(px, py) && guard++ < 200) {
+                                py += 10;
+                                if (py + h > boundsH) { py = 6; px += 12; }
+                                if (px + w > boundsW) { px = 6; break; }
+                            }
+
+                            // From grid -> clear there and add item; from backpack -> move item
+                            if (data.fromDay && data.fromDay !== "__backpack__" && schedule) {
+                                const next: Schedule = {
+                                    monday: [...schedule.monday],
+                                    tuesday: [...schedule.tuesday],
+                                    wednesday: [...schedule.wednesday],
+                                    thursday: [...schedule.thursday],
+                                    friday: [...schedule.friday],
+                                    saturday: [...schedule.saturday],
+                                    sunday: [...schedule.sunday],
+                                };
+                                for (let k = 0; k < data.length; k++) {
+                                    const at = data.startIdx + k;
+                                    if (at >= 0 && at < next[data.fromDay as keyof Schedule].length) {
+                                        next[data.fromDay as keyof Schedule][at] = null;
+                                    }
+                                }
+                                mergeNearIdenticalsOnRow(next[data.fromDay as keyof Schedule]);
+                                setSchedule(next);
+                                persist(next);
+                                const id = `bp_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+                                setBackpackItems(items => [...items, { id, label: String(data.label), length: Number(data.length) || 1, x: px, y: py }]);
+                            } else if (data.fromDay === "__backpack__" && data.itemId) {
+                                setBackpackItems(list => list.map(it => it.id === data.itemId ? { ...it, x: px, y: py } : it));
+                            }
+                        } catch {}
+                    }}
+                    onMouseMove={(e) => {
+                        const el = e.currentTarget as HTMLDivElement;
+                        const rect = el.getBoundingClientRect();
+                        const EDGE = 8;
+                        const nearLeft = e.clientX - rect.left <= EDGE;
+                        const nearRight = rect.right - e.clientX <= EDGE;
+                        const nearTop = e.clientY - rect.top <= EDGE;
+                        const nearBottom = rect.bottom - e.clientY <= EDGE;
+                        let cursor = '';
+                        if ((nearLeft && nearTop) || (nearRight && nearBottom)) cursor = 'nwse-resize';
+                        else if ((nearRight && nearTop) || (nearLeft && nearBottom)) cursor = 'nesw-resize';
+                        else if (nearLeft || nearRight) cursor = 'ew-resize';
+                        else if (nearTop || nearBottom) cursor = 'ns-resize';
+                        else cursor = '';
+                        el.style.cursor = cursor;
+                    }}
+                    onMouseDown={(e) => {
+                        const el = e.currentTarget as HTMLDivElement;
+                        const rect = el.getBoundingClientRect();
+                        const EDGE = 8;
+                        const hitLeft = e.clientX - rect.left <= EDGE;
+                        const hitRight = rect.right - e.clientX <= EDGE;
+                        const hitTop = e.clientY - rect.top <= EDGE;
+                        const hitBottom = rect.bottom - e.clientY <= EDGE;
+                        if (!(hitLeft || hitRight || hitTop || hitBottom)) return; // not an edge; let title handler move it
+                        e.preventDefault();
+                        const startX = e.clientX; const startY = e.clientY;
+                        const { x: sx, y: sy, w: sw, h: sh } = bpPos;
+                        const minW = 280, minH = 140;
+                        const move = (ev: MouseEvent) => {
+                            const dx = ev.clientX - startX;
+                            const dy = ev.clientY - startY;
+                            let nx = sx, ny = sy, nw = sw, nh = sh;
+                            if (hitRight) nw = Math.max(minW, sw + dx);
+                            if (hitBottom) nh = Math.max(minH, sh + dy);
+                            if (hitLeft) { nw = Math.max(minW, sw - dx); nx = sx + dx; }
+                            if (hitTop) { nh = Math.max(minH, sh - dy); ny = sy + dy; }
+                            setBpPos(p => ({ ...p, x: nx, y: ny, w: nw, h: nh }));
+                        };
+                        const up = () => {
+                            window.removeEventListener('mousemove', move);
+                            window.removeEventListener('mouseup', up);
+                        };
+                        window.addEventListener('mousemove', move);
+                        window.addEventListener('mouseup', up, { once: true });
+                    }}
+                >
+                    <div
+                        className="backpack__title"
+                        onMouseDown={(e) => {
+                            const startX = e.clientX; const startY = e.clientY;
+                            const { x, y } = bpPos;
+                            const move = (ev: MouseEvent) => {
+                                // Allow moving partially or fully off-screen; no clamping
+                                setBpPos(p => ({ ...p, x: x + (ev.clientX - startX), y: y + (ev.clientY - startY) }));
+                            };
+                            const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+                            window.addEventListener('mousemove', move);
+                            window.addEventListener('mouseup', up, { once: true });
+                        }}
+                    >
+                        Backpack
+                        <button className="backpack__close" onClick={() => setBackpackOpen(false)}>×</button>
+                    </div>
+                    <div className="backpack__content" ref={backpackRef}>
+                        {backpackItems.length === 0 && (
+                            <div className="backpack__empty">Drag blocks here to hold them</div>
+                        )}
+                        {backpackItems.map(it => {
+                            const type = blockTypeFromLabel(it.label);
+                            const ROW_PX = 20; // match grid
+                            // Visual height capped to 4 hours (16 blocks) while in Backpack
+                            const visualLenBlocks = Math.min(Math.max(it.length, 2), 16);
+                            const heightPx = visualLenBlocks * ROW_PX;
+                            const baseWidth = 220;
+                            return (
+                                <div
+                                    key={it.id}
+                                    className="backpack__item"
+                                    style={{ left: it.x, top: it.y, position: 'absolute' }}
+                                    draggable
+                                    onDragStart={(e) => {
+                                        const payload = { fromDay: "__backpack__", startIdx: 0, length: it.length, label: it.label, itemId: it.id };
+                                        const json = JSON.stringify(payload);
+                                        e.dataTransfer.setData("application/json", json);
+                                        e.dataTransfer.setData("text/plain", json);
+                                        e.dataTransfer.setData("text", json);
+                                        e.dataTransfer.effectAllowed = "move";
+                                    }}
+                                    onClick={() => {
+                                        // Open the same modify modal, targeting Backpack item
+                                        setSelected({ day: "__backpack__" as any, startIdx: 0, length: it.length, label: it.label });
+                                        setSelectedBackpackId(it.id);
+                                        setNewLabel(it.label);
+                                        setNewLength(it.length);
+                                        setCreateMode(false);
+                                        setModalOpen(true);
+                                    }}
+                                >
+                                    <div className={`block block--${type}`} style={{
+                                        width: baseWidth,
+                                        height: heightPx,
+                                        transform: 'none',
+                                        transformOrigin: 'top left'
+                                    } as React.CSSProperties}>
+                                        <div className="block__title">{it.label}</div>
+                                        <div className="block__meta">{it.length * 15} min</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="backpack__resize" onMouseDown={(e) => {
+                        const startX = e.clientX; const startY = e.clientY;
+                        const { w, h } = bpPos;
+                        const move = (ev: MouseEvent) => {
+                            setBpPos(p => ({ ...p, w: Math.max(280, w + (ev.clientX - startX)), h: Math.max(140, h + (ev.clientY - startY)) }));
+                        };
+                        const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+                        window.addEventListener('mousemove', move);
+                        window.addEventListener('mouseup', up, { once: true });
+                    }} />
                 </div>
             )}
         </div>

@@ -1,0 +1,80 @@
+/* Backpack floating tray */
+.backpack {
+  position: fixed;
+  z-index: 1000;
+  background: rgba(17, 24, 39, 0.92);
+  color: #e5e7eb;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  overflow: hidden;
+  user-select: none;
+}
+
+.backpack__title {
+  height: 36px;
+  line-height: 36px;
+  background: linear-gradient(180deg, rgba(30,41,59,.9), rgba(17,24,39,.9));
+  padding: 0 12px;
+  font-weight: 600;
+  cursor: move;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.backpack__close {
+  background: transparent;
+  border: none;
+  color: #e5e7eb;
+  font-size: 18px;
+  cursor: pointer;
+}
+.backpack__content {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  padding: 10px;
+  overflow: auto;
+}
+.backpack__empty {
+  opacity: .7;
+  font-size: .95rem;
+}
+.backpack__item {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: grab;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  width: max-content;
+}
+.backpack__item:active { cursor: grabbing; }
+.backpack__item-title { font-weight: 600; font-size: .95rem; color: #fff; }
+.backpack__item-meta { font-size: .8rem; color: #9ca3af; }
+.backpack__item-del {
+  align-self: flex-start;
+  font-size: .8rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+.backpack__item-del:hover{ background:#111827; }
+
+.backpack__resize {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, transparent 60%, #64748b 60%);
+  cursor: nwse-resize;
+}
+.backpack__actions { margin-top: 4px; }
