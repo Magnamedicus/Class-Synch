@@ -102,7 +102,41 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMo
                 {DAYS.map((day) => (
                     <div key={day} className="schedule__day">
                         {Array.from({ length: BLOCKS_PER_HOUR * 24 }).map((_, idx) => (
-                            <div key={idx} className="schedule__cell" data-idx={idx} onClick={() => onCellClick?.(day, idx)} />
+                            <div
+                                key={idx}
+                                className="schedule__cell"
+                                data-idx={idx}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+                                }}
+                                onDragEnter={(e) => {
+                                    (e.currentTarget as HTMLDivElement).classList.add("droptarget");
+                                }}
+                                onDragLeave={(e) => {
+                                    (e.currentTarget as HTMLDivElement).classList.remove("droptarget");
+                                }}
+                                onDrop={(e) => {
+                                    if (!onMoveBlock) return;
+                                    try {
+                                        let raw = e.dataTransfer.getData("application/json");
+                                        if (!raw) raw = e.dataTransfer.getData("text/plain");
+                                        if (!raw) raw = e.dataTransfer.getData("text");
+                                        const data = JSON.parse(raw || "null");
+                                        if (!data || typeof data.startIdx !== "number") return;
+                                        onMoveBlock(
+                                            data.fromDay,
+                                            data.startIdx,
+                                            data.length,
+                                            data.label,
+                                            day,
+                                            idx
+                                        );
+                                    } catch {}
+                                    (e.currentTarget as HTMLDivElement).classList.remove("droptarget");
+                                }}
+                                onClick={() => onCellClick?.(day, idx)}
+                            />
                         ))}
 
                         {dayBlocks[day].map((b, i) => {
@@ -168,4 +202,3 @@ export function ScheduleGrid({ schedule, onBlockClick, onMoveBlock, onStartTapMo
 }
 
 export default ScheduleGrid;
-
